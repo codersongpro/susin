@@ -155,13 +155,21 @@ python main.py
 
 ### 릴리즈
 
-`v` 로 시작하는 태그를 밀면 GitHub Actions 가 Windows 러너에서 exe 를 만들어
+방법은 두 가지다. 어느 쪽이든 GitHub Actions 가 Windows 러너에서 exe 를 만들어
 Release 에 붙인다.
+
+**태그를 민다**
 
 ```bash
 git tag -a v2.0.1 -m "무엇을 고쳤는지"
 git push origin v2.0.1
 ```
+
+**또는 Actions 탭에서 돌린다**
+
+`Actions → 릴리즈 빌드 → Run workflow` 에서 `version` 에 `v2.0.1` 을 적는다.
+러너가 태그까지 만들어 주므로 **태그를 밀 권한이 없어도 된다.**
+`version` 을 비워 두면 빌드만 하고 exe 를 artifact 로만 남긴다.
 
 워크플로는 `.github/workflows/release.yml` 이고 세 가지를 순서대로 한다.
 
@@ -171,8 +179,7 @@ git push origin v2.0.1
    대화상자는 전부 실패로 처리한다 — CI 에는 누를 사람이 없어 모달이 뜨면 영영 멈춘다.
 3. **빌드 + Release 첨부**
 
-Actions 탭에서 `Run workflow` 로 손수 돌릴 수도 있다. 이때는 Release 를 만들지 않고
-exe 를 artifact 로만 남기므로, 태그를 붙이기 전에 빌드가 되는지 확인할 때 쓴다.
+빌드만 확인하고 싶으면 `version` 을 비워 두고 돌린다. Release 없이 exe 만 남는다.
 
 GUI 없이도 핵심 로직은 전부 테스트된다 — 파싱, 매칭 등급, 코드 조회, 엑셀 생성,
 그리고 붙여넣기부터 엑셀까지 전체 경로.
