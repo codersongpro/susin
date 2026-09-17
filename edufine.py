@@ -264,3 +264,130 @@ def split_by_code(parsed_rows, codes):
         else:
             missing.append(dict(row, reason='코드 없음'))
     return ready, missing
+
+
+# ── 이름 → 기관 해석 (부서까지) ───────────────
+
+def _tokens(text: str) -> list:
+    return [t for t in re.split(r'\s+', (text or '').strip()) if t]
+
+
+def _strict_canon(text: str):
+    """org_db 정식명 — 단, 퍼지 추정은 받지 않는다.
+
+    '청주교육지원청 행정과' 가 편집거리로 '충청북도충주교육지원청 행정과' 에 붙는 일이
+    실제로 있었다. 청주로 보내려던 공문이 충주로 간다.
+    """
+    name, grade = lookup_org_graded(text)
+    return name if grade in AUTO_GRADES else None
+
+
+def resolve_org(codes: dict, text: str, index: dict = None):
+    """입력 문자열 → (에듀파인 수신기관명, 후보 목록).
+
+    학교는 이름 하나로 끝나지만 부서는 그렇지 않다. '행정과' 는 11곳에 있고
+    '청주교육지원청 행정과' 처럼 상위조직을 함께 적어야 한 곳으로 좁혀진다.
+
+    1) 전체경로와 정확히 일치
+    2) 짧은 이름이 한 곳만 가리킴
+    3) 토큰이 전부 들어 있는 전체경로로 좁히기 — 여기서 상위조직 + 부서가 맞물린다
+
+    한 곳으로 좁혀지지 않으면 아무것도 고르지 않고 후보만 돌려준다.
+    """
+    text = (text or '').strip()
+    if not text or not (codes or {}).get('기관'):
+        return None, []
+
+    orgs = codes['기관']
+    if text in orgs:
+        return text, []
+
+    index = index if index is not None else index_by_short_name(codes)
+
+    for key in (text, _strict_canon(text) or ''):
+        if not key:
+            continue
+        hits = index.get(key)
+        if hits and len(hits) == 1:
+            return hits[0], []
+
+    # 토큰 좁히기: 각 토큰을 org_db 정식명으로도 펼쳐 놓고, 전부 포함하는 경로를 찾는다
+    tokens = _tokens(text)
+    if len(tokens) > 1:
+        wanted = []
+        for tok in tokens:
+            forms = {tok}
+            canon = _strict_canon(tok)
+            if canon:
+                forms.add(canon)
+                forms.update(_tokens(canon))
+            wanted.append(forms)
+
+        narrowed = [
+            full for full in orgs
+            if all(any(form in full for form in forms) for forms in wanted)
+        ]
+        if len(narrowed) == 1:
+            return narrowed[0], []
+        if narrowed:
+            return None, sorted(narrowed)
+
+    # 좁히지 못했다. 짧은 이름 후보라도 보여준다.
+    for key in (text, _strict_canon(text) or ''):
+        hits = index.get(key or '')
+        if hits:
+            return None, sorted(hits)
+    return None, []
+
+
+def display_name(codes: dict, full: str, index: dict = None) -> str:
+    """목록에 보여줄 이름.
+
+    학교는 짧은 이름이 유일하니 '학성초등학교' 로 짧게 보여주고,
+    부서는 '행정과' 가 11곳이라 전체경로를 그대로 보여준다.
+    """
+    short = short_name(full)
+    if not short:
+        return full
+    index = index if index is not None else index_by_short_name(codes)
+    return short if len(index.get(short, [])) == 1 else full
+
+
+def search_orgs(codes: dict, query: str, limit: int = 300) -> list:
+    """찾아보기용 — 공백으로 나눈 조각이 모두 들어 있는 전체경로를 모은다."""
+    orgs = sorted((codes or {}).get('기관', {}))
+    pieces = [p for p in _tokens(query) if p]
+    if not pieces:
+        return orgs[:limit]
+    hits = [f for f in orgs if all(p in f for p in pieces)]
+    return hits[:limit]
+
+
+def apply_codes(rows, codes, index=None):
+    """parse_orgs 결과를 코드 사전으로 다시 해석해 제자리에서 고친다.
+
+    org_db 만으로는 부서를 못 좁힌다. '행정과' 는 11곳이고, '청주교육지원청 행정과'
+    처럼 상위조직과 맞물려야 한 곳이 된다. 그 판단을 여기서 한 번만 한다.
+
+    한 곳으로 좁혀지면 grade='exact', 여럿이면 'ambiguous' 로 두고 후보를 남긴다.
+    """
+    index = index if index is not None else index_by_short_name(codes)
+    for row in rows:
+        # 원문 줄로 먼저 본다. raw 는 해석에 쓰인 토막이라 부서가 떨어져 나간다.
+        probe = row.get('line') or row.get('raw') or ''
+        full, candidates = resolve_org(codes, probe, index)
+        if not full and not candidates and probe != row.get('raw'):
+            probe = row.get('raw') or ''
+            full, candidates = resolve_org(codes, probe, index)
+
+        if full:
+            row['name'] = full
+            row['grade'] = 'exact'
+            row['candidates'] = []
+            row['raw'] = probe
+        elif candidates:
+            row['name'] = None
+            row['grade'] = 'ambiguous'
+            row['candidates'] = candidates
+            row['raw'] = probe
+    return rows

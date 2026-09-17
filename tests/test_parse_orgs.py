@@ -120,9 +120,16 @@ class EdufineOrgNamesTest(unittest.TestCase):
             self.assertEqual(resolved, name, name)
             self.assertIn(grade, AUTO_GRADES, name)
 
-    def test_full_path_resolves_to_department(self):
+    def test_unique_department_resolves_to_short_name(self):
         self.assertEqual(
-            lookup_org_graded('충청북도교육청 유초등교육과')[0], '유초등교육과')
+            lookup_org_graded('충청북도교육청 정책기획과')[0], '정책기획과')
+
+    def test_shared_department_keeps_its_full_path(self):
+        # '유초등교육과'는 본청과 청주지원청 두 곳에 있다. 짧은 이름으로 줄이면
+        # 정확한 전체경로를 줬는데도 어느 곳인지 알 수 없게 된다.
+        self.assertEqual(
+            lookup_org_graded('충청북도교육청 유초등교육과')[0],
+            '충청북도교육청 유초등교육과')
 
     def test_person_detection_still_works(self):
         # 부서명을 넣다가 사람 이름 판별을 망가뜨리면 소통메신저가 깨진다

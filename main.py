@@ -36,6 +36,7 @@ from automation import (
 from hwp_extract import extract_hwp_text
 from sotong_parser import (
     AUTO_GRADES,
+    GRADE_AMBIGUOUS,
     lookup_org_graded,
     parse_input,
     parse_orgs,
@@ -593,6 +594,12 @@ class App:
                 relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2'
             ).pack(side='left', padx=3)
 
+        # 부서는 전체경로를 외울 수 없으니 목록에서 고르게 한다 (에듀파인 전용)
+        self.browse_btn = tk.Button(
+            action_frame, text='기관 찾아보기…', command=self._open_org_picker,
+            bg='#00695C', fg='white', activebackground='#004D40',
+            relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2')
+
         # ⑤ 추출 결과 상태 라벨
         self.parse_status = tk.Label(
             frame, text='', fg='#555', font=('맑은 고딕', 9), anchor='w'
@@ -818,6 +825,104 @@ class App:
             justify='left', anchor='w', wraplength=820
         )
         self.edufine_msg.grid(row=4, column=0, sticky='ew', padx=14, pady=(2, 10))
+
+    def _open_org_picker(self):
+        """기관 찾아보기 — 부서까지 목록에서 골라 명단에 넣는다.
+
+        '충청북도청주교육지원청 행정과' 같은 전체경로를 외울 수는 없다.
+        """
+        if not self.codes.get('기관'):
+            messagebox.showwarning(
+                '기관코드가 없습니다',
+                '[4. 수신그룹 엑셀] 탭에서 기관코드를 먼저 가져오세요.')
+            return
+
+        dlg = tk.Toplevel(self.root)
+        dlg.title('기관 찾아보기')
+        dlg.geometry('620x520')
+        dlg.grab_set()
+        dlg.transient(self.root)
+        dlg.configure(bg='#F5F7FA')
+
+        tk.Label(dlg, text='찾을 말을 띄어쓰기로 나눠 적으면 모두 포함된 기관만 보입니다.\n'
+                           '예)  청주 초등학교   ·   행정과   ·   단재 연수부',
+                 bg='#F5F7FA', fg='#546E7A', font=('맑은 고딕', 9),
+                 justify='left').pack(anchor='w', padx=16, pady=(14, 6))
+
+        query = tk.StringVar()
+        entry = ttk.Entry(dlg, textvariable=query, font=('맑은 고딕', 11))
+        entry.pack(fill='x', padx=16)
+        entry.focus_set()
+
+        count_label = tk.Label(dlg, text='', bg='#F5F7FA', fg='#555',
+                               font=('맑은 고딕', 8), anchor='w')
+        count_label.pack(fill='x', padx=16, pady=(4, 2))
+
+        list_wrap = tk.Frame(dlg)
+        list_wrap.pack(fill='both', expand=True, padx=16)
+        box = tk.Listbox(list_wrap, font=('맑은 고딕', 10), selectmode='extended',
+                         activestyle='none', selectbackground='#1565C0',
+                         selectforeground='white')
+        box.pack(side='left', fill='both', expand=True)
+        bar = ttk.Scrollbar(list_wrap, orient='vertical', command=box.yview)
+        bar.pack(side='right', fill='y')
+        box.config(yscrollcommand=bar.set)
+
+        shown = []
+
+        def refresh(*_):
+            nonlocal shown
+            shown = edufine.search_orgs(self.codes, query.get())
+            box.delete(0, 'end')
+            for full in shown:
+                box.insert('end', full)
+            total = len(self.codes.get('기관', {}))
+            count_label.config(text=f'{len(shown)}곳 표시  /  전체 {total}곳')
+
+        def add_selected():
+            picked = [shown[i] for i in box.curselection()]
+            if not picked:
+                return
+            existing = {i.get('org') for i in self.names_list}
+            index = edufine.index_by_short_name(self.codes)
+            added = 0
+            for full in picked:
+                if full in existing:
+                    continue
+                self.names_list.append({
+                    'org': full,
+                    'name': '',
+                    'search': edufine.display_name(self.codes, full, index),
+                    'grade': 'exact',
+                    'raw': full,
+                    'candidates': [],
+                })
+                existing.add(full)
+                added += 1
+            self._rebuild_parsed_list()
+            self._refresh_ready_status()
+            self._refresh_edufine_status()
+            self.parse_status.config(
+                text=f'찾아보기에서 {added}곳 추가  (명단 {len(self.names_list)}곳)',
+                fg='green')
+            count_label.config(text=f'{added}곳을 명단에 넣었습니다.')
+
+        query.trace_add('write', refresh)
+        box.bind('<Double-Button-1>', lambda e: add_selected())
+        entry.bind('<Return>', lambda e: box.focus_set())
+
+        btns = tk.Frame(dlg, bg='#F5F7FA')
+        btns.pack(pady=12)
+        tk.Button(btns, text='명단에 추가', command=add_selected,
+                  bg='#1565C0', fg='white', activebackground='#0D47A1',
+                  relief='flat', font=('맑은 고딕', 9, 'bold'),
+                  padx=18, pady=6, cursor='hand2').pack(side='left', padx=4)
+        tk.Button(btns, text='닫기', command=dlg.destroy,
+                  bg='#B0BEC5', fg='white', activebackground='#90A4AE',
+                  relief='flat', font=('맑은 고딕', 9),
+                  padx=14, pady=6, cursor='hand2').pack(side='left', padx=4)
+
+        refresh()
 
     def _save_edufine_fields(self):
         for key, var in getattr(self, 'edufine_vars', {}).items():
@@ -1232,10 +1337,17 @@ class App:
         except Exception as exc:
             logging.info('탭 표시 전환 실패: %s', exc)
 
+        browse = getattr(self, 'browse_btn', None)
+        if browse:
+            if edufine_on:
+                browse.pack(side='left', padx=3)
+            else:
+                browse.pack_forget()
+
         hint = getattr(self, 'target_hint', None)
         if hint:
             hint.config(text=(
-                '기관 명단을 넣으세요 (학교·교육지원청)' if edufine_on
+                '기관 명단을 넣으세요 — 학교·교육지원청·부서 모두 됩니다' if edufine_on
                 else '소속기관 + 이름 명단을 넣으세요'
             ))
         window = ("에듀파인 [수신자 지정] 팝업" if edufine_on
@@ -1316,17 +1428,28 @@ class App:
         raw = self.input_text.get('1.0', 'end')
         rows = parse_orgs(raw)
 
+        # 2차 해석 — 코드 사전(전체경로)으로 다시 본다.
+        # 부서는 org_db 만으로는 못 좁힌다. '행정과' 는 11곳이고
+        # '청주교육지원청 행정과' 처럼 상위조직과 맞물려야 한 곳이 된다.
+        index = edufine.index_by_short_name(self.codes)
+        edufine.apply_codes(rows, self.codes, index)
+
         self.names_list.clear()
         self.parsed_list.delete(0, 'end')
 
         confirmed = pending = 0
+        seen = set()
         for row in rows:
             auto = row['grade'] in AUTO_GRADES
-            display = row['name'] if auto else row['raw']
+            name = row['name'] or ''
+            if auto and name:
+                if name in seen:
+                    continue
+                seen.add(name)
             self.names_list.append({
-                'org': row['name'] or '',
+                'org': name,
                 'name': '',
-                'search': display,
+                'search': edufine.display_name(self.codes, name, index) if name else row['raw'],
                 'grade': row['grade'],
                 'raw': row['raw'],
                 'candidates': row.get('candidates', []),

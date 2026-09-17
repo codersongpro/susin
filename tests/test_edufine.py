@@ -137,3 +137,96 @@ class BuildTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ResolveOrgTest(unittest.TestCase):
+    """부서까지 지목할 수 있는지. 학교는 이름 하나로 끝나지만 부서는 아니다."""
+
+    def setUp(self):
+        self.codes = edufine.load_codes()
+        self.index = edufine.index_by_short_name(self.codes)
+
+    def resolve(self, text):
+        return edufine.resolve_org(self.codes, text, self.index)
+
+    def test_school_by_alias(self):
+        full, amb = self.resolve('학성초')
+        self.assertEqual(full, '충청북도진천교육지원청 학성초등학교')
+        self.assertEqual(amb, [])
+
+    def test_unique_department_by_name_alone(self):
+        full, _ = self.resolve('정책기획과')
+        self.assertEqual(full, '충청북도교육청 정책기획과')
+
+    def test_shared_department_needs_its_parent(self):
+        # '행정과'는 11곳에 있다. 혼자서는 절대 확정되면 안 된다.
+        full, amb = self.resolve('행정과')
+        self.assertIsNone(full)
+        self.assertGreater(len(amb), 1)
+
+    def test_parent_plus_department_narrows_to_one(self):
+        self.assertEqual(self.resolve('청주교육지원청 행정과')[0],
+                         '충청북도청주교육지원청 행정과')
+        self.assertEqual(self.resolve('충주교육지원청 행정과')[0],
+                         '충청북도충주교육지원청 행정과')
+
+    def test_similar_parents_are_never_confused(self):
+        # 청주와 충주는 한 글자 차이다. 편집거리로 붙이면 공문이 옆 시로 간다.
+        for parent in ('청주', '충주', '제천', '단양', '보은', '옥천', '영동', '음성', '진천'):
+            full, _ = self.resolve(f'{parent}교육지원청 행정과')
+            self.assertIsNotNone(full, parent)
+            self.assertIn(parent, full, parent)
+
+    def test_nested_department(self):
+        self.assertEqual(
+            self.resolve('단재교육연수원 교육연수부')[0],
+            '충청북도교육청 충청북도단재교육연수원 교육연수부')
+
+    def test_full_path_is_taken_as_is(self):
+        for full in ('충청북도청주교육지원청 행정과', '충청북도교육청 유초등교육과'):
+            self.assertEqual(self.resolve(full), (full, []))
+
+    def test_unknown_yields_nothing(self):
+        self.assertEqual(self.resolve('있을리없는부서'), (None, []))
+
+    def test_every_resolved_name_has_a_code(self):
+        for text in ('학성초', '정책기획과', '청주교육지원청 행정과',
+                     '단재교육연수원 교육연수부', '충북외고'):
+            full, _ = self.resolve(text)
+            entry, _ = edufine.lookup_code(self.codes, full, self.index)
+            self.assertIsNotNone(entry, text)
+
+
+class DisplayNameTest(unittest.TestCase):
+    def setUp(self):
+        self.codes = edufine.load_codes()
+
+    def test_unique_short_name_is_shown_short(self):
+        self.assertEqual(
+            edufine.display_name(self.codes, '충청북도진천교육지원청 학성초등학교'),
+            '학성초등학교')
+
+    def test_shared_short_name_shows_full_path(self):
+        full = '충청북도청주교육지원청 행정과'
+        self.assertEqual(edufine.display_name(self.codes, full), full)
+
+
+class SearchOrgsTest(unittest.TestCase):
+    def setUp(self):
+        self.codes = edufine.load_codes()
+
+    def test_all_pieces_must_match(self):
+        hits = edufine.search_orgs(self.codes, '청주 초등학교')
+        self.assertTrue(hits)
+        for h in hits:
+            self.assertIn('청주', h)
+            self.assertIn('초등학교', h)
+
+    def test_department_search(self):
+        hits = edufine.search_orgs(self.codes, '행정과')
+        self.assertGreater(len(hits), 1)
+        self.assertTrue(all('행정과' in h for h in hits))
+
+    def test_empty_query_lists_everything(self):
+        self.assertEqual(len(edufine.search_orgs(self.codes, '', limit=10000)),
+                         len(self.codes['기관']))

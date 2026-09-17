@@ -220,6 +220,7 @@ GRADE_EXACT = 'exact'    # 정식명 또는 등록된 별칭과 정확히 일치
 GRADE_ABBR = 'abbr'      # 약칭 확장 후 일치 (백곡초 → 백곡초등학교)
 GRADE_PREFIX = 'prefix'  # 접두어 + 학교급이 모두 일치
 GRADE_FUZZY = 'fuzzy'    # 편집거리 기반 추정 — 자동 확정 금지
+GRADE_AMBIGUOUS = 'ambiguous'  # 실재하는 기관 여럿이 같은 이름 — 사람이 골라야 한다
 GRADE_NONE = 'none'      # 후보 없음
 
 AUTO_GRADES = (GRADE_EXACT, GRADE_ABBR, GRADE_PREFIX)
@@ -351,6 +352,10 @@ def parse_orgs(text: str) -> list:
             seen.add(key)
             results.append({
                 'raw': raw,
+                # 원문 줄 전체. raw 는 해석에 쓰인 토막이라 정보가 깎여 있다.
+                # '청주교육지원청 행정과' 는 raw 가 '청주교육지원청' 이 되어
+                # 부서를 잃는다. 뒤에서 코드 사전으로 다시 볼 때 이 값이 필요하다.
+                'line': chunk,
                 'name': name,
                 'grade': grade,
                 'candidates': [] if grade in AUTO_GRADES else candidate_orgs(raw),

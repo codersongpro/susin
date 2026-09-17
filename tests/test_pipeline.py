@@ -65,3 +65,44 @@ class PipelineTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class DepartmentPipelineTest(unittest.TestCase):
+    """교육청·직속기관 부서도 엑셀까지 간다."""
+
+    def setUp(self):
+        self.codes = edufine.load_codes()
+        self.index = edufine.index_by_short_name(self.codes)
+
+    def resolve_all(self, text):
+        """앱이 하는 것과 같은 경로 — org_db 로 읽고 코드 사전으로 다시 본다."""
+        return edufine.apply_codes(parse_orgs(text), self.codes, self.index)
+
+    def test_departments_reach_the_workbook(self):
+        pasted = '정책기획과\n청주교육지원청 행정과\n단재교육연수원 교육연수부\n학성초'
+        rows = self.resolve_all(pasted)
+        self.assertTrue(all(r['grade'] == 'exact' for r in rows), rows)
+
+        ready, missing = edufine.split_by_code(confirmed(rows), self.codes)
+        self.assertEqual(missing, [])
+        self.assertEqual(len(ready), 4)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, 'g.xlsx')
+            edufine.build_workbook(ready, META, out)
+            back = edufine.read_group_workbook(out)
+            self.assertIn('충청북도청주교육지원청 행정과', back['기관'])
+            self.assertIn('충청북도교육청 정책기획과', back['기관'])
+
+    def test_bare_shared_department_is_held_for_the_user(self):
+        rows = self.resolve_all('행정과')
+        self.assertEqual(rows[0]['grade'], 'ambiguous')
+        self.assertGreater(len(rows[0]['candidates']), 1)
+        ready, _ = edufine.split_by_code(confirmed(rows), self.codes)
+        self.assertEqual(ready, [])
+
+    def test_neighbouring_offices_are_not_swapped(self):
+        rows = self.resolve_all('청주교육지원청 행정과\n충주교육지원청 행정과')
+        names = [r['name'] for r in rows]
+        self.assertEqual(names, ['충청북도청주교육지원청 행정과',
+                                 '충청북도충주교육지원청 행정과'])

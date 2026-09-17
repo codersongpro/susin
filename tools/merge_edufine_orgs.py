@@ -50,9 +50,14 @@ def build_additions(codes: dict, db: dict):
     for full in sorted(codes.get('기관', {})):
         short = edufine.short_name(full)
 
-        # 전체경로는 언제나 안전하다
-        if full not in db and full not in additions:
-            additions[full] = short or full
+        # 전체경로는 언제나 안전하다.
+        # 다만 가리키는 값은 짧은 이름이 유일할 때만 짧은 이름으로 준다.
+        # '충청북도청주교육지원청 행정과' 를 '행정과' 로 축약하면 11곳과 뭉쳐
+        # 정확한 전체경로를 줬는데도 코드를 못 찾는다.
+        unique_short = short and len(index.get(short, [])) == 1
+        target = short if unique_short else full
+        if additions.get(full) != target and db.get(full) != target:
+            additions[full] = target
 
         if not short or short in db or short in additions:
             continue
