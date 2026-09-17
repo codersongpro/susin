@@ -18,7 +18,7 @@ try:
 except ImportError:                                  # pragma: no cover
     openpyxl = None
 
-from sotong_parser import lookup_org
+from sotong_parser import AUTO_GRADES, lookup_org, lookup_org_graded
 
 SHEET_NAME = '개인수신그룹관리'
 HEADERS = [
@@ -94,7 +94,10 @@ def short_name(full_name: str) -> str:
     tail = (full_name or '').strip().split(' ')[-1].strip()
     if not tail:
         return ''
-    return lookup_org(tail) or tail
+    # 퍼지 추정으로 맞추면 안 된다. '괴산교육도서관' 이 '충청북도교육도서관' 으로
+    # 뭉개져 서로 다른 기관이 한 이름으로 묶인다.
+    name, grade = lookup_org_graded(tail)
+    return name if grade in AUTO_GRADES else tail
 
 
 def read_group_workbook(path: str) -> dict:
@@ -145,7 +148,9 @@ def merge_codes(codes: dict, harvested: dict) -> tuple:
         orgs[full] = code
 
     codes['기관'] = orgs
-    if harvested.get('등록교육청코드'):
+    # 등록교육청코드는 사람마다 다르다 (본인이 속한 교육지원청). 조직도를 통째로
+    # 내보낸 파일에는 엉뚱한 값이 들어 있을 수 있으므로, 비어 있을 때만 채운다.
+    if harvested.get('등록교육청코드') and not codes.get('등록교육청코드'):
         codes['등록교육청코드'] = harvested['등록교육청코드']
     codes['수집일'] = datetime.date.today().isoformat()
     return codes, added, changed

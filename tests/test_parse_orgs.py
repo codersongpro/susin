@@ -109,3 +109,29 @@ class CandidateTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class EdufineOrgNamesTest(unittest.TestCase):
+    """에듀파인 조직도에서 가져온 부서명이 org_db 에 안전하게 들어갔는지."""
+
+    def test_departments_are_recognised(self):
+        for name in ('정책기획과', '감사관', '교육연수부', '괴산교육도서관'):
+            resolved, grade = lookup_org_graded(name)
+            self.assertEqual(resolved, name, name)
+            self.assertIn(grade, AUTO_GRADES, name)
+
+    def test_full_path_resolves_to_department(self):
+        self.assertEqual(
+            lookup_org_graded('충청북도교육청 유초등교육과')[0], '유초등교육과')
+
+    def test_person_detection_still_works(self):
+        # 부서명을 넣다가 사람 이름 판별을 망가뜨리면 소통메신저가 깨진다
+        from sotong_parser import is_person_name
+        for name in ('홍길동', '김철수', '이영희', '박민', '다하'):
+            self.assertTrue(is_person_name(name), name)
+
+    def test_generic_department_names_stay_out(self):
+        # '행정과'는 11곳에 있다. 하나로 확정되면 안 된다.
+        from sotong_parser import _ORG_LOOKUP
+        for generic in ('행정과', '교육과', '학교지원센터', '병설유치원'):
+            self.assertNotIn(generic, _ORG_LOOKUP, generic)
