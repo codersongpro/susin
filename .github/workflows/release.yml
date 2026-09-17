@@ -47,6 +47,10 @@ jobs:
         # 탭 생성·출구 전환·명단 추출까지 실제로 돌려 본다.
         # 여기서 깨지면 사용자가 exe 를 받고 나서야 알게 된다.
         timeout-minutes: 3
+        env:
+          # Windows 러너 콘솔은 cp1252 라 한글 출력에서 죽는다
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: utf-8
         run: python tools/smoke_gui.py
 
       - name: exe 빌드

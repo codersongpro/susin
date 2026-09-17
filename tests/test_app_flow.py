@@ -210,3 +210,37 @@ class AppFlowTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SmokeScriptTest(unittest.TestCase):
+    """CI 의 스모크 스크립트 자체가 깨지지 않는지."""
+
+    def test_runs_under_a_non_utf8_console(self):
+        # Windows 러너 콘솔은 cp1252 다. 한글 확인 메시지를 찍다가 죽으면
+        # 앱은 멀쩡한데 빌드가 실패한다 (실제로 한 번 그랬다).
+        import os
+        import subprocess
+
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        script = os.path.join(root, 'tools', 'smoke_gui.py')
+        source = open(script, encoding='utf-8').read()
+        self.assertIn('reconfigure', source,
+                      '출력 인코딩 보정이 빠졌습니다')
+
+        # 보정 부분만 떼어 cp1252 환경에서 실제로 돌려 본다
+        probe = (
+            'import sys\n'
+            'for stream in (sys.stdout, sys.stderr):\n'
+            '    try:\n'
+            "        stream.reconfigure(encoding='utf-8', errors='replace')\n"
+            '    except (AttributeError, ValueError):\n'
+            '        pass\n'
+            "print('한글 출력 확인')\n"
+        )
+        result = subprocess.run(
+            [sys.executable, '-c', probe],
+            capture_output=True, text=True,
+            env=dict(os.environ, PYTHONIOENCODING='cp1252'),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('한글 출력 확인', result.stdout)

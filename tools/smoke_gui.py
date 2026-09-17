@@ -14,6 +14,14 @@ from tkinter import filedialog, messagebox
 # tools/ 에서 실행되므로 저장소 루트를 경로에 넣어야 main 을 찾는다
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Windows 콘솔 기본 인코딩(cp1252)에서는 한글을 찍다가 UnicodeEncodeError 로 죽는다.
+# 확인 메시지 때문에 빌드가 멈추면 안 되므로 출력 인코딩을 고정한다.
+for stream in (sys.stdout, sys.stderr):
+    try:
+        stream.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        pass
+
 
 def _blocked(name):
     def stub(*args, **kwargs):
