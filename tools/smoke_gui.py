@@ -6,9 +6,13 @@ exe 를 만들기 전에 여기서 걸러야 한다. 안 그러면 사용자가 
 대화상자는 전부 막는다. CI 에는 누를 사람이 없어서 모달이 뜨면 영영 멈춘다.
 """
 
+import os
 import sys
 import tkinter
 from tkinter import filedialog, messagebox
+
+# tools/ 에서 실행되므로 저장소 루트를 경로에 넣어야 main 을 찾는다
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def _blocked(name):
