@@ -45,6 +45,7 @@ from ui_helpers import format_item_label
 
 LOG_FILE = os.path.join(os.path.expanduser("~"), ".chungbuk_auto.log")
 LATEST_RELEASE_API = 'https://api.github.com/repos/codersongpro/susin/releases/latest'
+RELEASES_PAGE = 'https://github.com/codersongpro/susin/releases/latest'
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, encoding='utf-8')
 
 try:
@@ -137,13 +138,22 @@ class CaptureDialog(tk.Toplevel):
 #  도움말 텍스트
 # ─────────────────────────────────────────────
 _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  {APP_NAME}  v{APP_VERSION}  —  충북 소통메신저 자동 사용자 선택
+  {APP_NAME}  v{APP_VERSION}  —  소통메신저·에듀파인 수신자 한 번에
   처음 사용자도 따라할 수 있도록 작성되었습니다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ■ 이 프로그램이 하는 일
 ──────────────────────────────────────────────────────
-  명단(소속기관 + 이름)을 붙여넣거나 파일로 불러오면
+  명단을 붙여넣으면 충북 기관명으로 정리해 주고,
+  그 결과를 두 곳 중 한 곳으로 내보냅니다.
+
+    소통메신저 — [사용자 선택] 창에서 자동으로 골라 담기
+    에듀파인   — 개인수신그룹 일괄등록 엑셀 만들기
+
+  출구는 [1. 명단 입력] 탭 맨 위에서 고릅니다.
+  고른 출구에 따라 아래 탭이 바뀝니다.
+
+  ─ 소통메신저를 고르면 ─
   소통메신저에서 아래 3단계를 자동으로 반복합니다.
 
     1단계: 검색 입력창에 이름 입력 → 검색
@@ -275,6 +285,108 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   Q. HWP 파일이 안 열려요.
   A. 한/글이 설치되어 있지 않으면 일부 파일이 열리지 않습니다.
      한글에서 표를 Ctrl+C로 복사 후 입력창에 Ctrl+V로 붙여넣으세요.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 에듀파인 — 수신그룹 일괄등록
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  공문 수신 기관이 30곳이면 조직도에서 검색 → 체크 → [>>] 를
+  30번 반복해야 합니다. 클릭 120번입니다.
+
+  에듀파인에는 [개인설정 > 개인수신그룹관리 > 일괄등록] 이 있습니다.
+  엑셀 한 장을 올리면 수신그룹이 통째로 만들어지고,
+  다음부터는 기안할 때 [수신자 지정 > 개인수신그룹] 에서
+  그룹 하나만 고르면 끝납니다. 클릭 120번이 2번이 됩니다.
+
+  {APP_NAME}은 그 엑셀을 만들어 줍니다.
+
+
+  ① 내 정보 넣기  (처음 한 번만)
+  ──────────────────────────────────────────────────────
+    [4. 수신그룹 엑셀] 탭 → STEP 2
+
+      등록교육청 : 본인이 속한 교육지원청을 목록에서 고릅니다
+      사용자ID   : 에듀파인 로그인 ID
+      사용자명   : 결재선에 뜨는 이름
+
+    한 번 넣으면 저장되니 다음부터는 건너뜁니다.
+
+
+  ② 기관 명단 넣기
+  ──────────────────────────────────────────────────────
+    [1. 명단 입력] 탭에서 출구를 '에듀파인' 으로 두고
+    기관 명단을 붙여넣습니다.
+    줄바꿈·쉼표·탭 아무거나 되고, 글머리기호와 번호는 알아서 뗍니다.
+
+      학성초
+      한천초, 백곡초
+      1. 충북외고
+
+    [명단 추출 →] 를 누르면 네 갈래로 나뉩니다.
+
+      확정              그대로 씁니다
+      같은 이름이 여럿  '행정과' 처럼 실재하는 곳이 여러 곳
+      추정              짐작만 된 것
+      찾지 못함         사전에 없는 것
+
+    확정이 아닌 것은 더블클릭해서 후보 중에 고릅니다.
+    추정 상태로는 엑셀에 실리지 않습니다.
+    엑셀은 그대로 등록되므로, 틀린 기관이 조용히 들어가지 않게 막습니다.
+
+
+  ③ 부서에 보내려면
+  ──────────────────────────────────────────────────────
+    교육청·교육지원청·직속기관의 부서도 수신자가 됩니다.
+    다만 학교와 달리 이름 하나로는 안 될 때가 있습니다.
+
+      정책기획과              한 곳뿐이라 바로 확정
+      행정과                  11곳에 있어 확정하지 않음 → 후보에서 고름
+      청주교육지원청 행정과    상위조직과 맞물려 한 곳으로 좁혀짐
+      단재교육연수원 교육연수부  3단계도 됩니다
+
+    전체경로를 외울 필요는 없습니다.
+    [기관 찾아보기…] 버튼을 누르면 770곳을 검색해서 고를 수 있습니다.
+    찾을 말을 띄어쓰기로 나눠 적으면 모두 포함된 것만 걸러집니다.
+
+      예)  청주 초등학교   ·   행정과   ·   단재 연수부
+
+    ※ 부서는 엑셀 경로를 쓰는 편이 안전합니다.
+      좌표 자동선택은 조직명 칸에 '행정과' 를 쳐서 첫 결과를 고르는
+      방식이라, 여러 곳에 겹치는 부서명에서는 엉뚱한 곳이 잡힐 수 있습니다.
+
+
+  ④ 엑셀 만들어 올리기
+  ──────────────────────────────────────────────────────
+    [4. 수신그룹 엑셀] 탭 STEP 3 에 수신그룹명을 적고
+    [수신그룹 엑셀 만들기] 를 누릅니다.
+
+    코드가 없는 기관이 있으면 목록으로 알려 줍니다. 조용히 빠지지 않습니다.
+    그런 기관은 [클립보드 순차 복사] 로 조직도에 직접 넣으면 됩니다.
+
+    만들어진 엑셀을 에듀파인
+    [개인설정 > 개인수신그룹관리 > 일괄등록] 에서 올립니다.
+
+    ※ 처음에는 기관 2~3곳짜리 시험 그룹으로 한 번 확인해 보세요.
+
+
+  ⑤ 기관코드 갱신  (평소에는 필요 없음)
+  ──────────────────────────────────────────────────────
+    충북 770곳의 코드가 이미 들어 있습니다. STEP 1 은 건너뛰어도 됩니다.
+
+    학교 신설·통폐합으로 갱신이 필요하면,
+    에듀파인에서 수신그룹을 하나 만들어 저장한 뒤
+    [파일양식받기] 를 누르면 등록한 내용이 코드와 함께 내려옵니다.
+    그 파일을 STEP 1 의 [기관코드 가져오기…] 로 넣으면 됩니다.
+
+    코드가 바뀐 기관이 있으면 무엇이 어떻게 바뀌는지 먼저 보여 줍니다.
+
+
+  ⑥ 클립보드 순차 복사
+  ──────────────────────────────────────────────────────
+    기관명을 한 건씩 클립보드에 넣어 줍니다.
+    조직명 칸에 Ctrl+V → Enter → 체크 → [>>] 만 반복하면 됩니다.
+    Enter 키로 다음으로 넘어갑니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -765,12 +877,20 @@ class App:
         me_frame.columnconfigure(3, weight=1)
 
         self.edufine_vars = {}
-        fields = [
-            ('등록교육청코드', 0, 0, '예: M100000098'),
-            ('사용자ID',      0, 2, '에듀파인 로그인 ID'),
-            ('사용자명',      1, 0, '결재선에 뜨는 이름'),
-        ]
-        for key, r, c, hint in fields:
+
+        # 등록교육청은 코드를 외울 수 없으니 목록에서 고르게 한다
+        tk.Label(me_frame, text='등록교육청', bg='#F5F7FA',
+                 font=('맑은 고딕', 9)).grid(row=0, column=0, sticky='w', padx=(8, 4), pady=5)
+        self.edufine_vars['등록교육청코드'] = tk.StringVar(
+            value=self.config.edufine.get('등록교육청코드', ''))
+        self.office_var = tk.StringVar()
+        self.office_combo = ttk.Combobox(me_frame, textvariable=self.office_var,
+                                         state='readonly', width=24)
+        self.office_combo.grid(row=0, column=1, sticky='ew', padx=(0, 10), pady=5)
+        self.office_combo.bind('<<ComboboxSelected>>', self._on_office_selected)
+        self._reload_office_choices()
+
+        for key, r, c in [('사용자ID', 0, 2), ('사용자명', 1, 0)]:
             tk.Label(me_frame, text=key, bg='#F5F7FA',
                      font=('맑은 고딕', 9)).grid(row=r, column=c, sticky='w', padx=(8, 4), pady=5)
             var = tk.StringVar(value=self.config.edufine.get(key, ''))
@@ -779,9 +899,14 @@ class App:
             entry.grid(row=r, column=c + 1, sticky='ew', padx=(0, 10), pady=5)
             entry.bind('<FocusOut>', lambda e: self._save_edufine_fields())
 
+        self.office_code_label = tk.Label(
+            me_frame, text='', fg='#555', font=('맑은 고딕', 8), bg='#F5F7FA', anchor='w')
+        self.office_code_label.grid(row=1, column=2, columnspan=2, sticky='w',
+                                    padx=8, pady=(0, 4))
+
         tk.Label(
             me_frame,
-            text='등록교육청코드와 사용자ID·이름은 [파일양식받기] 파일에서 자동으로 채워집니다.',
+            text='등록교육청은 본인이 속한 교육지원청입니다. 사용자ID·이름은 [파일양식받기] 파일에서도 채워집니다.',
             fg='#555', font=('맑은 고딕', 8), bg='#F5F7FA', anchor='w'
         ).grid(row=2, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 6))
 
@@ -924,6 +1049,39 @@ class App:
 
         refresh()
 
+    def _reload_office_choices(self):
+        """등록교육청 목록을 코드 사전에서 다시 읽는다."""
+        combo = getattr(self, 'office_combo', None)
+        if not combo:
+            return
+        self.office_choices = edufine.registering_offices(self.codes)
+        combo['values'] = [name for name, _ in self.office_choices]
+
+        current = self.edufine_vars['등록교육청코드'].get().strip()
+        for name, code in self.office_choices:
+            if code == current:
+                self.office_var.set(name)
+                break
+        else:
+            self.office_var.set('')
+        self._refresh_office_code_label()
+
+    def _refresh_office_code_label(self):
+        label = getattr(self, 'office_code_label', None)
+        if not label:
+            return
+        code = self.edufine_vars['등록교육청코드'].get().strip()
+        label.config(text=f'코드 {code}' if code else '교육지원청을 골라주세요')
+
+    def _on_office_selected(self, event=None):
+        picked = self.office_var.get()
+        for name, code in getattr(self, 'office_choices', []):
+            if name == picked:
+                self.edufine_vars['등록교육청코드'].set(code)
+                break
+        self._save_edufine_fields()
+        self._refresh_office_code_label()
+
     def _save_edufine_fields(self):
         for key, var in getattr(self, 'edufine_vars', {}).items():
             self.config.edufine[key] = var.get().strip()
@@ -996,6 +1154,7 @@ class App:
 
         self.codes = codes
         edufine.save_codes(self.codes)
+        self._reload_office_choices()
 
         # 이미 채워 둔 값은 건드리지 않는다. 조직도를 통째로 내보낸 파일에는
         # 본인 것이 아닌 등록교육청코드가 들어 있을 수 있다.
@@ -1005,6 +1164,7 @@ class App:
             if value and key in self.edufine_vars and not self.edufine_vars[key].get().strip():
                 self.edufine_vars[key].set(value)
         self._save_edufine_fields()
+        self._reload_office_choices()
 
         messagebox.showinfo(
             '가져오기 완료',
@@ -1232,7 +1392,7 @@ class App:
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode('utf-8'))
             latest = (data.get('tag_name') or data.get('name') or '').strip().lstrip('vV')
-            url = data.get('html_url') or 'https://github.com/codersongpro/sotong/releases/latest'
+            url = data.get('html_url') or RELEASES_PAGE
             if latest and _is_newer_version(latest, APP_VERSION):
                 self.root.after(0, lambda: self._show_update_notice(latest, url))
         except Exception as exc:

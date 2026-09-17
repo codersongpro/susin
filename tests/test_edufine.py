@@ -230,3 +230,22 @@ class SearchOrgsTest(unittest.TestCase):
     def test_empty_query_lists_everything(self):
         self.assertEqual(len(edufine.search_orgs(self.codes, '', limit=10000)),
                          len(self.codes['기관']))
+
+
+class RegisteringOfficesTest(unittest.TestCase):
+    def setUp(self):
+        self.codes = edufine.load_codes()
+
+    def test_lists_province_and_district_offices(self):
+        offices = dict(edufine.registering_offices(self.codes))
+        self.assertEqual(offices.get('충청북도교육청'), 'M100000001')
+        self.assertEqual(offices.get('충청북도진천교육지원청'), 'M100000098')
+        self.assertEqual(len(offices), 11)      # 도교육청 1 + 교육지원청 10
+
+    def test_excludes_departments_and_schools(self):
+        names = [n for n, _ in edufine.registering_offices(self.codes)]
+        self.assertTrue(all(' ' not in n for n in names))
+        self.assertNotIn('충청북도진천교육지원청 학성초등학교', names)
+
+    def test_empty_dictionary_is_safe(self):
+        self.assertEqual(edufine.registering_offices(edufine.empty_codes()), [])

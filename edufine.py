@@ -391,3 +391,18 @@ def apply_codes(rows, codes, index=None):
             row['candidates'] = candidates
             row['raw'] = probe
     return rows
+
+
+def registering_offices(codes: dict) -> list:
+    """수신그룹등록교육청으로 고를 수 있는 곳 — 도교육청과 교육지원청.
+
+    이 값은 사람마다 다르다 (본인이 속한 교육지원청). 코드를 외울 수 없으니
+    목록에서 고르게 한다.
+    """
+    out = []
+    for full, code in sorted((codes or {}).get('기관', {}).items()):
+        if ' ' in full:
+            continue
+        if full.endswith('교육지원청') or full.endswith('교육청'):
+            out.append((full, code))
+    return out

@@ -1,0 +1,94 @@
+name: 릴리즈 빌드
+
+# v 로 시작하는 태그를 밀면 Windows 러너에서 exe 를 만들어 Release 에 붙인다.
+#   git tag v2.0.0 && git push origin v2.0.0
+# 손으로 돌려보고 싶으면 Actions 탭에서 [Run workflow] 로도 된다 (이때는 릴리즈를 만들지 않는다).
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write        # Release 를 만들고 파일을 붙이기 위해 필요
+
+jobs:
+  test:
+    name: 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # GUI 없이 도는 부분만 돈다. tkinter 가 없어도 통과해야 한다.
+      - run: pip install openpyxl
+      - run: python -m unittest discover -s tests -v
+
+  build:
+    name: Windows exe 빌드
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 앱이 뜨는지 확인
+        # 탭 생성·출구 전환·명단 추출까지 실제로 돌려 본다.
+        # 여기서 깨지면 사용자가 exe 를 받고 나서야 알게 된다.
+        timeout-minutes: 3
+        run: python tools/smoke_gui.py
+
+      - name: exe 빌드
+        run: >
+          pyinstaller --onefile --windowed --name sintongpick
+          --add-data "org_db.json;."
+          --add-data "org_codes.json;."
+          --add-data "assets/수신그룹_양식.xlsx;assets"
+          --hidden-import pyperclip
+          --hidden-import openpyxl
+          --hidden-import PIL
+          --hidden-import win32com.client
+          --hidden-import olefile
+          main.py
+
+      - name: 빌드 결과 확인
+        shell: bash
+        run: |
+          ls -la dist/
+          test -f dist/sintongpick.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sintongpick-exe
+          path: dist/sintongpick.exe
+          retention-days: 14
+
+      - name: Release 에 붙이기
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/sintongpick.exe
+          generate_release_notes: true
+          body: |
+            ## 받는 방법
+
+            아래 **sintongpick.exe** 를 내려받아 더블클릭하세요. 설치가 필요 없습니다.
+
+            Windows 가 파란 경고창을 띄우면 `추가 정보` → `실행` 을 누르면 됩니다.
+            서명되지 않은 프로그램이라 처음 한 번은 그렇게 뜹니다.
+
+            ## 쓰는 법
+
+            앱 안의 `📖 사용 방법` 탭에 전부 적혀 있습니다.
+            자세한 설명은 [README](https://github.com/codersongpro/susin#readme) 를 보세요.
