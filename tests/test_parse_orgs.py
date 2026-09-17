@@ -1,0 +1,111 @@
+import unittest
+
+from sotong_parser import (
+    AUTO_GRADES,
+    GRADE_EXACT,
+    GRADE_FUZZY,
+    GRADE_NONE,
+    candidate_orgs,
+    lookup_org_graded,
+    parse_orgs,
+)
+
+
+class LookupGradedTest(unittest.TestCase):
+    def test_exact(self):
+        self.assertEqual(lookup_org_graded('학성초등학교'), ('학성초등학교', GRADE_EXACT))
+
+    def test_registered_alias_is_exact(self):
+        # 약칭이 org_db 에 별칭으로 들어 있으면 추정이 아니라 정확 일치다
+        self.assertEqual(lookup_org_graded('학성초'), ('학성초등학교', GRADE_EXACT))
+
+    def test_sido_prefix_variants_agree(self):
+        self.assertEqual(lookup_org_graded('충북교육청')[0], '충청북도교육청')
+        self.assertEqual(lookup_org_graded('충청북도교육청')[0], '충청북도교육청')
+
+    def test_compound_abbreviation(self):
+        # '충북외고' 가 '충북고등학교' 로 붙으면 공문이 엉뚱한 학교로 간다
+        self.assertEqual(lookup_org_graded('충북외고')[0], '충북외국어고등학교')
+        self.assertEqual(lookup_org_graded('청주여중')[0], '청주여자중학교')
+        self.assertEqual(lookup_org_graded('충북공고')[0], '충북공업고등학교')
+
+    def test_school_level_filter(self):
+        # 초등학교 입력이 병설유치원으로 넘어가면 안 된다
+        self.assertEqual(lookup_org_graded('오송솔미초')[0], '오송솔미초등학교')
+
+    def test_unknown_is_none(self):
+        name, grade = lookup_org_graded('있을리없는이름아무개기관')
+        self.assertIsNone(name)
+        self.assertEqual(grade, GRADE_NONE)
+
+    def test_fuzzy_is_not_auto(self):
+        # 추정 결과는 자동 확정 등급에 들어가면 안 된다
+        _, grade = lookup_org_graded('오송솔미')
+        self.assertEqual(grade, GRADE_FUZZY)
+        self.assertNotIn(grade, AUTO_GRADES)
+
+
+class ParseOrgsTest(unittest.TestCase):
+    def names(self, text):
+        return [r['name'] for r in parse_orgs(text)]
+
+    def test_plain_lines(self):
+        self.assertEqual(
+            self.names('학성초\n한천초'),
+            ['학성초등학교', '한천초등학교'],
+        )
+
+    def test_comma_and_bullets_and_numbering(self):
+        self.assertEqual(
+            self.names('- 학성초, 한천초\n1) 백곡초'),
+            ['학성초등학교', '한천초등학교', '백곡초등학교'],
+        )
+
+    def test_dedupes_preserving_order(self):
+        self.assertEqual(
+            self.names('한천초\n학성초\n한천초등학교'),
+            ['한천초등학교', '학성초등학교'],
+        )
+
+    def test_edufine_hierarchical_name_takes_last_segment(self):
+        # 에듀파인 수신기관명은 '상위조직 하위조직' 순서다
+        self.assertEqual(
+            self.names('충청북도진천교육지원청 학성초등학교'),
+            ['학성초등학교'],
+        )
+
+    def test_person_names_are_skipped(self):
+        self.assertEqual(self.names('홍길동'), [])
+        self.assertEqual(self.names('김철수 이영희'), [])
+
+    def test_person_name_dropped_from_mixed_line(self):
+        self.assertEqual(self.names('충주중학교\t박영수'), ['충주중학교'])
+
+    def test_unresolved_is_reported_not_swallowed(self):
+        rows = parse_orgs('있을리없는이름아무개기관')
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['grade'], GRADE_NONE)
+        self.assertIsNone(rows[0]['name'])
+
+    def test_fuzzy_row_carries_candidates(self):
+        rows = parse_orgs('오송솔미')
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['grade'], GRADE_FUZZY)
+        self.assertIn('오송솔미초등학교', rows[0]['candidates'])
+
+    def test_auto_rows_have_no_candidates(self):
+        for row in parse_orgs('학성초\n한천초'):
+            self.assertIn(row['grade'], AUTO_GRADES)
+            self.assertEqual(row['candidates'], [])
+
+
+class CandidateTest(unittest.TestCase):
+    def test_candidates_respect_school_level(self):
+        # 초등학교로 물으면 유치원이 1순위로 오면 안 된다
+        cands = candidate_orgs('오송솔미초')
+        self.assertTrue(cands)
+        self.assertEqual(cands[0], '오송솔미초등학교')
+
+
+if __name__ == '__main__':
+    unittest.main()

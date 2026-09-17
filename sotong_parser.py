@@ -202,3 +202,157 @@ def parse_input(text: str) -> list:
             for n in names:
                 results.append({'org': pending_org, 'name': n})
     return results
+
+
+# ─────────────────────────────────────────────
+#  기관 전용 경로 (에듀파인 수신자용)
+#
+#  기존 parse_input 은 (소속, 이름) 쌍을 뽑으므로 사람 이름이 없으면 결과를
+#  만들지 않는다. 에듀파인은 기관명만 있는 명단이 정상 입력이라 별도 경로가 필요하다.
+#
+#  그리고 lookup_org 는 difflib 퍼지 결과도 그냥 반환한다. 메신저는 틀려도 화면에서
+#  눈에 띄지만, 에듀파인 엑셀은 그대로 파일로 나가 등록되므로 조용한 오매칭이 위험하다.
+#  그래서 등급을 함께 돌려주는 lookup_org_graded 를 두고, 호출하는 쪽에서 'fuzzy' 는
+#  사용자 확인을 받게 한다. 기존 lookup_org 는 손대지 않는다.
+# ─────────────────────────────────────────────
+
+GRADE_EXACT = 'exact'    # 정식명 또는 등록된 별칭과 정확히 일치
+GRADE_ABBR = 'abbr'      # 약칭 확장 후 일치 (백곡초 → 백곡초등학교)
+GRADE_PREFIX = 'prefix'  # 접두어 + 학교급이 모두 일치
+GRADE_FUZZY = 'fuzzy'    # 편집거리 기반 추정 — 자동 확정 금지
+GRADE_NONE = 'none'      # 후보 없음
+
+AUTO_GRADES = (GRADE_EXACT, GRADE_ABBR, GRADE_PREFIX)
+
+BULLET_RE = re.compile(r'^\s*(?:[-*•·]|\d+\s*[.)])\s*')
+QUOTE_RE = re.compile(r'^["\'“‘]+|["\'”’]+$')
+
+
+def candidate_orgs(s: str, limit: int = 5) -> list:
+    """정식명 후보 목록. 학교급이 뚜렷하면 같은 급 안에서만 찾는다."""
+    s = s.strip()
+    if not s:
+        return []
+    keys = list(_ORG_LOOKUP.keys())
+    _, suffix = _split_school_suffix(s)
+    if suffix:
+        keys = [k for k in keys if _split_school_suffix(k)[1] == suffix] or keys
+    names, seen = [], set()
+    for key in difflib.get_close_matches(s, keys, n=limit * 3, cutoff=0.5):
+        name = _ORG_LOOKUP[key]
+        if name not in seen:
+            seen.add(name)
+            names.append(name)
+        if len(names) >= limit:
+            break
+    return names
+
+
+def lookup_org_graded(s: str):
+    """소속명 → (정식명 또는 None, 등급).
+
+    lookup_org 와 같은 순서로 찾되 어느 단계에서 맞았는지 함께 알려준다.
+    """
+    s = s.strip()
+    if not s:
+        return None, GRADE_NONE
+    if s in _ORG_LOOKUP:
+        return _ORG_LOOKUP[s], GRADE_EXACT
+
+    abbr = abbreviate_school(s)
+    if abbr in _ORG_LOOKUP:
+        return _ORG_LOOKUP[abbr], GRADE_ABBR
+
+    prefix, suffix = _split_school_suffix(s)
+    if suffix:
+        for k, v in _ORG_LOOKUP.items():
+            kpre, ksuf = _split_school_suffix(k)
+            if kpre == prefix and ksuf == suffix:
+                return v, GRADE_PREFIX
+
+    resolved = lookup_org(s)
+    if resolved:
+        return resolved, GRADE_FUZZY
+    return None, GRADE_NONE
+
+
+def _clean_line(line: str) -> str:
+    line = TIMESTAMP_RE.sub('', line.strip())
+    line = BULLET_RE.sub('', line)
+    return QUOTE_RE.sub('', line).strip()
+
+
+def _org_from_line(line: str):
+    """한 줄 → (원문, 정식명|None, 등급) 또는 None(건너뜀).
+
+    줄 전체가 바로 해석되면 그것을 쓰고, 아니면 토큰으로 나눠 기관으로 해석되는
+    토큰 중 **마지막** 것을 고른다. 에듀파인 수신기관명이 '충청북도진천교육지원청
+    학성초등학교' 처럼 상위조직 + 조직명 순서라서 뒤쪽이 실제 대상이다.
+
+    사람 이름은 is_person_name 으로 미리 걸러내지 않는다. '오송솔미', '청주중앙'
+    처럼 학교명 접두어도 2~4자 한글이라 사람 이름과 형태가 같기 때문이다.
+    대신 '기관으로 해석되는가'를 필터로 쓰고, 끝까지 해석 안 된 토큰만
+    사람 이름 여부를 따진다.
+    """
+    if not line:
+        return None
+
+    name, grade = lookup_org_graded(line)
+    if grade in AUTO_GRADES:
+        return line, name, grade
+
+    tokens = [t for t in _tokenize(line) if t]
+    if not tokens:
+        return None
+
+    best = None
+    for tok in tokens:
+        tok_name, tok_grade = lookup_org_graded(tok)
+        if tok_grade in AUTO_GRADES:
+            best = (tok, tok_name, tok_grade)
+    if best:
+        return best
+
+    # 아무것도 확정되지 않았다. 사람 이름처럼 보이는 토큰을 빼고 남는 것을 본다.
+    rest = [t for t in tokens if not is_person_name(t)]
+    target = (rest or tokens)[-1]
+
+    name, grade = lookup_org_graded(target)
+    if grade == GRADE_NONE and is_person_name(target):
+        # 해석도 안 되고 후보도 없으면 사람 이름으로 보고 건너뛴다.
+        # 후보가 있으면 사용자가 판단하도록 남긴다 ('오송솔미' 같은 경우).
+        if not candidate_orgs(target, limit=1):
+            return None
+    return target, name, grade
+
+
+def parse_orgs(text: str) -> list:
+    """명단 텍스트 → 기관 목록.
+
+    반환: [{'raw', 'name', 'grade', 'candidates'}, ...]
+    입력 순서를 유지하고 중복은 제거한다. 사람 이름만 있는 줄은 건너뛴다.
+    해석에 실패한 줄도 grade='none' 으로 남긴다 — 조용히 삼키지 않는다.
+    """
+    results, seen = [], set()
+    for raw_line in (text or '').splitlines():
+        line = _clean_line(raw_line)
+        if not line:
+            continue
+        # 쉼표·세미콜론으로 여러 기관을 한 줄에 쓴 경우를 먼저 나눈다
+        chunks = [c.strip() for c in re.split(r'[,;]', line) if c.strip()] or [line]
+        for chunk in chunks:
+            found = _org_from_line(chunk)
+            if not found:
+                continue
+            raw, name, grade = found
+            key = name or f'?{raw}'
+            if key in seen:
+                continue
+            seen.add(key)
+            results.append({
+                'raw': raw,
+                'name': name,
+                'grade': grade,
+                'candidates': [] if grade in AUTO_GRADES else candidate_orgs(raw),
+            })
+    return results
