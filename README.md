@@ -12,6 +12,40 @@
 
 Windows 전용 · 무설치 · [소통픽](https://github.com/codersongpro/sotong)의 후속.
 
+## 받기
+
+[Releases](https://github.com/codersongpro/susin/releases/latest) 에서 둘 중 하나를 받는다.
+
+| 파일 | 설명 |
+|---|---|
+| `sintongpick-windows.zip` | **권장.** 압축을 풀고 안의 exe 실행. 백신 오탐이 훨씬 적다 |
+| `sintongpick.exe` | 파일 하나로 간편하지만 백신이 막을 수 있다 |
+
+### 백신이 막는다면
+
+이 프로그램은 **마우스와 키보드를 자동으로 움직인다.** 그게 하는 일이다. 그런데 그 동작은
+키로거·원격제어 악성코드의 행위 특징과 구분되지 않는다. 여기에 코드 서명이 없고 파일이
+새것이라 평판도 없으니, 백신이 자주 오탐한다. 특히 `--onefile` exe 는 실행할 때 자기 안의
+압축을 임시 폴더에 풀어 실행하는데, 그 구조가 드로퍼 악성코드와 같다.
+
+그래서 `.zip`(onedir) 을 함께 배포한다. 자기압축 해제 단계가 없어 대부분 통과한다.
+
+막혔을 때 순서:
+
+1. `.zip` 쪽을 먼저 써 본다
+2. `Windows 보안 → 보호 기록` 에서 탐지 이름을 확인한다.
+   `Wacatac`, `Bearfoos` 같은 generic 이름이면 전형적인 휴리스틱 오탐이다
+3. [VirusTotal](https://www.virustotal.com) 에 올려 몇 개 엔진이 무엇으로 잡는지 본다
+4. [Microsoft 오탐 신고](https://www.microsoft.com/en-us/wdsi/filesubmission) 에 제출한다.
+   무료이고 보통 1~3일 안에 풀린다
+
+**업무망 PC 에서는 임의로 백신 예외를 등록하지 말고 정보보안 담당자와 상의한다.**
+
+근본 해결은 코드 서명 인증서다 (연 20~40만 원). 아직 없다.
+
+파이썬이 있거나 설치해도 되는 환경이면 `시작.bat` 으로 소스에서 바로 실행할 수 있다.
+exe 가 아니라서 이 문제 자체가 없다.
+
 ---
 
 ## 에듀파인 수신그룹이 왜 필요한가
@@ -147,11 +181,13 @@ python3 tools/merge_edufine_orgs.py --apply   # 수확한 기관명을 org_db �
 
 ```bash
 pip install -r requirements.txt
-python3 -m unittest discover -s tests    # 63개
+python3 -m unittest discover -s tests    # 80개
 python main.py
 ```
 
 빌드는 `build.bat` (PyInstaller, 산출물 `dist/sintongpick.exe`).
+CI 는 onefile exe 와 onedir zip 을 모두 만들고, `tools/make_version_file.py` 로
+제품명·회사명·버전을 exe 에 박는다 (비어 있으면 백신 의심 점수가 올라간다).
 
 ### 릴리즈
 

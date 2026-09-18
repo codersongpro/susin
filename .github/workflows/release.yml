@@ -63,9 +63,15 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: python tools/smoke_gui.py
 
-      - name: exe 빌드
+      - name: 버전 정보 리소스 만들기
+        # exe 에 제품명·회사명·설명이 비어 있으면 백신이 의심 점수를 더 준다
+        run: python tools/make_version_file.py version_info.txt
+
+      - name: exe 빌드 (onefile)
         run: >
           pyinstaller --onefile --windowed --name sintongpick
+          --version-file version_info.txt
+          --distpath dist-onefile --workpath build-onefile
           --add-data "org_db.json;."
           --add-data "org_codes.json;."
           --add-data "assets/수신그룹_양식.xlsx;assets"
@@ -76,16 +82,46 @@ jobs:
           --hidden-import olefile
           main.py
 
+      - name: 폴더형 빌드 (onedir)
+        # onefile 은 실행할 때 자기 안의 압축을 임시 폴더에 풀고 실행한다.
+        # 그 동작이 드로퍼 악성코드와 구조가 같아 백신 휴리스틱에 자주 걸린다.
+        # onedir 는 그 단계가 없어 오탐이 훨씬 적다. 두 가지를 모두 배포한다.
+        run: >
+          pyinstaller --onedir --windowed --name sintongpick
+          --version-file version_info.txt
+          --distpath dist-onedir --workpath build-onedir
+          --add-data "org_db.json;."
+          --add-data "org_codes.json;."
+          --add-data "assets/수신그룹_양식.xlsx;assets"
+          --hidden-import pyperclip
+          --hidden-import openpyxl
+          --hidden-import PIL
+          --hidden-import win32com.client
+          --hidden-import olefile
+          main.py
+
+      - name: 폴더형을 zip 으로 묶기
+        shell: pwsh
+        run: |
+          Copy-Item README.md dist-onedir/sintongpick/ -ErrorAction SilentlyContinue
+          Compress-Archive -Path dist-onedir/sintongpick/* -DestinationPath sintongpick-windows.zip -Force
+
       - name: 빌드 결과 확인
         shell: bash
         run: |
-          ls -la dist/
-          test -f dist/sintongpick.exe
+          ls -la dist-onefile/ dist-onedir/sintongpick/ | head -30
+          test -f dist-onefile/sintongpick.exe
+          test -f dist-onedir/sintongpick/sintongpick.exe
+          test -f sintongpick-windows.zip
+          echo "--- SHA256"
+          sha256sum dist-onefile/sintongpick.exe sintongpick-windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sintongpick-exe
-          path: dist/sintongpick.exe
+          name: sintongpick-windows
+          path: |
+            dist-onefile/sintongpick.exe
+            sintongpick-windows.zip
           retention-days: 14
 
       - name: Release 에 붙이기
@@ -96,15 +132,36 @@ jobs:
           # 손으로 돌린 경우 여기 적힌 이름으로 태그를 새로 만든다
           tag_name: ${{ inputs.version || github.ref_name }}
           name: ${{ inputs.version || github.ref_name }}
-          files: dist/sintongpick.exe
+          files: |
+            dist-onefile/sintongpick.exe
+            sintongpick-windows.zip
           generate_release_notes: true
           body: |
-            ## 받는 방법
+            ## 받는 방법 — 두 가지 중 하나
 
-            아래 **sintongpick.exe** 를 내려받아 더블클릭하세요. 설치가 필요 없습니다.
+            **① `sintongpick-windows.zip` (권장)**
+            압축을 풀고 안의 `sintongpick.exe` 를 실행하세요.
+            백신 오탐이 훨씬 적습니다.
 
-            Windows 가 파란 경고창을 띄우면 `추가 정보` → `실행` 을 누르면 됩니다.
-            서명되지 않은 프로그램이라 처음 한 번은 그렇게 뜹니다.
+            **② `sintongpick.exe`**
+            파일 하나로 끝나서 간편하지만, 백신이 막을 수 있습니다 (아래 참고).
+
+            설치는 어느 쪽도 필요 없습니다.
+
+            ## 백신이 막는다면
+
+            이 프로그램은 **마우스와 키보드를 자동으로 움직입니다.** 그게 하는 일이니까요.
+            그런데 그 동작은 키로거·원격제어 악성코드의 특징과 구분되지 않습니다.
+            여기에 코드 서명이 없고 파일이 새것이라 평판도 없어서, 백신이 자주 오탐합니다.
+
+            - `.zip` 쪽을 먼저 써 보세요. 자기압축 해제 구조가 없어 대부분 통과합니다.
+            - Windows 가 파란 경고창을 띄우면 `추가 정보` → `실행` 입니다.
+            - **업무망 PC 라면 임의로 백신 예외를 등록하지 마시고 정보보안 담당자와 상의하세요.**
+
+            직접 확인하고 싶으시면:
+            소스는 전부 공개돼 있고, 이 파일은 GitHub Actions 가 그 소스에서 빌드했습니다.
+            빌드 로그도 공개입니다. [VirusTotal](https://www.virustotal.com) 에 올려 보시면
+            몇 개 엔진이 generic 이름으로만 잡는 것을 보실 수 있습니다.
 
             ## 쓰는 법
 

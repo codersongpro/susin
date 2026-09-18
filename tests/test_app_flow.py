@@ -244,3 +244,36 @@ class SmokeScriptTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('한글 출력 확인', result.stdout)
+
+
+class VersionFileTest(unittest.TestCase):
+    """exe 버전 정보 리소스 — 비어 있으면 백신 오탐이 늘어난다."""
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        sys.path.insert(0, os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
+        import make_version_file
+        cls.mod = make_version_file
+
+    def test_version_follows_the_app(self):
+        # main 은 tkinter 를 쓰므로 스텁을 끼워 읽는다
+        saved = install_tk_stubs()
+        try:
+            import main as app_module
+            self.assertEqual(self.mod.read_app_version(), app_module.APP_VERSION)
+        finally:
+            restore(saved)
+
+    def test_tuple_padding(self):
+        self.assertEqual(self.mod.version_tuple('2.0.1'), (2, 0, 1, 0))
+        self.assertEqual(self.mod.version_tuple('2.1'), (2, 1, 0, 0))
+
+    def test_rendered_file_is_valid_python_and_filled_in(self):
+        text = self.mod.render('2.0.1')
+        compile(text, 'version_info.txt', 'eval')      # PyInstaller 가 eval 한다
+        for needed in ('ProductName', '신통픽', 'CompanyName', 'FileDescription',
+                       "StringStruct('FileVersion', '2.0.1')"):
+            self.assertIn(needed, text, needed)
+        self.assertIn('(2, 0, 1, 0)', text)
