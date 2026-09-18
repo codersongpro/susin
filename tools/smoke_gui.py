@@ -78,6 +78,20 @@ def main():
     assert picker_row < tabs_row, ('선택 카드가 탭보다 아래에 있습니다', picker_row, tabs_row)
     print(f'도구 선택 위치 ok — 선택 {picker_row}행, 탭 {tabs_row}행')
 
+    # 탭 내용이 스크롤 틀 안에 있어야 한다. 안내 그림이 들어가면서 [설정 저장]
+    # 버튼이 창 밖으로 밀려난 적이 있다.
+    inner = app.calib_msg.nametowidget(app.calib_msg.winfo_parent())
+    holder = inner.nametowidget(inner.winfo_parent())
+    assert holder.winfo_class() == 'Canvas', (
+        '위치 설정 탭이 스크롤 틀 안에 있지 않습니다', holder.winfo_class())
+    print(f'스크롤 틀 ok — 위치 설정 탭이 {holder.winfo_class()} 안에 있습니다')
+
+    # 안내 그림이 실제로 읽히는지. 이름이 어긋나면 조용히 글만 나온다.
+    for step in app_module.GUIDE_IMAGES:
+        assert app_module.guide_image(step) is not None, (
+            f'{step}번 안내 그림을 읽지 못했습니다')
+    print(f'안내 그림 ok — {len(app_module.GUIDE_IMAGES)}장')
+
     root.destroy()
     print('스모크 테스트 통과')
     return 0

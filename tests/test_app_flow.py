@@ -128,6 +128,15 @@ class _WidgetBase:
     def winfo_exists(self):
         return True
 
+    def winfo_reqwidth(self):
+        return 420
+
+    def winfo_reqheight(self):
+        return 300
+
+    def winfo_ismapped(self):
+        return True
+
 
 class _Notebook(_WidgetBase):
     """ttk.Notebook 스텁 — add/hide/insert 를 진짜처럼 흉내 낸다.
@@ -195,6 +204,9 @@ def install_tk_stubs():
     for attr in ('Tk', 'Toplevel', 'Frame', 'Label', 'Button', 'Entry', 'Menu',
                  'Radiobutton', 'Checkbutton', 'Canvas', 'PhotoImage'):
         setattr(tk, attr, _Widget)
+    # 진짜 tkinter 처럼 예외 클래스여야 한다. MagicMock 이면 except 절에서
+    # TypeError 가 난다. 실제로 그렇게 걸린 적이 있다.
+    tk.TclError = type('TclError', (Exception,), {})
     tk.StringVar = tk.DoubleVar = tk.BooleanVar = tk.IntVar = _Var
     tk.Text = _Text
     tk.Listbox = _Listbox

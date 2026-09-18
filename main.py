@@ -170,6 +170,66 @@ def guide_image(step: str):
     return image
 
 
+def make_scrollable(parent):
+    """세로로 길어지는 탭을 스크롤할 수 있게 감싼다.
+
+    안내 그림이 들어가면서 [설정 저장] 버튼이 창 밖으로 밀려났다. 창을 키우지
+    않아도 아래까지 닿아야 한다. 위젯은 돌려주는 안쪽 틀에 붙인다.
+    """
+    canvas = tk.Canvas(parent, highlightthickness=0)
+    bar = ttk.Scrollbar(parent, orient='vertical', command=canvas.yview)
+    inner = tk.Frame(canvas)
+    window = canvas.create_window((0, 0), window=inner, anchor='nw')
+    canvas.configure(yscrollcommand=bar.set)
+    canvas.pack(side='left', fill='both', expand=True)
+
+    def overflows() -> bool:
+        return inner.winfo_reqheight() > canvas.winfo_height()
+
+    def show_bar():
+        """넘칠 때만 스크롤바를 내놓는다. 평소에는 자리를 차지하지 않는다."""
+        try:
+            if overflows():
+                if not bar.winfo_ismapped():
+                    bar.pack(side='right', fill='y')
+            elif bar.winfo_ismapped():
+                bar.pack_forget()
+        except tk.TclError as exc:
+            logging.debug('스크롤바 표시 갱신 실패: %s', exc)
+
+    def fit_scrollregion(_event=None):
+        try:
+            canvas.configure(scrollregion=canvas.bbox('all'))
+        except tk.TclError as exc:
+            logging.debug('스크롤 범위 갱신 실패: %s', exc)
+        show_bar()
+
+    def fit_size(event):
+        try:
+            canvas.itemconfigure(window, width=event.width)
+            # 내용이 짧으면 캔버스 높이에 맞춰 늘린다. 그래야 명단과 로그가
+            # 예전처럼 창 끝까지 찬다. 넘칠 때만 제 높이로 두고 스크롤한다.
+            short = inner.winfo_reqheight() < event.height
+            canvas.itemconfigure(window, height=event.height if short else 0)
+        except tk.TclError as exc:
+            logging.debug('스크롤 크기 갱신 실패: %s', exc)
+        show_bar()
+
+    def on_wheel(event):
+        try:
+            if overflows():
+                canvas.yview_scroll(int(-event.delta / 120), 'units')
+        except tk.TclError as exc:
+            logging.debug('휠 스크롤 실패: %s', exc)
+
+    inner.bind('<Configure>', fit_scrollregion)
+    canvas.bind('<Configure>', fit_size)
+    # 휠은 마우스가 이 탭 위에 있을 때만 받는다. 다른 목록의 휠을 뺏지 않는다.
+    canvas.bind('<Enter>', lambda _e: canvas.bind_all('<MouseWheel>', on_wheel))
+    canvas.bind('<Leave>', lambda _e: canvas.unbind_all('<MouseWheel>'))
+    return inner
+
+
 class CaptureDialog(tk.Toplevel):
     def __init__(self, parent, on_captured, label='위치', hint='', step=''):
         super().__init__(parent)
@@ -178,8 +238,9 @@ class CaptureDialog(tk.Toplevel):
         self._enter_released = False
         self._click_released = False
         self.title('위치 캡처')
-        self.geometry('440x320')
-        self.resizable(False, False)
+        # 크기를 못 박지 않는다. 그림이 붙으면 내용이 길어져 버튼이 창 밖으로
+        # 밀려났다. 내용에 맞춰 잡고, 사용자가 늘릴 수도 있게 둔다.
+        self.resizable(True, True)
 
         tk.Label(
             self, text=f'📍  캡처 대상: {label}',
@@ -188,7 +249,7 @@ class CaptureDialog(tk.Toplevel):
 
         if hint:
             tk.Label(
-                self, text=f'여기를 클릭하세요\n{hint}',
+                self, text=f'소통메신저에서 이 부분을 클릭하세요.\n{hint}',
                 bg='#E3F2FD', fg='#0D47A1', font=('맑은 고딕', 11, 'bold'),
                 justify='center', pady=10
             ).pack(fill='x')
@@ -201,20 +262,19 @@ class CaptureDialog(tk.Toplevel):
 
         tk.Label(
             self,
-            text='소통메신저에서 [쪽지작성] 과 [받는사람 추가] 를 눌러\n'
-                 '[사용자 선택] 창을 먼저 열어 두세요.\n'
-                 '[캡처 시작] 을 누른 뒤 위에 적힌 자리를 클릭하면 그 자리가 저장됩니다.\n'
+            text='[캡처 시작] 을 누른 뒤 위에 적힌 자리를 클릭하면 저장됩니다.\n'
                  '마우스를 옮긴 뒤 Enter 로 확정해도 되고, Esc 로 취소합니다.',
-            font=('맑은 고딕', 10), justify='center', pady=10
+            font=('맑은 고딕', 10), justify='center', pady=8
         ).pack()
 
-        tk.Label(
-            self,
-            text='클릭은 소통메신저에도 그대로 전달됩니다.\n'
-                 '[사용자 선택] 버튼 자리를 잡을 때는 그 사람이 실제로 추가되니,\n'
-                 '캡처를 마친 뒤 받는 사람 목록을 확인하세요.',
-            font=('맑은 고딕', 9), justify='center', fg='#B71C1C'
-        ).pack()
+        if step == '5':
+            # 이 클릭은 소통메신저에서 실제로 사람을 담는다. 그때만 알린다.
+            tk.Label(
+                self,
+                text='이 버튼을 누르면 그 사람이 실제로 추가됩니다.\n'
+                     '캡처를 마친 뒤 받는 사람 목록을 확인하세요.',
+                font=('맑은 고딕', 9), justify='center', fg='#B71C1C'
+            ).pack()
 
         self.status = tk.Label(
             self, text='아래 버튼을 클릭하여 캡처를 시작하세요.',
@@ -235,6 +295,13 @@ class CaptureDialog(tk.Toplevel):
             bg='#9E9E9E', fg='white', font=('맑은 고딕', 10),
             relief='flat', padx=12, pady=6
         ).pack(side='left', padx=6)
+
+        # 내용을 다 붙인 뒤 그 크기에 맞춘다. 버튼이 잘리지 않아야 한다.
+        try:
+            self.update_idletasks()
+            self.minsize(max(440, self.winfo_reqwidth()), self.winfo_reqheight())
+        except tk.TclError as exc:
+            logging.debug('캡처 창 크기 조정 실패: %s', exc)
 
     def _begin(self):
         self.start_btn.config(state='disabled')
@@ -1197,10 +1264,12 @@ class App:
 
         # 탭 등록은 _apply_target 이 한다. 고른 도구에 따라 매번 다시 구성한다.
 
-        self._tab_input(f1)
-        self._tab_calib(f2)
-        self._tab_auto(f3)
-        self._tab_edufine(f4)
+        # 화면을 넘치면 스크롤이 생기도록 감싼다. 사용법 탭은 글 상자가
+        # 스스로 스크롤하므로 그대로 둔다.
+        self._tab_input(make_scrollable(f1))
+        self._tab_calib(make_scrollable(f2))
+        self._tab_auto(make_scrollable(f3))
+        self._tab_edufine(make_scrollable(f4))
         self._tab_help(f5, TARGET_MESSENGER)
         self._tab_help(f6, TARGET_EDUFINE)
         self._apply_target()
