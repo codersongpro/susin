@@ -545,8 +545,8 @@
         <div class="section-label">충청북도교육청</div>
         <h1 class="display-hero">신통픽</h1>
         <p class="hero-sub">
-          공문 수신처가 30곳이면 조직도에서 검색하고 체크하기를 30번 반복합니다.<br>
-          그 명단을 붙여넣기만 하면 나머지는 신통픽이 합니다.
+          <strong>소통픽</strong>은 소통메신저 수신자를, <strong>수신픽</strong>은 에듀파인 공문 수신그룹을 맡습니다.<br>
+          둘을 합친 것이 신통픽입니다. 명단만 붙여넣으면 나머지는 알아서 합니다.
         </p>
         <div class="hero-ctas">
           <a class="btn-download"
@@ -559,7 +559,7 @@
 
       <div class="app-preview" aria-label="신통픽 앱 작업 흐름 미리보기">
         <div class="preview-titlebar">
-          <span>신통픽 v2.0.2</span>
+          <span>신통픽 v2.1.0</span>
           <span>준비</span>
         </div>
         <div class="preview-tabs">
@@ -613,13 +613,13 @@
       </div>
       <div class="feature-card">
         <span class="f-icon">🏛️</span>
-        <div class="f-name">에듀파인 수신그룹</div>
+        <div class="f-name">수신픽 — 에듀파인</div>
         <div class="f-desc">기관 명단으로 개인수신그룹 일괄등록 엑셀을 만듭니다.
           한 번 등록해 두면 다음부터는 그룹만 고르면 끝납니다.</div>
       </div>
       <div class="feature-card">
         <span class="f-icon">🔢</span>
-        <div class="f-name">기관코드 자동 연결</div>
+        <div class="f-name">기관코드 770곳</div>
         <div class="f-desc">충북 교육기관 770곳의 코드가 들어 있습니다.
           애매한 곳은 넘겨짚지 않고 어디인지 물어봅니다.</div>
       </div>
@@ -637,13 +637,12 @@
 <section id="howto">
   <div class="container">
     <div class="section-label">사용 방법</div>
-    <div class="display-lg">쓰는 곳에 따라 두 갈래</div>
+    <div class="display-lg">소통픽과 수신픽</div>
     <p style="color:var(--body);">
-      명단을 넣는 방법은 양쪽이 같고, 그 다음부터 달라집니다.
-      <strong>소통메신저</strong>는 수신자를 대신 골라 담고,
-      <strong>에듀파인</strong>은 수신그룹 엑셀을 만듭니다.<br>
-      앱을 켜면 맨 위에 어느 쪽을 쓸지 고르는 버튼 두 개가 있습니다.
-      고른 쪽에 필요한 탭만 남습니다.
+      명단을 넣는 방법은 양쪽이 같고, 그 다음부터 달라집니다.<br>
+      <strong>소통픽</strong> 은 소통메신저 [사용자 선택] 창에서 수신자를 대신 골라 담습니다.<br>
+      <strong>수신픽</strong> 은 에듀파인 개인수신그룹 일괄등록 엑셀을 만들어 줍니다.<br>
+      앱을 켜면 맨 위에서 어느 쪽을 쓸지 고릅니다. 고른 쪽에 필요한 탭만 남습니다.
     </p>
     <a href="https://youtu.be/shZnB5NRN5g" target="_blank" rel="noopener"
        style="display:inline-flex;align-items:center;gap:8px;margin:16px 0 24px;
@@ -654,10 +653,10 @@
 
     <div class="how-shell">
       <div class="how-tabs" role="tablist" aria-label="사용 방법 단계">
-        <button class="how-tab active" role="tab" aria-selected="true" aria-controls="tab1" id="tab-btn-1" onclick="switchTab(this,'tab1')">① 명단 넣기</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab2" id="tab-btn-2" onclick="switchTab(this,'tab2')">② 소통메신저 · 위치 설정</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab3" id="tab-btn-3" onclick="switchTab(this,'tab3')">③ 소통메신저 · 자동 선택</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab4" id="tab-btn-4" onclick="switchTab(this,'tab4')">④ 에듀파인 · 수신그룹 엑셀</button>
+        <button class="how-tab active" role="tab" aria-selected="true" aria-controls="tab1" id="tab-btn-1" onclick="switchTab(this,'tab1')">① 공통 · 명단 넣기</button>
+        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab2" id="tab-btn-2" onclick="switchTab(this,'tab2')">② 소통픽 · 위치 설정</button>
+        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab3" id="tab-btn-3" onclick="switchTab(this,'tab3')">③ 소통픽 · 자동 선택</button>
+        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab4" id="tab-btn-4" onclick="switchTab(this,'tab4')">④ 수신픽 · 수신그룹 엑셀</button>
       </div>
 
       <!-- 탭 1 -->
@@ -920,11 +919,11 @@
         </div>
       </details>
       <details>
-        <summary>쓰던 소통픽 설정이 사라지나요?</summary>
+        <summary>예전에 쓰던 소통픽 설정이 사라지나요?</summary>
         <div class="faq-body">
-          그대로 남습니다. 잡아 두신 클릭 위치와 대기 시간을 신통픽이 그대로 이어받으니
-          다시 설정하실 필요 없습니다.<br><br>
-          참고로 에듀파인 쪽에는 위치 설정이 아예 없습니다. 엑셀을 만들어 올리는 방식이라
+          그대로 남습니다. 잡아 두신 클릭 위치와 대기 시간을 신통픽이 이어받으니
+          다시 설정하실 필요 없습니다. 신통픽 안의 소통픽이 예전 그 소통픽입니다.<br><br>
+          수신픽에는 위치 설정이 아예 없습니다. 엑셀을 만들어 올리는 방식이라
           마우스 좌표를 잡을 일이 없습니다.
         </div>
       </details>
@@ -953,7 +952,7 @@
           고쳤으면 하는 점이나 안 되는 게 있으면
           <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a> 으로 알려주세요.
         </div>
-        <div class="version-pill">v2.0.2</div>
+        <div class="version-pill">v2.1.0</div>
       </div>
     </div>
   </div>
@@ -969,6 +968,7 @@
        target="_blank" rel="noopener">⬇&nbsp; 내려받기</a>
     <p class="sub" style="margin-top:14px;font-size:14px;">
       <strong>sintongpick-windows.zip</strong> 을 받으시면 백신에 걸릴 일이 적습니다.
+      소통픽과 수신픽이 한 프로그램에 들어 있습니다.
     </p>
   </div>
 </div>

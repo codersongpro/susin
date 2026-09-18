@@ -1,7 +1,7 @@
 """Persistent application configuration.
 
-좌표는 소통메신저에서만 쓴다. 에듀파인 쪽은 엑셀을 만들어 업로드하는 방식이라
-마우스 위치를 잡을 일이 없다.
+좌표는 소통픽(소통메신저)에서만 쓴다. 수신픽(에듀파인)은 엑셀을 만들어 올리는
+방식이라 마우스 위치를 잡을 일이 없다.
 
 data 는 예전처럼 좌표를 담은 평평한 딕셔너리라, 기존 호출부가 그대로 동작한다.
 """
@@ -17,14 +17,20 @@ TARGET_MESSENGER = 'messenger'
 TARGET_EDUFINE = 'edufine'
 TARGETS = (TARGET_MESSENGER, TARGET_EDUFINE)
 
+# 신통픽은 두 도구를 합친 것이다. 화면에서는 각각의 이름으로 부른다.
 TARGET_LABELS = {
+    TARGET_MESSENGER: '소통픽',
+    TARGET_EDUFINE: '수신픽',
+}
+
+TARGET_SYSTEMS = {
     TARGET_MESSENGER: '소통메신저',
     TARGET_EDUFINE: '에듀파인',
 }
 
 TARGET_SUMMARIES = {
-    TARGET_MESSENGER: '쪽지·대화 상대를 자동으로 골라 담습니다',
-    TARGET_EDUFINE: '공문 수신그룹 엑셀을 만들어 에듀파인에 올립니다',
+    TARGET_MESSENGER: '소통메신저에서 쪽지·대화 상대를 자동으로 골라 담습니다',
+    TARGET_EDUFINE: '에듀파인 공문 수신그룹 엑셀을 만들어 올립니다',
 }
 
 COORD_DEFAULTS = {
@@ -61,7 +67,7 @@ class Config:
 
     def use_target(self, target: str):
         if target not in TARGETS:
-            raise ValueError(f'알 수 없는 출구: {target}')
+            raise ValueError(f'알 수 없는 도구: {target}')
         self.target = target
 
     # ── 저장/불러오기 ────────────────────────
@@ -75,8 +81,8 @@ class Config:
             logging.warning("설정 파일을 읽지 못했습니다: %s", exc)
             return
 
-        # 2.0.x 는 좌표를 출구별 프로필로 나눠 뒀다. 에듀파인 쪽 좌표는 이제 쓰지
-        # 않으므로 메신저 것만 가져온다. 그 이전 판은 최상위에 평평하게 있었다.
+        # 2.0.x 는 좌표를 도구별 프로필로 나눠 뒀다. 수신픽 좌표는 이제 쓰지 않으므로
+        # 소통픽 것만 가져온다. 그 이전 판은 최상위에 평평하게 있었다.
         source = (raw.get('profiles') or {}).get(TARGET_MESSENGER)
         if not isinstance(source, dict):
             source = raw

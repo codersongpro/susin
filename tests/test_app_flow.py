@@ -258,6 +258,57 @@ class AppFlowTest(unittest.TestCase):
             self.assertGreaterEqual(len(self.app.nb.tabs()), 3,
                                     f'{target} 에서 탭이 사라졌습니다')
 
+    def test_edufine_buttons_are_shown_and_hidden(self):
+        """pack 을 빠뜨려 버튼이 아예 안 보이던 적이 있다."""
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+
+        self.app._choose_target(TARGET_EDUFINE)
+        for name in ('browse_btn', 'make_excel_btn'):
+            btn = getattr(self.app, name)
+            self.assertTrue(btn.pack.called, f'{name} 이 화면에 붙지 않았습니다')
+            btn.pack.reset_mock()
+            btn.pack_forget.reset_mock()
+
+        self.app._choose_target(TARGET_MESSENGER)
+        for name in ('browse_btn', 'make_excel_btn'):
+            btn = getattr(self.app, name)
+            self.assertTrue(btn.pack_forget.called, f'{name} 이 감춰지지 않았습니다')
+
+    def test_edited_list_is_what_reaches_the_excel(self):
+        """목록에서 지우고 고친 결과가 그대로 엑셀로 가야 한다."""
+        self.parse('학성초\n한천초\n백곡초')
+        self.assertEqual(len(self.app.names_list), 3)
+
+        # 가운데 항목을 지운다
+        self.app.parsed_list.curselection = lambda: (1,)
+        self.app._delete_selected()
+        self.assertEqual([i['org'] for i in self.app.names_list],
+                         ['충청북도진천교육지원청 학성초등학교',
+                          '충청북도진천교육지원청 백곡초등학교'])
+
+        # 지운 항목은 엑셀로 넘어가는 목록에도 없어야 한다
+        ready, missing = self.app._split_confirmed()
+        self.assertEqual([r['name'] for r in ready],
+                         ['충청북도진천교육지원청 학성초등학교',
+                          '충청북도진천교육지원청 백곡초등학교'])
+        self.assertEqual(missing, [])
+        self.assertTrue(all('한천초' not in r['name'] for r in ready))
+
+    def test_confirming_an_ambiguous_row_feeds_the_excel(self):
+        self.parse('행정과')
+        row = self.app.names_list[0]
+        self.assertEqual(row['grade'], 'ambiguous')
+        self.assertEqual(self.app._split_confirmed()[0], [])
+
+        # 사용자가 후보 하나를 고른 것과 같은 상태로 만든다
+        row.update({'org': '충청북도청주교육지원청 행정과', 'grade': 'exact',
+                    'search': '충청북도청주교육지원청 행정과', 'candidates': []})
+        self.app._after_list_edit()
+
+        ready, _ = self.app._split_confirmed()
+        self.assertEqual([r['name'] for r in ready],
+                         ['충청북도청주교육지원청 행정과'])
+
     def test_blank_template_exists_to_be_saved(self):
         import os
         self.assertTrue(os.path.exists(edufine_module().TEMPLATE_FILE),

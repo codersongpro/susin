@@ -1,14 +1,14 @@
 """신통픽 — 소통메신저·에듀파인 수신자 한 번에
 
 수신 + 소통. 명단을 읽어 충북 기관명으로 정리하는 파이프라인은 하나이고,
-그 결과를 내보내는 출구가 둘이다.
+두 도구를 합친 것이다.
 
-  소통메신저 — [사용자 선택] 창에서 좌표 자동 선택
-  에듀파인   — [수신자 지정] 팝업 자동 선택, 또는 개인수신그룹 일괄등록 엑셀
+  소통픽 — 소통메신저 [사용자 선택] 창에서 수신자를 자동으로 골라 담는다
+  수신픽 — 에듀파인 공문 수신그룹 일괄등록 엑셀을 만든다
 """
 
 APP_NAME    = '신통픽'
-APP_VERSION = '2.0.2'
+APP_VERSION = '2.1.0'
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
@@ -27,6 +27,7 @@ from app_config import (
     TARGET_LABELS,
     TARGET_MESSENGER,
     TARGET_SUMMARIES,
+    TARGET_SYSTEMS,
 )
 import edufine
 from automation import (
@@ -152,8 +153,8 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     소통메신저 — [사용자 선택] 창에서 자동으로 골라 담기
     에듀파인   — 개인수신그룹 일괄등록 엑셀 만들기
 
-  출구는 [1. 명단 입력] 탭 맨 위에서 고릅니다.
-  고른 출구에 따라 아래 탭이 바뀝니다.
+  [1. 명단 입력] 탭 맨 위에서 어느 쪽을 쓸지 고릅니다.
+  고른 쪽에 필요한 탭만 남습니다.
 
   ─ 소통메신저를 고르면 ─
   소통메신저에서 아래 3단계를 자동으로 반복합니다.
@@ -317,7 +318,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   ② 기관 명단 넣기
   ──────────────────────────────────────────────────────
-    [1. 명단 입력] 탭에서 출구를 '에듀파인' 으로 두고
+    [1. 명단 입력] 탭에서 '수신픽' 을 고르고
     기관 명단을 붙여넣습니다.
     줄바꿈·쉼표·탭 아무거나 되고, 글머리기호와 번호는 알아서 뗍니다.
 
@@ -583,7 +584,7 @@ class App:
         dev_bar = tk.Label(
             self.root,
             text=f'  {APP_NAME} v{APP_VERSION}  |  Developed by 송동석'
-                 '  |  Teacher · Data Analytics · App Developer'
+                 '  |  초등교사 · 데이터 분석 · 앱 개발'
                  '  |  협업: dungst.me@gmail.com  ',
             bg='#1565C0', fg='white',
             font=('맑은 고딕', 9), anchor='w', pady=5
@@ -601,13 +602,13 @@ class App:
         f4 = ttk.Frame(nb)
         f5 = ttk.Frame(nb)
 
-        # 출구에 따라 넣고 빼므로 순서와 이름을 기억해 둔다
+        # 고른 도구에 따라 넣고 빼므로 순서와 이름을 기억해 둔다
         self.tab_input = f1
         self.tab_help = f5
         self.messenger_tabs = [(f2, '  2. 위치 설정  '), (f3, '  3. 자동 선택  ')]
         self.edufine_tabs = [(f4, '  2. 수신그룹 엑셀  ')]
 
-        # 탭 등록은 _apply_target 이 한다. 고른 출구에 따라 매번 다시 구성한다.
+        # 탭 등록은 _apply_target 이 한다. 고른 도구에 따라 매번 다시 구성한다.
 
         self._tab_input(f1)
         self._tab_calib(f2)
@@ -631,14 +632,14 @@ class App:
         frame.rowconfigure(3, weight=1)
         frame.rowconfigure(6, weight=2)
 
-        # ⓪ 출구 선택 — 이 앱에서 가장 먼저 정해야 하는 것이라 크게 둔다
+        # ⓪ 어느 도구를 쓸지 — 가장 먼저 정해야 하는 것이라 크게 둔다
         picker = tk.Frame(frame, bg='#263238')
         picker.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 0))
         picker.columnconfigure(0, weight=1, uniform='pick')
         picker.columnconfigure(1, weight=1, uniform='pick')
 
         tk.Label(
-            picker, text='STEP 1 — 어디에 수신자를 넣을까요?  아래에서 고르세요',
+            picker, text='먼저 어느 쪽을 쓸지 고르세요',
             bg='#263238', fg='#ECEFF1', font=('맑은 고딕', 10, 'bold'), anchor='w'
         ).grid(row=0, column=0, columnspan=2, sticky='w', padx=14, pady=(10, 6))
 
@@ -650,7 +651,7 @@ class App:
                       padx=(14, 7) if col == 0 else (7, 14), pady=(0, 12))
             card.columnconfigure(0, weight=1)
 
-            title = tk.Label(card, font=('맑은 고딕', 13, 'bold'), anchor='w')
+            title = tk.Label(card, font=('맑은 고딕', 14, 'bold'), anchor='w')
             title.grid(row=0, column=0, sticky='ew', padx=14, pady=(10, 0))
 
             desc = tk.Label(card, text=TARGET_SUMMARIES[target],
@@ -673,21 +674,15 @@ class App:
         guide.grid(row=1, column=0, sticky='ew', padx=10, pady=(6, 4))
         guide.columnconfigure(0, weight=1)
 
-        tk.Label(
-            guide,
-            text='📋  명단을 입력하는 방법 (두 가지 중 하나 선택)',
-            bg='#E3F2FD', fg='#0D47A1', font=('맑은 고딕', 9, 'bold'), anchor='w'
-        ).grid(row=0, column=0, sticky='w', padx=10, pady=(6, 2))
+        self.guide_title = tk.Label(
+            guide, text='', bg='#E3F2FD', fg='#0D47A1',
+            font=('맑은 고딕', 9, 'bold'), anchor='w')
+        self.guide_title.grid(row=0, column=0, sticky='w', padx=10, pady=(6, 2))
 
-        tk.Label(
-            guide,
-            text='방법 ①  복사·붙여넣기 — 엑셀·HWP에서 소속기관·이름 범위를 선택 후 복사(Ctrl+C),\n'
-                 '                              아래 입력창에 붙여넣기(Ctrl+V) → [명단 추출 →] 클릭\n'
-                 '방법 ②  파일 직접 열기  — 아래 [엑셀 파일 열기] 또는 [HWP 파일 열기] 버튼 클릭\n'
-                 '\n'
-                 '형식 예)  충주중학교    홍길동        (소속기관  이름  순서)',
-            bg='#E3F2FD', fg='#333', font=('맑은 고딕', 9), justify='left', anchor='w'
-        ).grid(row=1, column=0, sticky='w', padx=10, pady=(0, 8))
+        self.guide_body = tk.Label(
+            guide, text='', bg='#E3F2FD', fg='#333',
+            font=('맑은 고딕', 9), justify='left', anchor='w')
+        self.guide_body.grid(row=1, column=0, sticky='w', padx=10, pady=(0, 8))
 
         self.ready_status = tk.Label(
             guide, text='', bg='#E3F2FD', fg='#0D47A1',
@@ -729,11 +724,18 @@ class App:
                 relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2'
             ).pack(side='left', padx=3)
 
-        # 부서는 전체경로를 외울 수 없으니 목록에서 고르게 한다 (에듀파인 전용)
+        # 아래 둘은 수신픽에서만 쓴다. _apply_target 이 보이고 감춘다.
+        # 부서는 전체경로를 외울 수 없으니 목록에서 고르게 한다
         self.browse_btn = tk.Button(
             action_frame, text='기관 찾아보기…', command=self._open_org_picker,
             bg='#00695C', fg='white', activebackground='#004D40',
             relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2')
+
+        # 목록을 고친 그대로 엑셀까지 간다. 탭을 옮겨 다닐 필요가 없다.
+        self.make_excel_btn = tk.Button(
+            action_frame, text='수신그룹 엑셀 만들기 →', command=self._build_group_excel,
+            bg='#1565C0', fg='white', activebackground='#0D47A1',
+            relief='flat', font=('맑은 고딕', 9, 'bold'), padx=14, pady=5, cursor='hand2')
 
         # ⑤ 추출 결과 상태 라벨
         self.parse_status = tk.Label(
@@ -1419,15 +1421,22 @@ class App:
         if not label:
             return
         count = len(self.names_list)
-        unit = '곳' if self.is_edufine() else '명'
         where = TARGET_LABELS[self.config.target]
-        positions = '완료' if self.config.is_calibrated() else '미설정'
-        manual = '켜짐' if self.config.data.get('manual_confirm', False) else '꺼짐'
-        delay = self.config.data.get('search_delay', 0.5)
-        label.config(
-            text=f'준비 상태  |  출구 {where}  ·  명단 {count}{unit}  ·  '
-                 f'위치 {positions}  ·  수동 확인 {manual}  ·  대기 {delay}초'
-        )
+        if self.is_edufine():
+            # 좌표·대기시간은 에듀파인과 무관하다. 대신 엑셀에 필요한 것을 보여준다.
+            me = '입력됨' if self.config.edufine_ready() else '필요'
+            codes = len(self.codes.get('기관', {}))
+            label.config(
+                text=f'{where}  |  명단 {count}곳  ·  기관코드 {codes}곳 보유  ·  내 정보 {me}'
+            )
+        else:
+            positions = '완료' if self.config.is_calibrated() else '미설정'
+            manual = '켜짐' if self.config.data.get('manual_confirm', False) else '꺼짐'
+            delay = self.config.data.get('search_delay', 0.5)
+            label.config(
+                text=f'{where}  |  명단 {count}명  ·  위치 {positions}  ·  '
+                     f'수동 확인 {manual}  ·  대기 {delay}초'
+            )
 
     def _refresh_failed_retry_state(self):
         btn = getattr(self, 'retry_failed_btn', None)
@@ -1541,7 +1550,7 @@ class App:
             self.status_var.set('HWP 읽기 실패 — 직접 복사·붙여넣기 필요')
 
     # ── 명단 추출 ──────────────────────────────
-    # ── 출구 전환 ──────────────────────────────
+    # ── 도구 전환 ──────────────────────────────
     def is_edufine(self) -> bool:
         return self.config.target == TARGET_EDUFINE
 
@@ -1576,7 +1585,7 @@ class App:
         edufine_on = self.is_edufine()
         self._paint_target_cards()
 
-        # 고른 출구에 필요한 탭만 남긴다. 에듀파인은 엑셀을 만들어 올리는 방식이라
+        # 고른 도구에 필요한 탭만 남긴다. 수신픽은 엑셀을 만들어 올리는 방식이라
         # 마우스 위치를 잡을 일이 없다.
         # hide() 로 감추고 insert() 로 끼워 넣는 방식을 썼더니, insert 가 감춘 탭을
         # 되살려서 에듀파인인데 위치 설정·자동 선택이 같이 보였다.
@@ -1596,6 +1605,45 @@ class App:
                 self.nb.add(tab, text=label)
             except Exception as exc:
                 logging.info('탭 배치 실패 (%s): %s', label.strip(), exc)
+
+        for name in ('browse_btn', 'make_excel_btn'):
+            btn = getattr(self, name, None)
+            if not btn:
+                continue
+            if edufine_on:
+                btn.pack(side='left', padx=3)
+            else:
+                btn.pack_forget()
+
+        hint = getattr(self, 'target_hint', None)
+        if hint:
+            hint.config(text=(
+                f'{TARGET_LABELS[self.config.target]} 사용 중  ·  '
+                + (TARGET_SYSTEMS[TARGET_EDUFINE] + ' 공문 수신그룹'
+                   if edufine_on else
+                   TARGET_SYSTEMS[TARGET_MESSENGER] + ' 수신자 선택')
+            ))
+
+        title = getattr(self, 'guide_title', None)
+        body = getattr(self, 'guide_body', None)
+        if title and body:
+            if edufine_on:
+                title.config(text='📋  기관 명단을 넣으세요')
+                body.config(text=(
+                    '엑셀·한글에서 기관명을 복사해 아래 입력창에 붙여넣거나,\n'
+                    '[엑셀 파일 열기] 로 파일을 바로 열어도 됩니다.\n'
+                    '줄바꿈·쉼표·탭 아무거나 되고, 번호나 글머리기호는 알아서 뗍니다.\n'
+                    '\n'
+                    '예)  학성초        충북외고        청주교육지원청 행정과'
+                ))
+            else:
+                title.config(text='📋  소속기관과 이름을 넣으세요')
+                body.config(text=(
+                    '엑셀·한글에서 소속기관과 이름 두 열을 복사해 아래에 붙여넣거나,\n'
+                    '[엑셀 파일 열기] · [HWP 파일 열기] 로 파일을 바로 열어도 됩니다.\n'
+                    '\n'
+                    '예)  충주중학교    홍길동        (소속기관, 이름 순서)'
+                ))
 
         # 좌표 안내는 소통메신저 전용이다
         intro = getattr(self, 'calib_intro', None)
@@ -1726,10 +1774,24 @@ class App:
         for i in reversed(self.parsed_list.curselection()):
             del self.names_list[i]
         self._rebuild_parsed_list()
+        self._after_list_edit()
+
+    def _after_list_edit(self):
+        """목록을 손본 뒤 상태를 다시 맞춘다. 이 목록이 그대로 엑셀로 간다."""
         total = len(self.names_list)
-        self.parse_status.config(
-            text=f'명단 추출 완료: {total}명', fg='green'
-        )
+        if self.is_edufine():
+            pending = sum(1 for i in self.names_list
+                          if i.get('grade') not in AUTO_GRADES)
+            parts = [f'기관 {total - pending}곳 확정']
+            if pending:
+                parts.append(f'확인 필요 {pending}곳 (더블클릭해서 고르세요)')
+            self.parse_status.config(
+                text='  /  '.join(parts),
+                fg='green' if not pending else '#E65100')
+        else:
+            self.parse_status.config(text=f'명단 추출 완료: {total}명', fg='green')
+        self._refresh_ready_status()
+        self._refresh_edufine_status()
 
     def _edit_item(self, event=None):
         sel = self.parsed_list.curselection()
@@ -1857,7 +1919,7 @@ class App:
             item['candidates'] = []
             item.pop('failure_reason', None)
             self._rebuild_parsed_list()
-            self._refresh_edufine_status()
+            self._after_list_edit()
             dlg.destroy()
 
         def take_selected():
