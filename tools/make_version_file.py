@@ -14,6 +14,13 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Windows 콘솔 기본 인코딩(cp1252)에서 한글을 찍으면 UnicodeEncodeError 로 죽는다
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        pass
+
 COMPANY = '송동석'
 PRODUCT = '신통픽'
 DESCRIPTION = '신통픽 — 소통메신저·에듀파인 수신자 선택 도우미'

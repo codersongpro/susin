@@ -17,6 +17,7 @@ import time
 import json
 import logging
 import os
+import shutil
 import webbrowser
 import urllib.request
 
@@ -25,6 +26,7 @@ from app_config import (
     TARGET_EDUFINE,
     TARGET_LABELS,
     TARGET_MESSENGER,
+    TARGET_SUMMARIES,
 )
 import edufine
 from automation import (
@@ -594,12 +596,16 @@ class App:
 
         self.nb = nb
         f1 = ttk.Frame(nb); nb.add(f1, text='  1. 명단 입력  ')
-        f2 = ttk.Frame(nb); nb.add(f2, text='  2. 위치 설정  ')
-        f3 = ttk.Frame(nb); nb.add(f3, text='  3. 자동 선택  ')
-        f4 = ttk.Frame(nb); nb.add(f4, text='  4. 수신그룹 엑셀  ')
-        f5 = ttk.Frame(nb); nb.add(f5, text='  📖 사용 방법  ')
+        f2 = ttk.Frame(nb)
+        f3 = ttk.Frame(nb)
+        f4 = ttk.Frame(nb)
+        f5 = ttk.Frame(nb)
 
-        self.tab_edufine = f4
+        # 출구에 따라 넣고 빼므로 순서와 이름을 기억해 둔다
+        self.tab_help = f5
+        self.messenger_tabs = [(f2, '  2. 위치 설정  '), (f3, '  3. 자동 선택  ')]
+        self.edufine_tabs = [(f4, '  2. 수신그룹 엑셀  ')]
+
         self._tab_input(f1)
         self._tab_calib(f2)
         self._tab_auto(f3)
@@ -622,28 +628,42 @@ class App:
         frame.rowconfigure(3, weight=1)
         frame.rowconfigure(6, weight=2)
 
-        # ⓪ 출구 선택 — 같은 명단을 어디로 보낼지
-        picker = tk.Frame(frame, bg='#ECEFF1', bd=1, relief='solid')
+        # ⓪ 출구 선택 — 이 앱에서 가장 먼저 정해야 하는 것이라 크게 둔다
+        picker = tk.Frame(frame, bg='#263238')
         picker.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 0))
+        picker.columnconfigure(0, weight=1, uniform='pick')
+        picker.columnconfigure(1, weight=1, uniform='pick')
+
         tk.Label(
-            picker, text='어디에 수신자를 넣나요?', bg='#ECEFF1', fg='#37474F',
-            font=('맑은 고딕', 9, 'bold')
-        ).pack(side='left', padx=(10, 12), pady=6)
+            picker, text='STEP 1 — 어디에 수신자를 넣을까요?  아래에서 고르세요',
+            bg='#263238', fg='#ECEFF1', font=('맑은 고딕', 10, 'bold'), anchor='w'
+        ).grid(row=0, column=0, columnspan=2, sticky='w', padx=14, pady=(10, 6))
 
         self.target_var = tk.StringVar(value=self.config.target)
-        for target in (TARGET_MESSENGER, TARGET_EDUFINE):
-            tk.Radiobutton(
-                picker, text=TARGET_LABELS[target], value=target,
-                variable=self.target_var, command=self._on_target_change,
-                bg='#ECEFF1', fg='#263238', selectcolor='#ECEFF1',
-                activebackground='#ECEFF1', font=('맑은 고딕', 9),
-                cursor='hand2', padx=4
-            ).pack(side='left', padx=4)
+        self.target_cards = {}
+        for col, target in enumerate((TARGET_MESSENGER, TARGET_EDUFINE)):
+            card = tk.Frame(picker, cursor='hand2', highlightthickness=3)
+            card.grid(row=1, column=col, sticky='nsew',
+                      padx=(14, 7) if col == 0 else (7, 14), pady=(0, 12))
+            card.columnconfigure(0, weight=1)
+
+            title = tk.Label(card, font=('맑은 고딕', 13, 'bold'), anchor='w')
+            title.grid(row=0, column=0, sticky='ew', padx=14, pady=(10, 0))
+
+            desc = tk.Label(card, text=TARGET_SUMMARIES[target],
+                            font=('맑은 고딕', 9), anchor='w', justify='left')
+            desc.grid(row=1, column=0, sticky='ew', padx=14, pady=(2, 10))
+
+            self.target_cards[target] = (card, title, desc)
+            for widget in (card, title, desc):
+                widget.bind('<Button-1>', lambda e, t=target: self._choose_target(t))
 
         self.target_hint = tk.Label(
-            picker, text='', bg='#ECEFF1', fg='#546E7A', font=('맑은 고딕', 8)
+            picker, text='', bg='#263238', fg='#B0BEC5',
+            font=('맑은 고딕', 9), anchor='w'
         )
-        self.target_hint.pack(side='left', padx=(14, 8))
+        self.target_hint.grid(row=2, column=0, columnspan=2, sticky='w',
+                              padx=14, pady=(0, 10))
 
         # ① 입력 형식 안내 박스
         guide = tk.Frame(frame, bg='#E3F2FD', bd=1, relief='solid')
@@ -945,6 +965,20 @@ class App:
             fg='#555', font=('맑은 고딕', 8), bg='#F5F7FA'
         ).pack(side='left', padx=(10, 0))
 
+        # 빈 양식 받기 — 에듀파인이 요구하는 서식을 눈으로 확인하고 싶을 때
+        sample_row = tk.Frame(group_frame, bg='#F5F7FA')
+        sample_row.grid(row=2, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 8))
+        tk.Button(
+            sample_row, text='빈 양식 받기', command=self._save_blank_template,
+            bg='#546E7A', fg='white', activebackground='#455A64',
+            relief='flat', font=('맑은 고딕', 9), padx=12, pady=4, cursor='hand2'
+        ).pack(side='left')
+        tk.Label(
+            sample_row,
+            text='에듀파인 [파일양식받기] 와 같은 빈 양식입니다. 서식 확인이나 수기 작성에 쓰세요.',
+            fg='#555', font=('맑은 고딕', 8), bg='#F5F7FA'
+        ).pack(side='left', padx=(10, 0))
+
         self.edufine_msg = tk.Label(
             frame, text='', fg='#555', font=('맑은 고딕', 9),
             justify='left', anchor='w', wraplength=820
@@ -1081,6 +1115,39 @@ class App:
                 break
         self._save_edufine_fields()
         self._refresh_office_code_label()
+
+    def _save_blank_template(self):
+        """에듀파인 일괄등록 빈 양식을 저장한다.
+
+        앱에 동봉된 원본 그대로다. 결과 엑셀도 이 파일을 열어 값만 채워 만든다.
+        """
+        source = edufine.TEMPLATE_FILE
+        if not os.path.exists(source):
+            messagebox.showerror(
+                '양식을 찾을 수 없습니다',
+                f'동봉된 양식 파일이 없습니다.\n\n{source}')
+            return
+
+        path = filedialog.asksaveasfilename(
+            title='빈 양식 저장',
+            defaultextension='.xlsx',
+            initialfile='개인수신그룹_일괄등록_양식.xlsx',
+            filetypes=[('엑셀 파일', '*.xlsx')]
+        )
+        if not path:
+            return
+        try:
+            shutil.copyfile(source, path)
+        except Exception as exc:
+            logging.exception('양식 저장 실패')
+            messagebox.showerror('저장 실패', f'양식을 저장하지 못했습니다.\n\n{exc}')
+            return
+
+        self.status_var.set(f'빈 양식 저장 완료: {path}')
+        messagebox.showinfo(
+            '저장했습니다',
+            f'빈 양식을 저장했습니다.\n\n{path}\n\n'
+            '이 서식 그대로 [수신그룹 엑셀 만들기] 가 결과를 만들어 줍니다.')
 
     def _save_edufine_fields(self):
         for key, var in getattr(self, 'edufine_vars', {}).items():
@@ -1475,10 +1542,10 @@ class App:
     def is_edufine(self) -> bool:
         return self.config.target == TARGET_EDUFINE
 
-    def _on_target_change(self):
-        target = self.target_var.get()
+    def _choose_target(self, target: str):
         if target == self.config.target:
             return
+        self.target_var.set(target)
         self.config.use_target(target)
         self.config.save()
         # 명단의 의미가 달라진다 (사람 ↔ 기관). 남겨 두면 헷갈리므로 비운다.
@@ -1487,13 +1554,35 @@ class App:
         self.parse_status.config(text='')
         self._apply_target()
 
+    def _on_target_change(self):
+        """target_var 에 들어 있는 값으로 전환한다."""
+        self._choose_target(self.target_var.get())
+
+    def _paint_target_cards(self):
+        """고른 쪽을 눈에 띄게. 어느 쪽인지 헷갈리면 안 된다."""
+        for target, (card, title, desc) in getattr(self, 'target_cards', {}).items():
+            chosen = target == self.config.target
+            bg = '#1565C0' if chosen else '#ECEFF1'
+            edge = '#FFC107' if chosen else '#37474F'
+            card.config(bg=bg, highlightbackground=edge, highlightcolor=edge)
+            title.config(bg=bg, fg='white' if chosen else '#546E7A',
+                         text=('✓  ' if chosen else '     ') + TARGET_LABELS[target])
+            desc.config(bg=bg, fg='#BBDEFB' if chosen else '#90A4AE')
+
     def _apply_target(self):
         edufine_on = self.is_edufine()
+        self._paint_target_cards()
+
+        # 고른 출구에 필요한 탭만 남긴다. 에듀파인은 엑셀을 만들어 올리는 방식이라
+        # 마우스 위치를 잡을 일이 없다.
+        show = self.edufine_tabs if edufine_on else self.messenger_tabs
+        hide = self.messenger_tabs if edufine_on else self.edufine_tabs
         try:
-            if edufine_on:
-                self.nb.add(self.tab_edufine, text='  4. 수신그룹 엑셀  ')
-            else:
-                self.nb.hide(self.tab_edufine)
+            for tab, _ in hide:
+                self.nb.hide(tab)
+            for index, (tab, label) in enumerate(show, start=1):
+                self.nb.insert(index, tab, text=label)
+            self.nb.insert('end', self.tab_help, text='  📖 사용 방법  ')
         except Exception as exc:
             logging.info('탭 표시 전환 실패: %s', exc)
 
@@ -1507,27 +1596,24 @@ class App:
         hint = getattr(self, 'target_hint', None)
         if hint:
             hint.config(text=(
-                '기관 명단을 넣으세요 — 학교·교육지원청·부서 모두 됩니다' if edufine_on
-                else '소속기관 + 이름 명단을 넣으세요'
+                '기관 명단을 넣고 수신그룹 엑셀을 만들어 에듀파인에 올립니다'
+                if edufine_on else
+                '소속기관 + 이름 명단을 넣으면 메신저에서 자동으로 골라 담습니다'
             ))
-        window = ("에듀파인 [수신자 지정] 팝업" if edufine_on
-                  else "소통메신저 [사용자 선택] 창")
-        unit = '기관' if edufine_on else '이름'
+        # 좌표 안내는 소통메신저 전용이다
         intro = getattr(self, 'calib_intro', None)
         if intro:
             intro.config(text=(
-                f'{window}을 열어 둔 상태에서 아래 3곳의 위치를 순서대로 설정하세요.\n'
-                'STEP 1: 검색 입력창  ·  STEP 2: 결과 첫 번째 항목  ·  STEP 3: 추가/선택 버튼\n'
-                '[캡처 시작] 후 마우스를 대상 위치로 이동하고 Enter로 확정합니다. Esc로 취소할 수 있습니다.\n'
-                '위치는 출구별로 따로 저장되니, 한쪽을 설정해도 다른 쪽이 지워지지 않습니다.'
+                '소통메신저 [사용자 선택] 창을 열어 둔 상태에서 아래 3곳을 순서대로 설정하세요.\n'
+                'STEP 1: 검색 입력창  ·  STEP 2: 결과 첫 번째 항목  ·  STEP 3: 사용자 선택 버튼\n'
+                '[캡처 시작] 후 마우스를 대상 위치로 옮기고 Enter로 확정합니다. Esc로 취소합니다.'
             ))
         auto_intro = getattr(self, 'auto_intro', None)
         if auto_intro:
-            extra = ('조직도 탭을 열어 두세요.' if edufine_on else '[전체조직] 탭을 열어 두세요.')
             auto_intro.config(text=(
-                f'{window}을 열고 {extra} 그리고 아래 버튼을 누르세요.\n'
-                f'{unit}마다 ① 검색 입력  ② 결과 첫 번째 클릭  ③ 추가 버튼 클릭  이 자동으로 반복됩니다.\n'
-                '⚠  마우스를 화면 왼쪽 위 모서리로 이동하면 긴급 중지됩니다.'
+                '소통메신저 [사용자 선택] 창을 열고 [전체조직] 탭을 켜 두세요.\n'
+                '이름마다 ① 검색 입력  ② 결과 첫 번째 클릭  ③ 선택 버튼 클릭  이 반복됩니다.\n'
+                '⚠  마우스를 화면 왼쪽 위 모서리로 옮기면 긴급 중지됩니다.'
             ))
 
         self._refresh_calib_labels()

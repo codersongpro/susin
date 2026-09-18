@@ -181,7 +181,7 @@ python3 tools/merge_edufine_orgs.py --apply   # 수확한 기관명을 org_db �
 
 ```bash
 pip install -r requirements.txt
-python3 -m unittest discover -s tests    # 80개
+python3 -m unittest discover -s tests    # 83개
 python main.py
 ```
 
@@ -216,6 +216,35 @@ git push origin v2.0.1
 3. **빌드 + Release 첨부**
 
 빌드만 확인하고 싶으면 `version` 을 비워 두고 돌린다. Release 없이 exe 만 남는다.
+
+### 랜딩페이지 배포 (Vercel)
+
+`index.html` 한 장이 전부다. 인라인 CSS 와 외부 링크만 쓰므로 다른 파일이 필요 없다.
+
+**Git 연동 (권장)** — [vercel.com/new](https://vercel.com/new) 에서 이 저장소를 고르고
+Framework Preset 을 `Other`, Build Command 를 비워 두면 끝난다. 이후 `main` 에 푸시할
+때마다 자동 배포된다. 토큰이나 시크릿을 넣을 일이 없다.
+
+**CLI**
+
+```bash
+npm i -g vercel
+vercel          # 미리보기
+vercel --prod   # 운영 배포
+```
+
+`.vercelignore` 가 `index.html` 과 `vercel.json` 만 남기고 전부 제외한다.
+빼지 않으면 `outputDirectory` 가 저장소 루트라 앱 소스와 `data/` 의 4MB CSV 까지
+공개 URL 로 서빙된다.
+
+`vercel.json` 에 짧은 주소를 두 개 걸어 뒀다.
+
+| 주소 | 가는 곳 |
+|---|---|
+| `/download` | 최신 릴리즈 |
+| `/github` | 저장소 |
+
+배포 후 랜딩페이지 주소를 동료에게 알려주면 거기서 바로 받을 수 있다.
 
 GUI 없이도 핵심 로직은 전부 테스트된다 — 파싱, 매칭 등급, 코드 조회, 엑셀 생성,
 그리고 붙여넣기부터 엑셀까지 전체 경로.

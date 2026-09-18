@@ -1,4 +1,7 @@
-main.py
-__pycache__/
-build/
-*.pyc
+# 랜딩페이지만 배포한다.
+# outputDirectory 가 저장소 루트라, 빼지 않으면 앱 소스와 데이터가 전부 공개 URL 로
+# 서빙된다 (org_db.json, data/ 의 4MB CSV, 양식 파일까지).
+# index.html 은 외부 링크와 인라인 CSS 만 쓰므로 혼자로 충분하다.
+*
+!index.html
+!vercel.json

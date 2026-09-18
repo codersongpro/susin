@@ -65,11 +65,16 @@ class _Listbox:
 
 
 class _Widget:
+    """위젯 스텁. 같은 이름은 같은 mock 을 돌려줘야 호출 기록을 검사할 수 있다."""
+
     def __init__(self, *args, **kwargs):
-        pass
+        object.__setattr__(self, '_mocks', {})
 
     def __getattr__(self, name):
-        return MagicMock()
+        mocks = object.__getattribute__(self, '_mocks')
+        if name not in mocks:
+            mocks[name] = MagicMock(name=name)
+        return mocks[name]
 
     def __setitem__(self, key, value):
         pass
@@ -111,6 +116,11 @@ def restore(saved):
             sys.modules.pop(name, None)
         else:
             sys.modules[name] = module
+
+
+def edufine_module():
+    import edufine
+    return edufine
 
 
 class AppFlowTest(unittest.TestCase):
@@ -162,9 +172,30 @@ class AppFlowTest(unittest.TestCase):
     def test_target_switching_does_not_crash(self):
         from app_config import TARGET_EDUFINE, TARGET_MESSENGER
         for target in (TARGET_MESSENGER, TARGET_EDUFINE, TARGET_MESSENGER):
-            self.app.target_var.set(target)
-            self.app._on_target_change()
+            self.app._choose_target(target)
             self.assertEqual(self.app.config.target, target)
+            self.assertEqual(self.app.target_var.get(), target)
+
+    def test_edufine_hides_the_coordinate_tabs(self):
+        # 에듀파인은 엑셀을 만들어 올리는 방식이라 마우스 위치를 잡을 일이 없다
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+        self.app._choose_target(TARGET_MESSENGER)     # setUp 이 이미 에듀파인이라
+        self.app.nb.hide.reset_mock()
+        self.app._choose_target(TARGET_EDUFINE)
+        hidden = [call.args[0] for call in self.app.nb.hide.call_args_list]
+        for tab, _ in self.app.messenger_tabs:
+            self.assertIn(tab, hidden)
+
+        self.app.nb.hide.reset_mock()
+        self.app._choose_target(TARGET_MESSENGER)
+        hidden = [call.args[0] for call in self.app.nb.hide.call_args_list]
+        for tab, _ in self.app.edufine_tabs:
+            self.assertIn(tab, hidden)
+
+    def test_blank_template_exists_to_be_saved(self):
+        import os
+        self.assertTrue(os.path.exists(edufine_module().TEMPLATE_FILE),
+                        '동봉된 빈 양식이 없습니다')
 
     def test_switching_target_clears_the_list(self):
         from app_config import TARGET_MESSENGER
