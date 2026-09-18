@@ -38,6 +38,8 @@ from automation import (
     FAIL_NO_USER,
     FAIL_NOT_ADDED,
     FAIL_SEARCH_STALE,
+    POPUP_WAIT_ADD,
+    POPUP_WAIT_VERIFY,
     RESULT_SCAN_HEIGHT,
     RESULT_SCAN_WIDTH,
     RESULT_WAIT_MIN,
@@ -92,6 +94,7 @@ try:
 except ImportError:
     win32api = None
 
+VK_LBUTTON = 0x01
 VK_RETURN = 0x0D
 VK_ESCAPE = 0x1B
 
@@ -116,8 +119,9 @@ class CaptureDialog(tk.Toplevel):
         self.on_captured = on_captured
         self._finished = False
         self._enter_released = False
+        self._click_released = False
         self.title('위치 캡처')
-        self.geometry('420x270')
+        self.geometry('440x320')
         self.resizable(False, False)
 
         tk.Label(
@@ -127,10 +131,18 @@ class CaptureDialog(tk.Toplevel):
 
         tk.Label(
             self,
-            text='[캡처 시작] 버튼을 클릭한 뒤 소통메신저의 대상 위치로\n'
-                 '마우스를 이동하세요. 소통메신저를 눌러 앞으로 꺼내도 됩니다.\n'
-                 'Enter로 확정, Esc로 취소합니다.',
+            text='[캡처 시작] 을 누른 뒤 소통메신저에서 잡을 자리를 클릭하세요.\n'
+                 '클릭한 자리가 그대로 저장됩니다. 소통메신저를 눌러 앞으로 꺼내도 됩니다.\n'
+                 '마우스를 옮긴 뒤 Enter 로 확정해도 되고, Esc 로 취소합니다.',
             font=('맑은 고딕', 10), justify='center', pady=12
+        ).pack()
+
+        tk.Label(
+            self,
+            text='클릭은 소통메신저에도 그대로 전달됩니다.\n'
+                 '[사용자 선택] 버튼 자리를 잡을 때는 그 사람이 실제로 추가되니,\n'
+                 '캡처를 마친 뒤 받는 사람 목록을 확인하세요.',
+            font=('맑은 고딕', 9), justify='center', fg='#B71C1C'
         ).pack()
 
         self.status = tk.Label(
@@ -155,7 +167,7 @@ class CaptureDialog(tk.Toplevel):
 
     def _begin(self):
         self.start_btn.config(state='disabled')
-        self.status.config(text='마우스 위치 확인 중...  Enter 확정 / Esc 취소')
+        self.status.config(text='잡을 자리를 클릭하세요.  Enter 로도 확정 / Esc 취소')
         self.bind('<Return>', lambda _e: self._confirm())
         self.bind('<Escape>', lambda _e: self.destroy())
 
@@ -174,8 +186,9 @@ class CaptureDialog(tk.Toplevel):
             logging.info('캡처 창 포커스 실패: %s', exc)
 
         # 버튼을 Enter 로 눌렀다면 그 Enter 가 아직 눌린 채다. 한 번 떼기 전에는
-        # 확정으로 치지 않는다.
+        # 확정으로 치지 않는다. [캡처 시작] 을 누른 마우스 버튼도 마찬가지다.
         self._enter_released = not key_is_down(VK_RETURN)
+        self._click_released = not key_is_down(VK_LBUTTON)
         self._finished = False
         self._poll_position()
 
@@ -189,12 +202,21 @@ class CaptureDialog(tk.Toplevel):
         if self._finished or not self.winfo_exists():
             return
         pos = pyautogui.position()
-        self.status.config(text=f'현재 위치: ({pos.x}, {pos.y})  Enter 확정 / Esc 취소')
+        self.status.config(
+            text=f'현재 위치: ({pos.x}, {pos.y})  클릭하면 확정 / Esc 취소')
 
-        # 소통메신저가 앞에 나와 있어도 Enter 가 먹어야 한다.
+        # 소통메신저가 앞에 나와 있어도 클릭과 Enter 가 먹어야 한다.
         if key_is_down(VK_ESCAPE):
             self.destroy()
             return
+        if key_is_down(VK_LBUTTON):
+            if self._click_released:
+                # 누르는 순간의 자리를 잡는다. 떼기를 기다리면 그새 마우스가
+                # 움직여 엉뚱한 자리가 저장된다.
+                self._done(pos)
+                return
+        else:
+            self._click_released = True
         if key_is_down(VK_RETURN):
             if self._enter_released:
                 self._confirm()
@@ -202,7 +224,8 @@ class CaptureDialog(tk.Toplevel):
         else:
             self._enter_released = True
 
-        self.after(120, self._poll_position)
+        # 클릭을 놓치지 않으려면 자주 봐야 한다.
+        self.after(40, self._poll_position)
 
     def _confirm(self):
         if self._finished:
@@ -313,20 +336,21 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   공통 캡처 방법:
     [📍 위치 설정] 을 누르고 [캡처 시작] 을 누른 뒤,
-    소통메신저의 해당 위치로 마우스를 옮기고 Enter 를 누르면 확정됩니다.
-    소통메신저를 눌러 앞으로 꺼내도 Enter 는 그대로 먹습니다.
-    잘못 눌렀다면 Esc 로 취소할 수 있습니다.
+    소통메신저에서 잡을 자리를 그대로 클릭하면 됩니다.
+    마우스를 옮긴 뒤 Enter 를 눌러도 확정되고, Esc 로 취소합니다.
+    클릭은 소통메신저에도 전달되니, STEP 3 을 잡을 때는
+    그 사람이 실제로 추가됩니다. 캡처를 마친 뒤 받는 사람 목록을 확인하세요.
 
   [ STEP 1 ]  검색 입력창 위치
-    소통메신저 '이름 검색' 입력칸 위로 마우스를 이동한 뒤 Enter.
+    소통메신저 '이름 검색' 입력칸을 클릭합니다.
 
   [ STEP 2 ]  결과 첫 번째 항목 위치
-    임의 이름(예: 홍길동)을 검색한 뒤
-    결과 목록의 첫 번째 줄 위로 마우스를 이동한 뒤 Enter.
+    아무 이름(예: 홍길동)이나 검색한 뒤
+    결과 목록의 첫 번째 줄을 클릭합니다.
 
   [ STEP 3 ]  사용자 선택 버튼 위치
     결과가 보이는 상태에서
-    [사용자 선택] 또는 [추가] 버튼 위로 마우스를 이동한 뒤 Enter.
+    [사용자 선택] 또는 [추가] 버튼을 클릭합니다.
 
   [ 검색 설정 ]
     · 검색 후 대기 시간: 기본 0.5초.
@@ -2405,8 +2429,8 @@ class App:
             intro.config(text=(
                 '소통메신저 [사용자 선택] 창을 열어 둔 상태에서 아래 3곳을 순서대로 설정하세요.\n'
                 'STEP 1: 검색 입력창  ·  STEP 2: 결과 첫 번째 항목  ·  STEP 3: 사용자 선택 버튼\n'
-                '[캡처 시작] 을 누르고 마우스를 대상 위치로 옮긴 뒤 Enter 를 누르면 '
-                '확정됩니다. 소통메신저가 앞에 나와 있어도 됩니다. Esc 는 취소입니다.'
+                '[캡처 시작] 을 누른 뒤 잡을 자리를 클릭하면 그 자리가 저장됩니다. '
+                'Enter 로도 확정되고 Esc 는 취소입니다.'
             ))
         auto_intro = getattr(self, 'auto_intro', None)
         if auto_intro:
@@ -2809,6 +2833,9 @@ class App:
         total = len(run_items)
         no_result_streak = 0
         unverified_streak = 0
+        if (not manual and self.config.data.get('verify_add', True)
+                and self._win32gui() is None):
+            self._log('⚠  이 PC 에서는 안내창을 볼 수 없어 추가 확인을 건너뜁니다.\n\n')
 
         for idx, item in enumerate(run_items):
             if self.stop_flag.is_set():
@@ -2916,7 +2943,7 @@ class App:
         time.sleep(delay)
         pyautogui.press('enter')
 
-    def _click_add_once(self) -> bool:
+    def _click_add_once(self, popup_wait: float = POPUP_WAIT_ADD) -> bool:
         """결과 첫 줄과 선택 버튼을 한 번 누른다.
 
         이미 선택된 사용자라는 안내창이 떴으면 True. 그 사람이 받는 사람에
@@ -2932,15 +2959,13 @@ class App:
         time.sleep(0.15)
         before = self._snapshot_dialogs()
         pyautogui.click(ax, ay)
-        time.sleep(0.4)
-        new_hwnds = self._snapshot_dialogs() - before
-        if new_hwnds and self._is_duplicate_popup(new_hwnds):
-            self._close_dialogs(new_hwnds)
-            return True
-        if new_hwnds:
-            # 무슨 안내창인지는 몰라도 열린 채로 두면 다음 클릭이 다 막힌다.
-            self._close_dialogs(new_hwnds)
-        return False
+        appeared = self._wait_for_dialog(before, popup_wait)
+        if not appeared:
+            return False
+        duplicate = self._is_duplicate_popup(appeared)
+        # 무슨 안내창인지와 상관없이 닫는다. 열린 채로 두면 다음 클릭이 다 막힌다.
+        self._close_dialogs(appeared)
+        return duplicate
 
     def _do_select(self) -> str:
         """추가하고, 정말 추가됐는지 확인한다.
@@ -2955,47 +2980,107 @@ class App:
         않은 것이라 실패로 남긴다.
         """
         time.sleep(0.2)
-        if self._click_add_once():
+        if self._click_add_once(POPUP_WAIT_ADD):
             return 'duplicate'      # 명단을 돌리기 전부터 받는 사람에 있던 사람
         if not self.config.data.get('verify_add', True):
+            return 'ok'
+        if self._win32gui() is None:
+            # 창을 들여다볼 수 없으면 확인할 방법이 없다. 멀쩡히 추가된 사람을
+            # 실패로 몰아세우지 않는다.
             return 'ok'
         for _ in range(VERIFY_ADD_TRIES):
             if self.stop_flag.is_set():
                 return 'stopped'
-            if self._click_add_once():
+            if self._click_add_once(POPUP_WAIT_VERIFY):
                 return 'ok'         # 앞선 클릭으로 추가된 것이 확인됐다
         return 'unverified'
 
-    def _snapshot_dialogs(self) -> set:
-        """현재 열려있는 #32770 다이얼로그 핸들 집합 반환."""
+    _win32gui_warned = False
+
+    def _win32gui(self):
+        """창을 들여다보는 모듈. 못 쓰면 None 을 주고 한 번만 알린다."""
         try:
             import win32gui
-            found = set()
-            def cb(hwnd, _):
-                if win32gui.IsWindowVisible(hwnd) and win32gui.IsWindowEnabled(hwnd):
-                    if win32gui.GetClassName(hwnd) == '#32770':
-                        found.add(hwnd)
-            win32gui.EnumWindows(cb, None)
-            return found
+            return win32gui
         except Exception as exc:
-            logging.debug("다이얼로그 목록 확인 실패: %s", exc)
+            if not App._win32gui_warned:
+                App._win32gui_warned = True
+                logging.warning('win32gui 를 쓸 수 없어 안내창을 볼 수 없습니다: %s', exc)
+            return None
+
+    def _snapshot_dialogs(self) -> set:
+        """지금 떠 있는 창 핸들.
+
+        예전에는 표준 안내창(#32770) 만 찾았다. 소통메신저가 그 틀을 쓰지 않으면
+        안내창을 하나도 보지 못하고, 추가됐는지 확인하는 장치가 통째로 먹통이
+        된다. 그래서 보이는 창을 다 담아 두고, 무엇인지는 문구로 가린다.
+        """
+        gui = self._win32gui()
+        if gui is None:
             return set()
+        found = set()
+
+        def cb(hwnd, _):
+            try:
+                if gui.IsWindowVisible(hwnd) and gui.IsWindowEnabled(hwnd):
+                    found.add(hwnd)
+            except Exception:
+                pass
+            return True
+
+        try:
+            gui.EnumWindows(cb, None)
+        except Exception as exc:
+            logging.warning('창 목록 확인 실패: %s', exc)
+        return found
+
+    def _window_texts(self, hwnd) -> list:
+        """창과 그 안에 적힌 글을 모은다."""
+        gui = self._win32gui()
+        if gui is None:
+            return []
+        texts = []
+        try:
+            texts.append(gui.GetWindowText(hwnd))
+
+            def collect(child, _):
+                try:
+                    text = gui.GetWindowText(child)
+                    if text:
+                        texts.append(text)
+                except Exception:
+                    pass
+                return True
+
+            gui.EnumChildWindows(hwnd, collect, None)
+        except Exception as exc:
+            logging.debug('창 글 읽기 실패: %s', exc)
+        return texts
+
+    def _wait_for_dialog(self, before: set, timeout: float) -> set:
+        """새로 뜬 창을 기다린다. 끝까지 없으면 빈 집합.
+
+        한 번만 보고 넘어가면 늦게 뜨는 안내창을 놓친다. 그러면 추가가 됐는데도
+        안 됐다고 표시된다.
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            appeared = self._snapshot_dialogs() - before
+            if appeared:
+                return appeared
+            if time.monotonic() >= deadline:
+                return set()
+            time.sleep(0.1)
 
     def _is_duplicate_popup(self, hwnds: set) -> bool:
-        """새로 뜬 안내창이 이미 선택된 사용자라는 안내인가."""
-        try:
-            import win32gui
-            for hwnd in hwnds:
-                texts = [win32gui.GetWindowText(hwnd)]
-                def collect(h, _):
-                    t = win32gui.GetWindowText(h)
-                    if t:
-                        texts.append(t)
-                win32gui.EnumChildWindows(hwnd, collect, None)
-                if looks_like_duplicate_popup(texts):
-                    return True
-        except Exception as exc:
-            logging.debug("안내창 확인 실패: %s", exc)
+        """새로 뜬 창이 이미 선택된 사용자라는 안내인가."""
+        for hwnd in hwnds:
+            texts = self._window_texts(hwnd)
+            if looks_like_duplicate_popup(texts):
+                return True
+            if texts:
+                logging.info('안내창을 알아보지 못했습니다: %s', ' | '.join(
+                    t for t in texts if t)[:200])
         return False
 
     def _close_dialogs(self, hwnds: set) -> bool:

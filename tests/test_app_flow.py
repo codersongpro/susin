@@ -800,10 +800,15 @@ class AppFlowTest(unittest.TestCase):
         self.assertFalse(looks_like_duplicate_popup([None, '', '확인']))
 
     # ── 추가됐는지 확인 ────────────────────────
-    def _use_verify(self, on=True):
+    def _use_verify(self, on=True, windows=True):
         saved = self.app.config.data.get('verify_add')
         self.app.config.data['verify_add'] = on
         self.addCleanup(lambda: self.app.config.data.__setitem__('verify_add', saved))
+        if windows:
+            # 리눅스 테스트에는 win32gui 가 없다. 창을 볼 수 있는 윈도우처럼 둔다.
+            patcher = patch.object(self.app, '_win32gui', return_value=object())
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_add_is_confirmed_by_the_duplicate_popup(self):
         """두 번째 클릭에서 중복 안내창이 뜨면 첫 클릭이 통한 것이다."""
@@ -841,6 +846,44 @@ class AppFlowTest(unittest.TestCase):
                              return_value=False) as clicked:
             self.assertEqual(self.app._do_select(), 'ok')
         self.assertEqual(clicked.call_count, 1)
+
+    def test_late_popup_is_still_caught(self):
+        """안내창이 늦게 떠도 놓치지 않는다.
+
+        한 번만 보고 넘어가던 때에는, 추가가 됐는데도 안 됐다고 표시됐다.
+        """
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_snapshot_dialogs',
+                             side_effect=[{1}, {1}, {1}, {1, 7}]), \
+                patch.object(self.app, '_is_duplicate_popup', return_value=True), \
+                patch.object(self.app, '_close_dialogs', return_value=True), \
+                patch.object(self.app_module, 'pyautogui', MagicMock()):
+            self._use_result_coords()
+            self.app.config.data['add_button_x'] = 900
+            self.app.config.data['add_button_y'] = 600
+            self.assertTrue(self.app._click_add_once(1.0))
+
+    def test_verification_is_skipped_without_window_access(self):
+        """창을 못 들여다보면 확인을 건너뛴다. 멀쩡한 사람을 실패로 만들지 않는다."""
+        self._use_verify(True, windows=False)
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_win32gui', return_value=None), \
+                patch.object(self.app, '_click_add_once',
+                             return_value=False) as clicked:
+            self.assertEqual(self.app._do_select(), 'ok')
+        self.assertEqual(clicked.call_count, 1)
+
+    def test_verification_clicks_only_once(self):
+        """확인은 한 번만 한다. 사람 수만큼 시간이 불어나면 못 쓴다."""
+        from automation import VERIFY_ADD_TRIES
+
+        self.assertEqual(VERIFY_ADD_TRIES, 1)
+        self._use_verify(True)
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_click_add_once',
+                             return_value=False) as clicked:
+            self.assertEqual(self.app._do_select(), 'unverified')
+        self.assertEqual(clicked.call_count, 2)
 
     def test_verification_stops_when_the_user_stops(self):
         self._use_verify(True)
@@ -900,6 +943,7 @@ class CaptureEnterTest(unittest.TestCase):
         dlg = m.CaptureDialog.__new__(m.CaptureDialog)
         dlg._finished = False
         dlg._enter_released = False
+        dlg._click_released = True
         dlg.captured = []
         dlg.on_captured = lambda x, y: dlg.captured.append((x, y))
         dlg.status = MagicMock()
@@ -938,6 +982,28 @@ class CaptureEnterTest(unittest.TestCase):
         dlg = self._dialog(None)
         dlg._enter_released = True
         self._run(dlg, [{}, {m.VK_RETURN: True}])
+        self.assertEqual(dlg.captured, [(100, 200)])
+
+    def test_click_confirms_the_position(self):
+        """잡을 자리를 클릭하면 그 자리가 저장된다."""
+        m = self.app_module
+        dlg = self._dialog(None)
+        self._run(dlg, [{}, {m.VK_LBUTTON: True}])
+        self.assertEqual(dlg.captured, [(100, 200)])
+
+    def test_click_still_held_from_the_start_button_does_not_confirm(self):
+        """[캡처 시작] 을 누른 그 클릭으로 바로 확정되면 안 된다."""
+        m = self.app_module
+        dlg = self._dialog(None)
+        dlg._click_released = False
+        self._run(dlg, [{m.VK_LBUTTON: True}, {m.VK_LBUTTON: True}])
+        self.assertEqual(dlg.captured, [], '누른 채로 있던 클릭이 확정됐습니다')
+
+    def test_click_after_releasing_the_start_button_confirms(self):
+        m = self.app_module
+        dlg = self._dialog(None)
+        dlg._click_released = False
+        self._run(dlg, [{m.VK_LBUTTON: True}, {}, {m.VK_LBUTTON: True}])
         self.assertEqual(dlg.captured, [(100, 200)])
 
     def test_enter_still_held_from_the_button_does_not_confirm(self):
