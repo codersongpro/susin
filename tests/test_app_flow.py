@@ -69,6 +69,7 @@ class _WidgetBase:
 
     def __init__(self, *args, **kwargs):
         object.__setattr__(self, '_mocks', {})
+        object.__setattr__(self, 'master', args[0] if args else None)
 
     def __getattr__(self, name):
         mocks = object.__getattribute__(self, '_mocks')
@@ -257,6 +258,13 @@ class AppFlowTest(unittest.TestCase):
             self.app._choose_target(target)
             self.assertGreaterEqual(len(self.app.nb.tabs()), 3,
                                     f'{target} 에서 탭이 사라졌습니다')
+
+    def test_picker_lives_above_the_tabs(self):
+        """도구 선택은 탭 안이 아니라 창 맨 위에 있어야 어느 화면에서든 바꾼다."""
+        for target, (card, title, desc) in self.app.target_cards.items():
+            parent = card.master if hasattr(card, 'master') else None
+            self.assertIsNot(parent, self.app.tab_input,
+                             f'{target} 카드가 명단 입력 탭 안에 있습니다')
 
     def test_edufine_buttons_are_shown_and_hidden(self):
         """pack 을 빠뜨려 버튼이 아예 안 보이던 적이 있다."""

@@ -68,13 +68,16 @@ TITLE_WORDS = frozenset({
     '팀장', '실장', '계장', '차장', '센터장', '장학관', '장학사', '연구관', '연구사',
     '사무관', '서기관', '주무관', '주사', '서기', '담당', '담당자', '지도사',
     '위원장', '부위원장', '간사', '총무', '회장', '부회장', '대표', '코디네이터',
+    # 모임 명단의 역할 칸
+    '자문', '고문', '임원', '운영진', '위원', '부원', '회원',
 })
 
 # 붙여넣은 표의 머리글
 HEADER_WORDS = frozenset({
-    '번호', '연번', '순번', '성명', '이름', '직위', '직급', '직책', '소속', '기관',
-    '학교', '부서', '구분', '비고', '연락처', '전화', '전화번호', '이메일', '메일',
-    '업무', '담당업무', '상태', '대상',
+    '번호', '연번', '순번', '순', '성명', '이름', '직위', '직급', '직책', '역할',
+    '소속', '기관', '학교', '부서', '구분', '비고', '연락처', '전화', '전화번호',
+    '휴대폰', '이메일', '메일', '업무', '담당업무', '상태', '대상', '개인',
+    '명단', '목록', '현황', '인원', '합계',
 })
 
 NON_NAME_WORDS = TITLE_WORDS | HEADER_WORDS
@@ -210,6 +213,11 @@ def parse_input(text: str) -> list:
                 results.append({'org': pending_org, 'name': t})
             pending_org = ''
             continue
+
+        # 문서 제목이나 설명 줄. 기관도 없고 전부 사람 이름도 아니면 명단 줄이 아니다.
+        # '026. 충북 GEG 학습공동체 회원 명단' 에서 '충북' 이 이름으로 잡히던 것을 막는다.
+        if len(tokens) >= 3 and not best_org_from(tokens):
+            continue
         pair = extract_pair(tokens)
         if pair:
             org, name = pair
@@ -311,7 +319,7 @@ def _clean_line(line: str) -> str:
     return QUOTE_RE.sub('', line).strip()
 
 
-def _org_from_line(line: str):
+def _org_from_line(line: str, known=None):
     """한 줄 → (원문, 정식명|None, 등급) 또는 None(건너뜀).
 
     줄 전체가 바로 해석되면 그것을 쓰고, 아니면 토큰으로 나눠 기관으로 해석되는
@@ -349,18 +357,24 @@ def _org_from_line(line: str):
     target = (rest or tokens)[-1]
 
     name, grade = lookup_org_graded(target)
-    if grade == GRADE_NONE and is_person_name(target):
-        # 해석도 안 되고 후보도 없으면 사람 이름으로 보고 건너뛴다.
-        # 후보가 있으면 사용자가 판단하도록 남긴다 ('오송솔미' 같은 경우).
-        if not candidate_orgs(target, limit=1):
-            return None
+    if grade == GRADE_NONE and (is_person_name(target) or len(tokens) >= 3):
+        # 해석이 안 됐다. 다음 중 하나라도 해당하면 남기고, 아니면 노이즈로 보고 버린다.
+        #   · 기관코드 사전이 아는 이름이다 ('행정과' 처럼 org_db 에는 없는 부서)
+        #   · 후보가 그 말을 통째로 품고 있다 ('오송솔미' → '오송솔미초등학교')
+        # 편집거리로만 닮은 것은 버린다 ('이혜원' → '이원초등학교').
+        # 오타 난 기관명은 여기 오지 않는다. 그건 fuzzy 로 잡혀 후보와 함께 남는다.
+        if not (known and target in known):
+            if not any(target in c for c in candidate_orgs(target, limit=5)):
+                return None
     return target, name, grade
 
 
-def parse_orgs(text: str) -> list:
+def parse_orgs(text: str, known=None) -> list:
     """명단 텍스트 → 기관 목록.
 
-    반환: [{'raw', 'name', 'grade', 'candidates'}, ...]
+    known 에 기관코드 사전이 아는 이름들을 넘기면, org_db 에 없는 부서명도 살려 둔다.
+
+    반환: [{'raw', 'line', 'name', 'grade', 'candidates'}, ...]
     입력 순서를 유지하고 중복은 제거한다. 사람 이름만 있는 줄은 건너뛴다.
     해석에 실패한 줄도 grade='none' 으로 남긴다 — 조용히 삼키지 않는다.
     """
@@ -372,7 +386,7 @@ def parse_orgs(text: str) -> list:
         # 쉼표·세미콜론으로 여러 기관을 한 줄에 쓴 경우를 먼저 나눈다
         chunks = [c.strip() for c in re.split(r'[,;]', line) if c.strip()] or [line]
         for chunk in chunks:
-            found = _org_from_line(chunk)
+            found = _org_from_line(chunk, known)
             if not found:
                 continue
             raw, name, grade = found

@@ -76,7 +76,7 @@ class DepartmentPipelineTest(unittest.TestCase):
 
     def resolve_all(self, text):
         """앱이 하는 것과 같은 경로 — org_db 로 읽고 코드 사전으로 다시 본다."""
-        return edufine.apply_codes(parse_orgs(text), self.codes, self.index)
+        return edufine.parse_and_resolve(text, self.codes, self.index)
 
     def test_departments_reach_the_workbook(self):
         pasted = '정책기획과\n청주교육지원청 행정과\n단재교육연수원 교육연수부\n학성초'

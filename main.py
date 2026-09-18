@@ -578,7 +578,7 @@ class App:
     # ── UI 빌드 ────────────────────────────────
     def _build_ui(self):
         self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(1, weight=1)
+        self.root.rowconfigure(2, weight=1)
 
         # 개발자 정보 바 (항상 상단 표시)
         dev_bar = tk.Label(
@@ -591,50 +591,9 @@ class App:
         )
         dev_bar.grid(row=0, column=0, sticky='ew')
 
-        # 탭 노트북
-        nb = ttk.Notebook(self.root)
-        nb.grid(row=1, column=0, sticky='nsew', padx=4, pady=(0, 4))
-
-        self.nb = nb
-        f1 = ttk.Frame(nb)
-        f2 = ttk.Frame(nb)
-        f3 = ttk.Frame(nb)
-        f4 = ttk.Frame(nb)
-        f5 = ttk.Frame(nb)
-
-        # 고른 도구에 따라 넣고 빼므로 순서와 이름을 기억해 둔다
-        self.tab_input = f1
-        self.tab_help = f5
-        self.messenger_tabs = [(f2, '  2. 위치 설정  '), (f3, '  3. 자동 선택  ')]
-        self.edufine_tabs = [(f4, '  2. 수신그룹 엑셀  ')]
-
-        # 탭 등록은 _apply_target 이 한다. 고른 도구에 따라 매번 다시 구성한다.
-
-        self._tab_input(f1)
-        self._tab_calib(f2)
-        self._tab_auto(f3)
-        self._tab_edufine(f4)
-        self._tab_help(f5)
-        self._apply_target()
-
-        # 상태바
-        self.status_var = tk.StringVar(value='준비')
-        tk.Label(
-            self.root, textvariable=self.status_var,
-            relief='sunken', anchor='w', bg='#f0f0f0', fg='#333',
-            font=('맑은 고딕', 9), pady=3
-        ).grid(row=2, column=0, sticky='ew')
-        self._refresh_ready_status()
-
-    # ── 탭 1: 명단 입력 ────────────────────────
-    def _tab_input(self, frame: ttk.Frame):
-        frame.columnconfigure(0, weight=1)
-        frame.rowconfigure(3, weight=1)
-        frame.rowconfigure(6, weight=2)
-
-        # ⓪ 어느 도구를 쓸지 — 가장 먼저 정해야 하는 것이라 크게 둔다
-        picker = tk.Frame(frame, bg='#263238')
-        picker.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 0))
+        # 어느 도구를 쓸지. 탭 위에 둬서 어느 화면에서든 바로 바꿀 수 있게 한다.
+        picker = tk.Frame(self.root, bg='#263238')
+        picker.grid(row=1, column=0, sticky='ew')
         picker.columnconfigure(0, weight=1, uniform='pick')
         picker.columnconfigure(1, weight=1, uniform='pick')
 
@@ -669,9 +628,50 @@ class App:
         self.target_hint.grid(row=2, column=0, columnspan=2, sticky='w',
                               padx=14, pady=(0, 10))
 
+        # 탭 노트북
+        nb = ttk.Notebook(self.root)
+        nb.grid(row=2, column=0, sticky='nsew', padx=4, pady=(4, 4))
+
+        self.nb = nb
+        f1 = ttk.Frame(nb)
+        f2 = ttk.Frame(nb)
+        f3 = ttk.Frame(nb)
+        f4 = ttk.Frame(nb)
+        f5 = ttk.Frame(nb)
+
+        # 고른 도구에 따라 넣고 빼므로 순서와 이름을 기억해 둔다
+        self.tab_input = f1
+        self.tab_help = f5
+        self.messenger_tabs = [(f2, '  2. 위치 설정  '), (f3, '  3. 자동 선택  ')]
+        self.edufine_tabs = [(f4, '  2. 수신그룹 엑셀  ')]
+
+        # 탭 등록은 _apply_target 이 한다. 고른 도구에 따라 매번 다시 구성한다.
+
+        self._tab_input(f1)
+        self._tab_calib(f2)
+        self._tab_auto(f3)
+        self._tab_edufine(f4)
+        self._tab_help(f5)
+        self._apply_target()
+
+        # 상태바
+        self.status_var = tk.StringVar(value='준비')
+        tk.Label(
+            self.root, textvariable=self.status_var,
+            relief='sunken', anchor='w', bg='#f0f0f0', fg='#333',
+            font=('맑은 고딕', 9), pady=3
+        ).grid(row=3, column=0, sticky='ew')
+        self._refresh_ready_status()
+
+    # ── 탭 1: 명단 입력 ────────────────────────
+    def _tab_input(self, frame: ttk.Frame):
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(2, weight=1)
+        frame.rowconfigure(5, weight=2)
+
         # ① 입력 형식 안내 박스
         guide = tk.Frame(frame, bg='#E3F2FD', bd=1, relief='solid')
-        guide.grid(row=1, column=0, sticky='ew', padx=10, pady=(6, 4))
+        guide.grid(row=0, column=0, sticky='ew', padx=10, pady=(6, 4))
         guide.columnconfigure(0, weight=1)
 
         self.guide_title = tk.Label(
@@ -692,7 +692,7 @@ class App:
 
         # ② 파일 열기 버튼 행
         file_btn_frame = tk.Frame(frame, bg='#F5F7FA')
-        file_btn_frame.grid(row=2, column=0, sticky='ew', padx=8, pady=(0, 2))
+        file_btn_frame.grid(row=1, column=0, sticky='ew', padx=8, pady=(0, 2))
 
         for text, cmd, bg in [
             ('엑셀 파일 열기 (.xlsx)', self._open_excel, '#607D8B'),
@@ -708,11 +708,11 @@ class App:
         self.input_text = scrolledtext.ScrolledText(
             frame, height=8, font=('맑은 고딕', 9), wrap='none'
         )
-        self.input_text.grid(row=3, column=0, sticky='nsew', padx=8, pady=4)
+        self.input_text.grid(row=2, column=0, sticky='nsew', padx=8, pady=4)
 
         # ④ 추출 버튼 행
         action_frame = tk.Frame(frame, bg='#F5F7FA')
-        action_frame.grid(row=4, column=0, sticky='ew', padx=8, pady=(0, 4))
+        action_frame.grid(row=3, column=0, sticky='ew', padx=8, pady=(0, 4))
 
         for text, cmd, bg in [
             ('명단 추출 →', self._parse,       '#1565C0'),
@@ -741,11 +741,11 @@ class App:
         self.parse_status = tk.Label(
             frame, text='', fg='#555', font=('맑은 고딕', 9), anchor='w'
         )
-        self.parse_status.grid(row=5, column=0, sticky='w', padx=12, pady=(0, 2))
+        self.parse_status.grid(row=4, column=0, sticky='w', padx=12, pady=(0, 2))
 
         # ⑥ 추출된 명단 리스트
         list_frame = tk.Frame(frame)
-        list_frame.grid(row=6, column=0, sticky='nsew', padx=8, pady=(0, 4))
+        list_frame.grid(row=5, column=0, sticky='nsew', padx=8, pady=(0, 4))
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
 
@@ -761,7 +761,7 @@ class App:
 
         # ⑦ 하단 버튼 + 범례
         bottom_frame = tk.Frame(frame, bg='#F5F7FA')
-        bottom_frame.grid(row=7, column=0, sticky='ew', padx=8, pady=(0, 6))
+        bottom_frame.grid(row=6, column=0, sticky='ew', padx=8, pady=(0, 6))
         bottom_frame.columnconfigure(1, weight=1)
 
         tk.Button(
@@ -1758,13 +1758,12 @@ class App:
         엑셀로 나가면 그대로 등록되므로 사람이 후보를 골라야 한다.
         """
         raw = self.input_text.get('1.0', 'end')
-        rows = parse_orgs(raw)
 
-        # 2차 해석 — 코드 사전(전체경로)으로 다시 본다.
+        # 명단을 읽고 코드 사전으로 다시 본다.
         # 부서는 org_db 만으로는 못 좁힌다. '행정과' 는 11곳이고
         # '청주교육지원청 행정과' 처럼 상위조직과 맞물려야 한 곳이 된다.
         index = edufine.index_by_short_name(self.codes)
-        edufine.apply_codes(rows, self.codes, index)
+        rows = edufine.parse_and_resolve(raw, self.codes, index)
 
         self.names_list.clear()
         self.parsed_list.delete(0, 'end')

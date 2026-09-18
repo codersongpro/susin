@@ -445,3 +445,24 @@ def category_counts(codes: dict) -> dict:
     for full in (codes or {}).get('기관', {}):
         counts[categorise(full)] = counts.get(categorise(full), 0) + 1
     return counts
+
+
+def known_names(codes: dict, index: dict = None) -> set:
+    """코드 사전이 아는 모든 이름 (짧은 이름 + 전체경로).
+
+    org_db 에는 없지만 실재하는 부서명('행정과')을 명단 파싱 단계에서 버리지 않도록
+    parse_orgs 에 넘긴다.
+    """
+    index = index if index is not None else index_by_short_name(codes)
+    return set(index) | set((codes or {}).get('기관', {}))
+
+
+def parse_and_resolve(text: str, codes: dict, index: dict = None):
+    """명단 텍스트 → 코드 사전까지 반영한 기관 목록.
+
+    앱과 테스트가 같은 경로를 타도록 여기 한 곳에 모아 둔다.
+    """
+    from sotong_parser import parse_orgs
+    index = index if index is not None else index_by_short_name(codes)
+    rows = parse_orgs(text, known=known_names(codes, index))
+    return apply_codes(rows, codes, index)

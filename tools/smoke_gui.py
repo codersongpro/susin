@@ -65,6 +65,11 @@ def main():
     assert grades.count('exact') == 2, grades
     assert 'ambiguous' in grades, grades
 
+    # 도구 선택은 탭 밖(창 맨 위)에 있어야 한다
+    card = app.target_cards['edufine'][0]
+    assert str(card.winfo_parent()) not in str(app.tab_input), '선택 카드가 탭 안에 있습니다'
+    print('도구 선택 위치 ok')
+
     root.destroy()
     print('스모크 테스트 통과')
     return 0
