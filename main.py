@@ -38,15 +38,11 @@ from automation import (
     FAIL_DUPLICATE,
     FAIL_MANUAL_STOP,
     FAIL_NO_USER,
-    FAIL_NOT_ADDED,
     FAIL_SEARCH_STALE,
-    FAIL_UNCHECKED,
     POPUP_WAIT_ADD,
-    POPUP_WAIT_VERIFY,
     RESULT_SCAN_HEIGHT,
     RESULT_SCAN_WIDTH,
     RESULT_WAIT_MIN,
-    VERIFY_ADD_TRIES,
     failure_reason_from_error,
     looks_like_duplicate_popup,
     looks_like_result,
@@ -419,12 +415,10 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     1단계: 검색 입력창에 이름을 넣고 검색합니다
     2단계: 검색 결과 첫 번째 항목을 누릅니다
     3단계: [사용자 선택] 버튼을 눌러 받는 사람에 추가합니다
-    4단계: 정말 추가됐는지 선택 버튼을 한 번 더 눌러 확인합니다
 
-  4단계는 이미 선택된 사용자를 다시 선택할 때 뜨는
-  '선택된 사용자 입니다.' 안내창을 추가됐다는 증거로 씁니다.
-  안내창이 끝까지 없으면 추가되지 않은 것이라 빨간 항목으로
-  남깁니다.
+  검색해서 나오지 않은 사람은 빨간 항목으로 남습니다.
+  다 끝난 뒤 소통메신저의 [선택된 사용자] 수가 맞는지
+  한 번 보시면 좋습니다.
 
   수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
@@ -3114,13 +3108,10 @@ class App:
 
     # ── 자동화 워커 ────────────────────────────
     def _worker(self, run_items):
-        ok = fail = unchecked = 0
+        ok = fail = 0
         manual = self.config.data.get('manual_confirm', False)
         total = len(run_items)
         no_result_streak = 0
-        unverified_streak = 0
-        if not manual and self._win32gui() is None:
-            self._log('⚠  이 PC 에서는 안내창을 볼 수 없어 추가 확인을 건너뜁니다.\n\n')
 
         for idx, item in enumerate(run_items):
             if self.stop_flag.is_set():
@@ -3184,25 +3175,6 @@ class App:
                         self._mark_failed(idx, FAIL_DUPLICATE)
                         self._update_progress(idx + 1, total)
                         continue
-                    if result == 'unverified':
-                        fail += 1
-                        unverified_streak += 1
-                        self._log('✗  (받는 사람에 추가되지 않았습니다)\n')
-                        if unverified_streak == 3:
-                            self._log(
-                                '     연달아 추가되지 않았습니다. [위치 설정] 탭에서 '
-                                '결과 첫 줄과 선택 버튼 위치를 확인해 보세요.\n')
-                        self._mark_failed(idx, FAIL_NOT_ADDED)
-                        self._update_progress(idx + 1, total)
-                        continue
-                    unverified_streak = 0
-                    if result == 'unchecked':
-                        # 확인하지 않은 것을 성공이라고 하지 않는다.
-                        unchecked += 1
-                        self._log('?  (추가됐는지 확인 못 함)\n')
-                        self._mark_failed(idx, FAIL_UNCHECKED)
-                        self._update_progress(idx + 1, total)
-                        continue
                     ok += 1
                     self._log('✓\n')
             except pyautogui.FailSafeException:
@@ -3219,7 +3191,7 @@ class App:
             time.sleep(0.1)
 
         stopped = self.stop_flag.is_set()
-        self.root.after(0, lambda: self._done(ok, fail, stopped, unchecked))
+        self.root.after(0, lambda: self._done(ok, fail, stopped))
 
     def _do_search(self, search_str: str):
         x = self.config.data['search_field_x']
@@ -3260,30 +3232,19 @@ class App:
         return duplicate
 
     def _do_select(self) -> str:
-        """추가하고, 정말 추가됐는지 확인한다.
+        """결과 첫 줄을 누르고 선택 버튼을 눌러 받는 사람에 추가한다.
 
-        선택 버튼을 눌렀다는 것만으로는 추가됐는지 알 수 없다. 클릭이 빗나가도
-        소통메신저는 아무 말을 하지 않아서, 받는 사람에 없는 사람이 성공으로
-        기록됐다.
+        추가됐는지 되짚어 확인하지는 않는다. 확인하려면 사람마다 선택 버튼을
+        한 번 더 눌러야 해서 시간이 두 배로 든다. 그래서 빼 두었다.
+        대신 끝난 뒤 소통메신저의 [선택된 사용자] 수를 직접 보시면 된다.
 
-        이미 선택된 사용자를 다시 선택하려 하면 '선택된 사용자 입니다.' 안내창이
-        뜬다. 그 안내창을 추가됐다는 증거로 쓴다. 같은 자리를 한 번 더 눌러
-        안내창이 뜨면 앞선 클릭이 통한 것이고, 끝까지 안내창이 없으면 추가되지
-        않은 것이라 실패로 남긴다.
+        이미 선택된 사용자였다면 '선택된 사용자 입니다.' 안내창이 뜬다.
+        그때는 중복으로 남긴다.
         """
         time.sleep(0.2)
         if self._click_add_once(POPUP_WAIT_ADD):
             return 'duplicate'      # 명단을 돌리기 전부터 받는 사람에 있던 사람
-        if self._win32gui() is None:
-            # 창을 들여다볼 수 없으면 확인할 방법이 없다. 멀쩡히 추가된 사람을
-            # 실패로 몰아세우지도, 확인하지 않은 것을 성공이라 하지도 않는다.
-            return 'unchecked'
-        for _ in range(VERIFY_ADD_TRIES):
-            if self.stop_flag.is_set():
-                return 'stopped'
-            if self._click_add_once(POPUP_WAIT_VERIFY):
-                return 'ok'         # 앞선 클릭으로 추가된 것이 확인됐다
-        return 'unverified'
+        return 'ok'
 
     _win32gui_warned = False
 
@@ -3560,7 +3521,7 @@ class App:
         )
         self.continue_btn.config(state='normal')
 
-    def _done(self, ok: int, fail: int, stopped: bool = False, unchecked: int = 0):
+    def _done(self, ok: int, fail: int, stopped: bool = False):
         self.worker_thread = None
         self.start_btn.config(state='normal')
         self.stop_btn.config(state='disabled')
@@ -3568,15 +3529,12 @@ class App:
         self._refresh_failed_retry_state()
         sep = '─' * 44
         result_word = '중지' if stopped else '완료'
-        tail = f'   ?  확인 못 함 {unchecked}명' if unchecked else ''
-        self._log(f'\n{sep}\n{result_word}  ✓ {ok}명   ✗ {fail}명{tail}\n')
+        self._log(f'\n{sep}\n{result_word}  ✓ {ok}명   ✗ {fail}명\n')
         summary = f'성공: {ok}명, 실패: {fail}명'
-        if unchecked:
-            summary += f', 확인 못 함: {unchecked}명'
         if stopped:
             self.status_var.set(f'중지됨  ·  {summary}')
             return
-        if fail or unchecked:
+        if fail:
             self.status_var.set(f'완료 — {summary}  ← 빨간색 항목 확인')
             # 빠진 사람은 목록으로 보여 준다. 몇 명인지만 알려 주면 누가 빠졌는지
             # 로그를 거슬러 올라가며 찾아야 한다.
@@ -3602,10 +3560,7 @@ class App:
             self.names_list[idx]['failure_reason'] = reason
             self.parsed_list.delete(idx)
             self.parsed_list.insert(idx, self._format_item_label(self.names_list[idx]))
-            # 확인하지 못한 것은 실패와 구분해 노란색으로 둔다.
-            colors = ({'bg': '#FFF3CD', 'fg': '#7A5B00'} if reason == FAIL_UNCHECKED
-                      else {'bg': '#FFCDD2', 'fg': '#B71C1C'})
-            self.parsed_list.itemconfig(idx, colors)
+            self.parsed_list.itemconfig(idx, {'bg': '#FFCDD2', 'fg': '#B71C1C'})
             self._refresh_failed_retry_state()
         self.root.after(0, apply)
 

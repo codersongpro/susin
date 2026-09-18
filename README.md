@@ -161,6 +161,23 @@ python3 tools/merge_edufine_orgs.py --apply   # 수확한 기관명을 org_db �
 
 둘 다 **기존 별칭을 덮어쓰지 않고 추가만 한다.** 반복 실행해도 안전하다.
 
+## 고치면서 돌려 보기
+
+exe 를 만들지 않고 소스로 바로 띄운다. 고칠 때마다 빌드를 기다릴 일이 없다.
+
+```
+git clone https://github.com/codersongpro/susin.git
+cd susin
+```
+
+그다음부터는 **`개발용 실행.bat`** 만 누르면 된다. 최신 코드를 받고, 빠진
+패키지만 깔고, 앱을 띄우는 것까지 한 번에 한다. 파이썬이 없으면 `시작.bat` 을
+한 번 실행해 파이썬까지 깔고 나서 쓴다.
+
+릴리즈는 고치는 것이 끝나고 확인까지 마쳤을 때 한 번만 한다.
+exe 만 확인하고 싶으면 Actions 에서 `version` 을 비우고 돌린다. 릴리즈는
+만들지 않고 exe 만 artifact 로 남는다.
+
 ## 개발
 
 ```bash

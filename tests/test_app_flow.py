@@ -819,25 +819,7 @@ class AppFlowTest(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-    def test_add_is_confirmed_by_the_duplicate_popup(self):
-        """두 번째 클릭에서 중복 안내창이 뜨면 첫 클릭이 통한 것이다."""
-        self._use_verify()
-        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_click_add_once',
-                             side_effect=[False, True]) as clicked:
-            self.assertEqual(self.app._do_select(), 'ok')
-        self.assertEqual(clicked.call_count, 2)
 
-    def test_add_that_never_shows_the_popup_is_a_failure(self):
-        """끝까지 안내창이 없으면 담기지 않은 것이라 실패로 남긴다."""
-        from automation import VERIFY_ADD_TRIES
-
-        self._use_verify()
-        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_click_add_once',
-                             return_value=False) as clicked:
-            self.assertEqual(self.app._do_select(), 'unverified')
-        self.assertEqual(clicked.call_count, 1 + VERIFY_ADD_TRIES)
 
     def test_already_added_person_is_reported_as_duplicate(self):
         """첫 클릭에서 안내창이 뜨면 돌리기 전부터 담혀 있던 사람이다."""
@@ -965,40 +947,8 @@ class AppFlowTest(unittest.TestCase):
             self.app.config.data['add_button_y'] = 600
             self.assertTrue(self.app._click_add_once(1.0))
 
-    def test_verification_is_skipped_without_window_access(self):
-        """창을 못 들여다보면 확인 못 함으로 둔다.
 
-        멀쩡한 사람을 실패로 몰지도, 확인하지 않은 것을 성공이라 하지도 않는다.
-        """
-        self._use_verify(windows=False)
-        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_win32gui', return_value=None), \
-                patch.object(self.app, '_click_add_once',
-                             return_value=False) as clicked:
-            self.assertEqual(self.app._do_select(), 'unchecked')
-        self.assertEqual(clicked.call_count, 1)
 
-    def test_verification_clicks_only_once(self):
-        """확인은 한 번만 한다. 사람 수만큼 시간이 불어나면 못 쓴다."""
-        from automation import VERIFY_ADD_TRIES
-
-        self.assertEqual(VERIFY_ADD_TRIES, 1)
-        self._use_verify()
-        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_click_add_once',
-                             return_value=False) as clicked:
-            self.assertEqual(self.app._do_select(), 'unverified')
-        self.assertEqual(clicked.call_count, 2)
-
-    def test_verification_stops_when_the_user_stops(self):
-        self._use_verify()
-        self.app.stop_flag.set()
-        try:
-            with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                    patch.object(self.app, '_click_add_once', return_value=False):
-                self.assertEqual(self.app._do_select(), 'stopped')
-        finally:
-            self.app.stop_flag.clear()
 
     def test_missing_coordinates_are_reported(self):
         keys = ('result_first_x', 'result_first_y', 'add_button_x', 'add_button_y')
