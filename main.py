@@ -122,32 +122,35 @@ def key_is_down(vk_code):
 # 소통메신저에서 수신자를 담기까지 누르는 차례. 3·4·5 번이 신통픽이 기억해야 할
 # 자리다. 사용자가 화면에서 바로 찾을 수 있게 같은 번호로 부른다.
 MESSENGER_STEPS = (
-    ('1', '[쪽지작성] 버튼', '소통메신저 화면 위쪽의 파란 버튼입니다.'),
-    ('2', '[받는사람 추가] 버튼', '누르면 [사용자 선택] 창이 열립니다.'),
-    ('3', '검색 입력칸', "'소속+이름 또는 이름 검색' 이라고 적힌 칸입니다."),
-    ('4', '검색 결과 첫 줄', "'검색 결과(1명)' 아래 첫 번째 사람입니다."),
-    ('5', '오른쪽 화살표 버튼', '결과 목록과 [선택된 사용자] 사이에 있는 버튼입니다.'),
+    ('1', '편지 버튼', '소통메신저 오른쪽 위에 있습니다. 누르지 말고 마우스만 올리면 '
+                      '아래로 메뉴가 펼쳐집니다.'),
+    ('2', '[쪽지작성]', '펼쳐진 메뉴에서 누릅니다.'),
+    ('3', '[받는사람 추가] 버튼', '누르면 [사용자 선택] 창이 열립니다.'),
+    ('4', '검색 입력칸', "'소속+이름 또는 이름 검색' 이라고 적힌 칸입니다."),
+    ('5', '검색 결과 첫 줄', "'검색 결과(1명)' 아래 첫 번째 사람입니다."),
+    ('6', '오른쪽 화살표 버튼', '결과 목록과 [선택된 사용자] 사이에 있는 버튼입니다.'),
 )
 
 CAPTURE_HINTS = {
-    'search_field': "3번  검색 입력칸  ('소속+이름 또는 이름 검색' 칸)",
-    'result_first': "4번  검색 결과 첫 줄  ('검색 결과(1명)' 아래 첫 사람)",
-    'add_button': '5번  오른쪽 화살표 버튼  (결과를 [선택된 사용자] 로 옮기는 버튼)',
+    'search_field': "4번  검색 입력칸  ('소속+이름 또는 이름 검색' 칸)",
+    'result_first': "5번  검색 결과 첫 줄  ('검색 결과(1명)' 아래 첫 사람)",
+    'add_button': '6번  오른쪽 화살표 버튼  (결과를 [선택된 사용자] 로 옮기는 버튼)',
 }
 
 # 안내 그림 파일 이름. assets/guide/ 에 넣어 두면 화면에 함께 나오고,
 # 없으면 글 안내만 나온다. tk 가 읽을 수 있게 PNG 로 둔다.
 GUIDE_IMAGES = {
-    '1': 'step1_write.png',
-    '2': 'step2_add.png',
-    '3': 'step3_search.png',
-    '4': 'step4_result.png',
-    '5': 'step5_arrow.png',
+    '1': 'mail_button.png',
+    '2': 'write_note.png',
+    '3': 'add_recipient.png',
+    '4': 'search_box.png',
+    '5': 'first_result.png',
+    '6': 'arrow_button.png',
 }
 CAPTURE_STEP_KEYS = {
-    'search_field': '3',
-    'result_first': '4',
-    'add_button': '5',
+    'search_field': '4',
+    'result_first': '5',
+    'add_button': '6',
 }
 _guide_image_cache = {}
 
@@ -267,7 +270,7 @@ class CaptureDialog(tk.Toplevel):
             font=('맑은 고딕', 10), justify='center', pady=8
         ).pack()
 
-        if step == '5':
+        if step == '6':
             # 이 클릭은 소통메신저에서 실제로 사람을 담는다. 그때만 알린다.
             tk.Label(
                 self,
@@ -473,29 +476,31 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   한 번만 설정하면 이후에는 자동으로 기억합니다.
 
   소통메신저에서 누르는 차례:
-    1번  [쪽지작성] 버튼        화면 위쪽의 파란 버튼입니다.
-    2번  [받는사람 추가] 버튼   누르면 [사용자 선택] 창이 열립니다.
-    3번  검색 입력칸            '소속+이름 또는 이름 검색' 칸입니다.
-    4번  검색 결과 첫 줄        '검색 결과(1명)' 아래 첫 사람입니다.
-    5번  오른쪽 화살표 버튼     결과를 [선택된 사용자] 로 옮기는 버튼입니다.
+    1번  편지 버튼             오른쪽 위에 있습니다. 누르지 말고 마우스만 올리면
+                              아래로 메뉴가 펼쳐집니다.
+    2번  [쪽지작성]            펼쳐진 메뉴에서 누릅니다.
+    3번  [받는사람 추가] 버튼   누르면 [사용자 선택] 창이 열립니다.
+    4번  검색 입력칸            '소속+이름 또는 이름 검색' 칸입니다.
+    5번  검색 결과 첫 줄        '검색 결과(1명)' 아래 첫 사람입니다.
+    6번  오른쪽 화살표 버튼     결과를 [선택된 사용자] 로 옮기는 버튼입니다.
 
-  이 가운데 3·4·5 번 자리를 신통픽에 알려 주면 됩니다.
+  이 가운데 4·5·6 번 자리를 신통픽에 알려 주면 됩니다.
 
   공통 캡처 방법:
     [📍 위치 설정] 을 누르고 [캡처 시작] 을 누른 뒤,
     소통메신저에서 잡을 자리를 그대로 클릭하면 됩니다.
     마우스를 옮긴 뒤 Enter 를 눌러도 확정되고, Esc 로 취소합니다.
-    클릭은 소통메신저에도 전달되니, 5번을 잡을 때는
+    클릭은 소통메신저에도 전달되니, 6번을 잡을 때는
     그 사람이 실제로 추가됩니다. 캡처를 마친 뒤 받는 사람 목록을 확인하세요.
 
-  [ 3번 ]  검색 입력칸
+  [ 4번 ]  검색 입력칸
     '소속+이름 또는 이름 검색' 칸을 클릭합니다.
 
-  [ 4번 ]  검색 결과 첫 줄
+  [ 5번 ]  검색 결과 첫 줄
     아무 이름(예: 홍길동)이나 검색한 뒤
     '검색 결과(1명)' 아래 첫 사람을 클릭합니다.
 
-  [ 5번 ]  오른쪽 화살표 버튼
+  [ 6번 ]  오른쪽 화살표 버튼
     결과가 보이는 상태에서
     결과 목록과 [선택된 사용자] 사이의 화살표 버튼을 클릭합니다.
 
@@ -893,19 +898,19 @@ class ClipboardWalker(tk.Toplevel):
         row.pack(pady=14)
 
         tk.Button(row, text='← 이전', command=self.prev,
-                  bg='#90A4AE', fg='white', activebackground='#78909C',
+                  bg='#90A4AE', fg='white', disabledforeground='#ECEFF1', activebackground='#78909C',
                   relief='flat', font=('맑은 고딕', 9), padx=12, pady=6,
                   cursor='hand2').pack(side='left', padx=4)
 
         self.next_btn = tk.Button(
             row, text='복사하고 다음  (Enter)', command=self.advance,
-            bg='#6A1B9A', fg='white', activebackground='#4A148C',
+            bg='#6A1B9A', fg='white', disabledforeground='#ECEFF1', activebackground='#4A148C',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=18, pady=6,
             cursor='hand2')
         self.next_btn.pack(side='left', padx=4)
 
         tk.Button(row, text='닫기', command=self.destroy,
-                  bg='#B0BEC5', fg='white', activebackground='#90A4AE',
+                  bg='#B0BEC5', fg='white', disabledforeground='#ECEFF1', activebackground='#90A4AE',
                   relief='flat', font=('맑은 고딕', 9), padx=12, pady=6,
                   cursor='hand2').pack(side='left', padx=4)
 
@@ -1236,7 +1241,7 @@ class App:
         tk.Button(
             picker, text='사용 가이드',
             command=lambda: self._show_onboarding(self.config.target),
-            bg='#455A64', fg='white', activebackground='#37474F',
+            bg='#455A64', fg='white', disabledforeground='#ECEFF1', activebackground='#37474F',
             relief='flat', font=('맑은 고딕', 9), padx=10, pady=4,
             cursor='hand2'
         ).grid(row=2, column=1, sticky='e', padx=14, pady=(0, 8))
@@ -1320,7 +1325,7 @@ class App:
         ]:
             tk.Button(
                 file_btn_frame, text=text, command=cmd,
-                bg=bg, fg='white', activebackground=bg,
+                bg=bg, fg='white', disabledforeground='#ECEFF1', activebackground=bg,
                 relief='flat', font=('맑은 고딕', 9), padx=8, pady=4, cursor='hand2'
             ).pack(side='left', padx=3)
 
@@ -1340,7 +1345,7 @@ class App:
         ]:
             button = tk.Button(
                 action_frame, text=text, command=cmd,
-                bg=bg, fg='white', activebackground=bg,
+                bg=bg, fg='white', disabledforeground='#ECEFF1', activebackground=bg,
                 relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2'
             )
             button.pack(side='left', padx=3)
@@ -1351,18 +1356,18 @@ class App:
         # 부서는 전체경로를 외울 수 없으니 목록에서 고르게 한다
         self.browse_btn = tk.Button(
             action_frame, text='기관 찾아보기…', command=self._open_org_picker,
-            bg='#00695C', fg='white', activebackground='#004D40',
+            bg='#00695C', fg='white', disabledforeground='#ECEFF1', activebackground='#004D40',
             relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2')
 
         self.bulk_fix_btn = tk.Button(
             action_frame, text='확인 필요 기관 일괄 수정', command=self._open_bulk_org_editor,
-            bg='#C62828', fg='white', activebackground='#B71C1C',
+            bg='#C62828', fg='white', disabledforeground='#ECEFF1', activebackground='#B71C1C',
             relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5,
             cursor='hand2', state='disabled')
 
         self.org_history_btn = tk.Button(
             action_frame, text='추출 기록 보기', command=self._open_org_history,
-            bg='#546E7A', fg='white', activebackground='#455A64',
+            bg='#546E7A', fg='white', disabledforeground='#ECEFF1', activebackground='#455A64',
             relief='flat', font=('맑은 고딕', 9), padx=10, pady=5,
             cursor='hand2')
 
@@ -1402,7 +1407,7 @@ class App:
 
         tk.Button(
             bottom_frame, text='선택 항목 삭제 (Del)', command=self._delete_selected,
-            bg='#EF6C00', fg='white', activebackground='#E65100',
+            bg='#EF6C00', fg='white', disabledforeground='#ECEFF1', activebackground='#E65100',
             relief='flat', font=('맑은 고딕', 9), padx=8, pady=3, cursor='hand2'
         ).grid(row=0, column=0, sticky='w')
 
@@ -1433,7 +1438,7 @@ class App:
         order.columnconfigure(2, weight=1)
         self.step_images = []
         for row_i, (number, title, desc) in enumerate(MESSENGER_STEPS):
-            mine = number in GUIDE_IMAGES and number in ('3', '4', '5')
+            mine = number in CAPTURE_STEP_KEYS.values()
             tk.Label(
                 order, text=number,
                 bg='#1565C0' if mine else '#90A4AE', fg='white',
@@ -1453,15 +1458,15 @@ class App:
             ).grid(row=row_i, column=2, padx=4, pady=3, sticky='w')
 
         # STEP 1·2·3: 위치 설정
-        pos_frame = ttk.LabelFrame(frame, text='잡아 둘 자리 세 곳 (위의 3·4·5 번)')
+        pos_frame = ttk.LabelFrame(frame, text='잡아 둘 자리 세 곳 (위의 4·5·6 번)')
         pos_frame.grid(row=2, column=0, sticky='ew', padx=10, pady=4)
         pos_frame.columnconfigure(1, weight=1)
         self.calibration_panel = pos_frame
 
         for row_i, (label_text, key) in enumerate([
-            ('3번  검색 입력칸:', 'search_field'),
-            ('4번  검색 결과 첫 줄:', 'result_first'),
-            ('5번  오른쪽 화살표 버튼:', 'add_button'),
+            ('4번  검색 입력칸:', 'search_field'),
+            ('5번  검색 결과 첫 줄:', 'result_first'),
+            ('6번  오른쪽 화살표 버튼:', 'add_button'),
         ]):
             tk.Label(pos_frame, text=label_text,
                      font=('맑은 고딕', 9, 'bold')).grid(
@@ -1474,7 +1479,7 @@ class App:
 
             tk.Button(
                 pos_frame, text='📍 위치 설정',
-                bg='#FF9800', fg='white', activebackground='#FF9800',
+                bg='#FF9800', fg='white', disabledforeground='#ECEFF1', activebackground='#FF9800',
                 relief='flat', font=('맑은 고딕', 9), padx=6, pady=3,
                 cursor='hand2',
                 command=lambda k=key: self._do_capture(k)
@@ -1525,7 +1530,7 @@ class App:
 
         tk.Button(
             frame, text='✅  설정 저장',
-            bg='#4CAF50', fg='white', activebackground='#4CAF50',
+            bg='#4CAF50', fg='white', disabledforeground='#ECEFF1', activebackground='#4CAF50',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=12, pady=6,
             cursor='hand2', command=self._save_calib
         ).grid(row=4, column=0, pady=8)
@@ -1611,14 +1616,14 @@ class App:
 
         self.edufine_make_button = tk.Button(
             btn_row, text='수신그룹 엑셀 만들기', command=self._build_group_excel,
-            bg='#1565C0', fg='white', activebackground='#0D47A1',
+            bg='#1565C0', fg='white', disabledforeground='#ECEFF1', activebackground='#0D47A1',
             relief='flat', font=('맑은 고딕', 9, 'bold'), padx=14, pady=6, cursor='hand2'
         )
         self.edufine_make_button.pack(side='left')
 
         tk.Button(
             btn_row, text='코드 없는 기관 순차 복사', command=self._open_clipboard_walker,
-            bg='#6A1B9A', fg='white', activebackground='#4A148C',
+            bg='#6A1B9A', fg='white', disabledforeground='#ECEFF1', activebackground='#4A148C',
             relief='flat', font=('맑은 고딕', 9, 'bold'), padx=14, pady=6, cursor='hand2'
         ).pack(side='left', padx=(8, 0))
 
@@ -1633,7 +1638,7 @@ class App:
         sample_row.grid(row=4, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 8))
         tk.Button(
             sample_row, text='빈 양식 받기', command=self._save_blank_template,
-            bg='#546E7A', fg='white', activebackground='#455A64',
+            bg='#546E7A', fg='white', disabledforeground='#ECEFF1', activebackground='#455A64',
             relief='flat', font=('맑은 고딕', 9), padx=12, pady=4, cursor='hand2'
         ).pack(side='left')
         tk.Label(
@@ -1773,15 +1778,15 @@ class App:
         btns = tk.Frame(dlg, bg='#F5F7FA')
         btns.pack(pady=12)
         tk.Button(btns, text='선택한 것 넣기', command=add_selected,
-                  bg='#1565C0', fg='white', activebackground='#0D47A1',
+                  bg='#1565C0', fg='white', disabledforeground='#ECEFF1', activebackground='#0D47A1',
                   relief='flat', font=('맑은 고딕', 9, 'bold'),
                   padx=16, pady=6, cursor='hand2').pack(side='left', padx=4)
         tk.Button(btns, text='보이는 것 전부 넣기', command=add_all_shown,
-                  bg='#00695C', fg='white', activebackground='#004D40',
+                  bg='#00695C', fg='white', disabledforeground='#ECEFF1', activebackground='#004D40',
                   relief='flat', font=('맑은 고딕', 9, 'bold'),
                   padx=16, pady=6, cursor='hand2').pack(side='left', padx=4)
         tk.Button(btns, text='닫기', command=dlg.destroy,
-                  bg='#B0BEC5', fg='white', activebackground='#90A4AE',
+                  bg='#B0BEC5', fg='white', disabledforeground='#ECEFF1', activebackground='#90A4AE',
                   relief='flat', font=('맑은 고딕', 9),
                   padx=14, pady=6, cursor='hand2').pack(side='left', padx=4)
 
@@ -1953,7 +1958,7 @@ class App:
 
         self.start_btn = tk.Button(
             btn_frame, text='▶  자동 선택 시작',
-            bg='#4CAF50', fg='white', activebackground='#388E3C',
+            bg='#4CAF50', fg='white', disabledforeground='#ECEFF1', activebackground='#388E3C',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
             cursor='hand2', command=self._start
         )
@@ -1961,7 +1966,7 @@ class App:
 
         self.continue_btn = tk.Button(
             btn_frame, text='▶▶  계속',
-            bg='#2196F3', fg='white', activebackground='#1565C0',
+            bg='#2196F3', fg='white', disabledforeground='#ECEFF1', activebackground='#1565C0',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
             cursor='hand2', state='disabled', command=self._resume
         )
@@ -1969,7 +1974,7 @@ class App:
 
         self.stop_btn = tk.Button(
             btn_frame, text='■  중지',
-            bg='#F44336', fg='white', activebackground='#C62828',
+            bg='#F44336', fg='white', disabledforeground='#ECEFF1', activebackground='#C62828',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
             cursor='hand2', state='disabled', command=self._stop
         )
@@ -1977,7 +1982,7 @@ class App:
 
         self.retry_failed_btn = tk.Button(
             btn_frame, text='↻  실패 항목만 다시 실행',
-            bg='#795548', fg='white', activebackground='#5D4037',
+            bg='#795548', fg='white', disabledforeground='#ECEFF1', activebackground='#5D4037',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
             cursor='hand2', state='disabled', command=self._retry_failed
         )
@@ -1985,7 +1990,7 @@ class App:
 
         self.failed_list_btn = tk.Button(
             btn_frame, text='📋  실패 명단 보기',
-            bg='#B71C1C', fg='white', activebackground='#8E0000',
+            bg='#B71C1C', fg='white', disabledforeground='#ECEFF1', activebackground='#8E0000',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
             cursor='hand2', state='disabled', command=self._show_failure_report
         )
@@ -1993,7 +1998,7 @@ class App:
 
         tk.Button(
             btn_frame, text='로그 지우기',
-            bg='#607D8B', fg='white', activebackground='#455A64',
+            bg='#607D8B', fg='white', disabledforeground='#ECEFF1', activebackground='#455A64',
             relief='flat', font=('맑은 고딕', 9), padx=9, pady=6,
             cursor='hand2', command=self._log_clear
         ).pack(side='left', padx=4)
@@ -2031,7 +2036,7 @@ class App:
         video_btn = tk.Button(
             frame,
             text=f'▶  {label} 사용법 영상 (YouTube)',
-            bg='#FF0000', fg='white', activebackground='#CC0000',
+            bg='#FF0000', fg='white', disabledforeground='#ECEFF1', activebackground='#CC0000',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
             cursor='hand2',
             command=lambda selected=target: webbrowser.open(GUIDE_VIDEO_URLS[selected])
@@ -2707,8 +2712,9 @@ class App:
         intro = getattr(self, 'calib_intro', None)
         if intro:
             intro.config(text=(
-                '소통메신저에서 [쪽지작성] 과 [받는사람 추가] 를 눌러 [사용자 선택] 창을 열어 두세요.\n'
-                '아래 차례에서 3번 검색 입력칸, 4번 검색 결과 첫 줄, 5번 화살표 버튼을 잡습니다.\n'
+                '소통메신저에서 편지 버튼에 마우스를 올려 [쪽지작성] 을 누르고,\n'
+                '[받는사람 추가] 로 [사용자 선택] 창을 열어 두세요.\n'
+                '아래 차례에서 4번 검색 입력칸, 5번 검색 결과 첫 줄, 6번 화살표 버튼을 잡습니다.\n'
                 '[캡처 시작] 을 누른 뒤 잡을 자리를 클릭하면 그 자리가 저장됩니다. '
                 'Enter 로도 확정되고 Esc 는 취소입니다.'
             ))
@@ -2997,11 +3003,11 @@ class App:
         btns = tk.Frame(dlg, bg='#F5F7FA')
         btns.pack(pady=12)
         tk.Button(btns, text='확정', command=take_selected,
-                  bg='#1565C0', fg='white', activebackground='#0D47A1',
+                  bg='#1565C0', fg='white', disabledforeground='#ECEFF1', activebackground='#0D47A1',
                   relief='flat', font=('맑은 고딕', 9, 'bold'),
                   padx=18, pady=5, cursor='hand2').pack(side='left', padx=4)
         tk.Button(btns, text='취소', command=dlg.destroy,
-                  bg='#B0BEC5', fg='white', activebackground='#90A4AE',
+                  bg='#B0BEC5', fg='white', disabledforeground='#ECEFF1', activebackground='#90A4AE',
                   relief='flat', font=('맑은 고딕', 9),
                   padx=14, pady=5, cursor='hand2').pack(side='left', padx=4)
 

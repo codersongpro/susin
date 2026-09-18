@@ -883,11 +883,13 @@ class AppFlowTest(unittest.TestCase):
                                  f'PNG 가 아닙니다: {name}')
 
     def test_capture_steps_point_at_the_three_saved_spots(self):
-        """캡처하는 세 자리가 안내 차례의 3·4·5 번과 같아야 한다."""
+        """캡처하는 세 자리가 안내 차례의 마지막 세 번호와 같아야 한다."""
         m = self.app_module
-        self.assertEqual(set(m.CAPTURE_STEP_KEYS.values()), {'3', '4', '5'})
         numbers = [number for number, _title, _desc in m.MESSENGER_STEPS]
-        self.assertEqual(numbers, ['1', '2', '3', '4', '5'])
+        self.assertEqual(numbers, ['1', '2', '3', '4', '5', '6'])
+        self.assertEqual(sorted(m.CAPTURE_STEP_KEYS.values()), numbers[-3:])
+        # 그림은 모든 차례에 있어야 한다
+        self.assertEqual(sorted(m.GUIDE_IMAGES), numbers)
         for key in ('search_field', 'result_first', 'add_button'):
             self.assertIn(key, m.CAPTURE_HINTS)
             self.assertIn(key, m.CAPTURE_STEP_KEYS)
