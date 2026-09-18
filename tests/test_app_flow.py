@@ -348,15 +348,20 @@ class AppFlowTest(unittest.TestCase):
         """pack 을 빠뜨려 버튼이 아예 안 보이던 적이 있다."""
         from app_config import TARGET_EDUFINE, TARGET_MESSENGER
 
+        self.assertFalse(
+            hasattr(self.app, 'make_excel_btn'),
+            '명단 입력 화면에 수신그룹 엑셀 만들기 버튼이 다시 생겼습니다',
+        )
+
         self.app._choose_target(TARGET_EDUFINE)
-        for name in ('browse_btn', 'make_excel_btn', 'bulk_fix_btn', 'org_history_btn'):
+        for name in ('browse_btn', 'bulk_fix_btn', 'org_history_btn'):
             btn = getattr(self.app, name)
             self.assertTrue(btn.pack.called, f'{name} 이 화면에 붙지 않았습니다')
             btn.pack.reset_mock()
             btn.pack_forget.reset_mock()
 
         self.app._choose_target(TARGET_MESSENGER)
-        for name in ('browse_btn', 'make_excel_btn', 'bulk_fix_btn', 'org_history_btn'):
+        for name in ('browse_btn', 'bulk_fix_btn', 'org_history_btn'):
             btn = getattr(self.app, name)
             self.assertTrue(btn.pack_forget.called, f'{name} 이 감춰지지 않았습니다')
 
@@ -640,6 +645,15 @@ class CaptureEnterTest(unittest.TestCase):
                     break
         finally:
             m.key_is_down, m.pyautogui = real_key, real_auto
+
+    def test_capture_dialog_never_claims_the_mouse_grab(self):
+        """외부 소통메신저를 눌러야 하므로 캡처 창은 처음부터 입력을 독점하면 안 된다."""
+        m = self.app_module
+        dlg = m.CaptureDialog(_Widget(), lambda _x, _y: None)
+        self.assertFalse(
+            dlg.grab_set.called,
+            '캡처 창을 열기만 해도 마우스 입력을 독점하고 있습니다',
+        )
 
     def test_enter_outside_the_window_confirms(self):
         m = self.app_module

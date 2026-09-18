@@ -8,7 +8,7 @@
 """
 
 APP_NAME    = '신통픽'
-APP_VERSION = '2.2.0'
+APP_VERSION = '2.2.1'
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
@@ -111,7 +111,6 @@ class CaptureDialog(tk.Toplevel):
         self.title('위치 캡처')
         self.geometry('420x270')
         self.resizable(False, False)
-        self.grab_set()
 
         tk.Label(
             self, text=f'📍  캡처 대상: {label}',
@@ -152,9 +151,9 @@ class CaptureDialog(tk.Toplevel):
         self.bind('<Return>', lambda _e: self._confirm())
         self.bind('<Escape>', lambda _e: self.destroy())
 
-        # 여기서부터는 사용자가 소통메신저를 만져야 한다. 잡아 둔 마우스를 놓지
-        # 않으면 윈도우가 마우스 입력을 이 창에만 주기 때문에, 소통메신저 위에서
-        # 마우스가 먹지 않는다. 캡처 중에는 반드시 놓는다.
+        # 캡처 창은 처음부터 grab_set()을 사용하지 않는다. 사용자가 외부
+        # 소통메신저를 눌러야 하기 때문이다. 혹시 이전 이벤트가 grab을 남겼다면
+        # 시작 시 한 번 더 해제한다.
         self._release_grab()
         # 소통메신저가 앞에 나와도 좌표는 계속 보여야 한다.
         try:
@@ -1063,18 +1062,12 @@ class App:
             if attr:
                 setattr(self, attr, button)
 
-        # 아래 둘은 수신픽에서만 쓴다. _apply_target 이 보이고 감춘다.
+        # 아래 버튼들은 수신픽에서만 쓴다. _apply_target 이 보이고 감춘다.
         # 부서는 전체경로를 외울 수 없으니 목록에서 고르게 한다
         self.browse_btn = tk.Button(
             action_frame, text='기관 찾아보기…', command=self._open_org_picker,
             bg='#00695C', fg='white', activebackground='#004D40',
             relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2')
-
-        # 목록을 고친 그대로 엑셀까지 간다. 탭을 옮겨 다닐 필요가 없다.
-        self.make_excel_btn = tk.Button(
-            action_frame, text='수신그룹 엑셀 만들기 →', command=self._build_group_excel,
-            bg='#1565C0', fg='white', activebackground='#0D47A1',
-            relief='flat', font=('맑은 고딕', 9, 'bold'), padx=14, pady=5, cursor='hand2')
 
         self.bulk_fix_btn = tk.Button(
             action_frame, text='확인 필요 기관 일괄 수정', command=self._open_bulk_org_editor,
@@ -2337,7 +2330,7 @@ class App:
             except Exception as exc:
                 logging.info('탭 배치 실패 (%s): %s', label.strip(), exc)
 
-        for name in ('browse_btn', 'make_excel_btn', 'bulk_fix_btn', 'org_history_btn'):
+        for name in ('browse_btn', 'bulk_fix_btn', 'org_history_btn'):
             btn = getattr(self, name, None)
             if not btn:
                 continue
