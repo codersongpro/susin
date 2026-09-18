@@ -669,22 +669,72 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual((left, top), (0, 0))
         self.assertEqual((width, height), (RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT))
 
+    def _result_frames(self, *frames):
+        """_result_pixels 가 차례대로 돌려줄 화면들을 만든다."""
+        from automation import RESULT_SCAN_HEIGHT, RESULT_SCAN_WIDTH
+
+        width, height = RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT
+        made = []
+        for painted in frames:
+            pixels = tuple(_fake_pixels(width, height, painted))
+            made.append((pixels, width, height))
+        return made
+
+    @staticmethod
+    def _row(row, start, count=12):
+        return {(row, start + off) for off in range(count)}
+
     def test_late_result_is_waited_for(self):
         """결과가 늦게 떠도 바로 실패로 넘기지 않는다."""
         self.app.config.data['search_delay'] = 0.1
+        blank, blank2, filled = self._result_frames(set(), set(), self._row(6, 40))
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_has_result',
-                             side_effect=[False, False, True]):
-            self.assertTrue(self.app._wait_for_result())
+                patch.object(self.app, '_result_pixels',
+                             side_effect=[blank, blank2, filled]):
+            self.assertEqual(self.app._wait_for_result(), 'new')
 
-    def test_waiting_gives_up_after_the_deadline(self):
+    def test_empty_result_is_reported_as_empty(self):
         self.app.config.data['search_delay'] = 0.01
+        blank, = self._result_frames(set())
         with patch.object(self.app_module, 'RESULT_WAIT_MIN', 0.05), \
                 patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_has_result', return_value=False):
-            self.assertFalse(self.app._wait_for_result())
+                patch.object(self.app, '_result_pixels', return_value=blank):
+            self.assertEqual(self.app._wait_for_result(), 'empty')
 
-    # ── 담겼는지 확인 ──────────────────────────
+    def test_unchanged_result_is_never_treated_as_new(self):
+        """앞사람의 결과가 남아 있으면 통과시키지 않는다.
+
+        글자만 보고 넘어가던 때에는 앞사람 줄을 눌러 엉뚱한 사람이 들어갈 수
+        있었다. 검색이 먹지 않았다는 사실을 그대로 알린다.
+        """
+        self.app.config.data['search_delay'] = 0.01
+        stale, = self._result_frames(self._row(6, 40))
+        with patch.object(self.app_module, 'RESULT_WAIT_MIN', 0.05), \
+                patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_result_pixels', return_value=stale):
+            self.assertEqual(self.app._wait_for_result(stale[0]), 'stale')
+
+    def test_changed_result_counts_as_new(self):
+        self.app.config.data['search_delay'] = 0.01
+        previous, current = self._result_frames(self._row(6, 40), self._row(6, 90))
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_result_pixels', return_value=current):
+            self.assertEqual(self.app._wait_for_result(previous[0]), 'new')
+
+    # ── 안내창 문구 ────────────────────────────
+    def test_real_messenger_popup_is_recognized(self):
+        """충북소통메신저가 실제로 띄우는 문구를 알아봐야 한다."""
+        from automation import looks_like_duplicate_popup
+
+        self.assertTrue(looks_like_duplicate_popup(
+            ['충북소통메신저', '선택된 사용자 입니다.', '확인']))
+        self.assertTrue(looks_like_duplicate_popup(
+            ['알림', '이미 선택된 사용자입니다', '확인']))
+        self.assertFalse(looks_like_duplicate_popup(
+            ['충북소통메신저', '검색 결과가 없습니다.', '확인']))
+        self.assertFalse(looks_like_duplicate_popup([None, '', '확인']))
+
+    # ── 추가됐는지 확인 ────────────────────────
     def _use_verify(self, on=True):
         saved = self.app.config.data.get('verify_add')
         self.app.config.data['verify_add'] = on
@@ -751,8 +801,8 @@ class AppFlowTest(unittest.TestCase):
     def test_waiting_stops_when_the_user_stops(self):
         self.app.stop_flag.set()
         try:
-            with patch.object(self.app, '_has_result') as looked:
-                self.assertFalse(self.app._wait_for_result())
+            with patch.object(self.app, '_result_pixels') as looked:
+                self.assertEqual(self.app._wait_for_result(), 'stopped')
             looked.assert_not_called()
         finally:
             self.app.stop_flag.clear()

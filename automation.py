@@ -2,14 +2,26 @@
 
 FAIL_NO_USER = '사용자 없음'
 FAIL_DUPLICATE = '중복'
-FAIL_NOT_ADDED = '담기지 않음'
+FAIL_NOT_ADDED = '추가 안 됨'
+FAIL_SEARCH_STALE = '검색 결과 안 바뀜'
 FAIL_COORDINATE = '좌표 오류'
 FAIL_MANUAL_STOP = '수동 중지'
 FAIL_AUTOMATION = '자동화 오류'
 
-# 담겼는지 확인하려고 같은 자리를 다시 누르는 횟수. 이미 담긴 사람을 또 담으려
-# 하면 중복 팝업이 뜨므로, 그 팝업이 담겼다는 증거가 된다.
+# 추가됐는지 확인하려고 같은 자리를 다시 누르는 횟수. 이미 선택된 사용자를 또
+# 선택하려 하면 소통메신저가 안내창을 띄우므로, 그것이 추가됐다는 증거가 된다.
 VERIFY_ADD_TRIES = 2
+
+# 이미 선택된 사용자를 다시 선택할 때 충북소통메신저가 띄우는 안내창 문구.
+# 실제 문구는 '선택된 사용자 입니다.' 다. 예전에는 '이미' 만 찾다가 이 안내창을
+# 못 알아봐서, 중복도 못 걸러내고 추가 여부도 확인하지 못했다.
+DUPLICATE_POPUP_HINTS = ('선택된 사용자', '이미 선택', '이미 추가', '중복')
+
+
+def looks_like_duplicate_popup(texts) -> bool:
+    """안내창에서 긁어온 글에 이미 선택된 사용자라는 말이 있는가."""
+    joined = ' '.join(t for t in texts if t)
+    return any(hint in joined for hint in DUPLICATE_POPUP_HINTS)
 
 
 def failure_reason_from_error(exc: Exception) -> str:

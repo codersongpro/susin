@@ -37,11 +37,13 @@ from automation import (
     FAIL_MANUAL_STOP,
     FAIL_NO_USER,
     FAIL_NOT_ADDED,
+    FAIL_SEARCH_STALE,
     RESULT_SCAN_HEIGHT,
     RESULT_SCAN_WIDTH,
     RESULT_WAIT_MIN,
     VERIFY_ADD_TRIES,
     failure_reason_from_error,
+    looks_like_duplicate_popup,
     looks_like_result,
 )
 from hwp_extract import extract_hwp_text
@@ -252,15 +254,16 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
     1단계: 검색 입력창에 이름을 넣고 검색합니다
     2단계: 검색 결과 첫 번째 항목을 누릅니다
-    3단계: [사용자 선택] 버튼을 눌러 담습니다
-    4단계: 정말 담겼는지 선택 버튼을 한 번 더 눌러 확인합니다
+    3단계: [사용자 선택] 버튼을 눌러 받는 사람에 추가합니다
+    4단계: 정말 추가됐는지 선택 버튼을 한 번 더 눌러 확인합니다
 
-  4단계는 이미 담긴 사람을 또 담으려 할 때 뜨는 중복 안내창을
-  담겼다는 증거로 씁니다. 안내창이 끝까지 없으면 담기지 않은
-  것이라 빨간 항목으로 남깁니다. [위치 설정] 탭에서 끌 수 있지만,
-  끄면 빠진 사람을 알 수 없습니다.
+  4단계는 이미 선택된 사용자를 다시 선택할 때 뜨는
+  '선택된 사용자 입니다.' 안내창을 추가됐다는 증거로 씁니다.
+  안내창이 끝까지 없으면 추가되지 않은 것이라 빨간 항목으로
+  남깁니다. [위치 설정] 탭에서 끌 수 있지만, 끄면 빠진 사람을
+  알 수 없습니다.
 
-  수십에서 수백 명을 일일이 담는 반복 작업을 대신합니다.
+  수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1216,10 +1219,11 @@ class App:
         )
         tk.Checkbutton(
             setting_frame,
-            text='담겼는지 확인하고 넘어가기 (권장)\n'
-                 '한 사람마다 선택 버튼을 한 번 더 눌러 봅니다. 이미 담겼으면 중복 안내창이\n'
-                 '뜨는데, 그것을 담겼다는 증거로 씁니다. 안내창이 끝까지 없으면 담기지 않은\n'
-                 '것이라 빨간 항목으로 남깁니다. 끄면 빨라지지만 빠진 사람을 알 수 없습니다.',
+            text='추가됐는지 확인하고 넘어가기 (권장)\n'
+                 '한 사람마다 선택 버튼을 한 번 더 눌러 봅니다. 이미 들어가 있으면 소통메신저가\n'
+                 "'선택된 사용자 입니다.' 안내창을 띄우는데, 그것을 추가됐다는 증거로 씁니다.\n"
+                 '안내창이 끝까지 없으면 추가되지 않은 것이라 빨간 항목으로 남깁니다.\n'
+                 '끄면 빨라지지만 빠진 사람을 알 수 없습니다.',
             variable=self.verify_var,
             font=('맑은 고딕', 9), justify='left', anchor='w'
         ).grid(row=2, column=0, columnspan=3, sticky='w', padx=8, pady=4)
@@ -1765,7 +1769,7 @@ class App:
             delay = self.config.data.get('search_delay', 0.5)
             label.config(
                 text=f'{where}  |  명단 {count}명  ·  위치 {positions}  ·  '
-                     f'수동 확인 {manual}  ·  담김 확인 {verify}  ·  대기 {delay}초'
+                     f'수동 확인 {manual}  ·  추가 확인 {verify}  ·  대기 {delay}초'
             )
 
     def _refresh_failed_retry_state(self):
@@ -2409,7 +2413,7 @@ class App:
             auto_intro.config(text=(
                 '소통메신저 [사용자 선택] 창을 열고 [전체조직] 탭을 켜 두세요.\n'
                 '이름마다 ① 검색 입력  ② 결과 첫 번째 클릭  ③ 선택 버튼 클릭  이 반복됩니다.\n'
-                '담겼는지 확인하려고 선택 버튼을 한 번 더 누릅니다. 중복 안내창이 뜨면 담긴 것입니다.\n'
+                '추가됐는지 확인하려고 선택 버튼을 한 번 더 누릅니다. 안내창이 뜨면 추가된 것입니다.\n'
                 '⚠  마우스를 화면 왼쪽 위 모서리로 옮기면 긴급 중지됩니다.'
             ))
 
@@ -2787,22 +2791,32 @@ class App:
 
             self._log(f'{prefix}{search_str}  ... ')
             try:
+                # 검색 전 결과 영역을 기억해 둔다. 앞사람의 결과가 남아 있는
+                # 사이에 눌러 엉뚱한 사람이 들어가는 일을 막는다.
+                before = self._result_pixels()
+                before_pixels = before[0] if before else None
+
                 self._do_search(search_str)
                 time.sleep(self.config.data.get('search_delay', 0.5))
 
-                if not self._wait_for_result():
-                    if self.stop_flag.is_set():
-                        self._log('\n')
-                        self._mark_failed(idx, FAIL_MANUAL_STOP)
-                        break
+                found = self._wait_for_result(before_pixels)
+                if found == 'stopped':
+                    self._log('\n')
+                    self._mark_failed(idx, FAIL_MANUAL_STOP)
+                    break
+                if found != 'new':
                     fail += 1
                     no_result_streak += 1
-                    self._log('—  (사용자 없음)\n')
+                    if found == 'stale':
+                        self._log('—  (검색 결과가 바뀌지 않았습니다)\n')
+                        self._mark_failed(idx, FAIL_SEARCH_STALE)
+                    else:
+                        self._log('—  (사용자 없음)\n')
+                        self._mark_failed(idx, FAIL_NO_USER)
                     if no_result_streak == 3:
                         self._log(
-                            '     연달아 결과를 못 찾았습니다. [위치 설정] 탭에서 '
-                            '결과 첫 줄 위치가 맞는지 확인해 보세요.\n')
-                    self._mark_failed(idx, FAIL_NO_USER)
+                            '     연달아 결과를 못 찾았습니다. 검색 후 대기 시간을 늘리거나 '
+                            '[위치 설정] 탭에서 결과 첫 줄 위치를 확인해 보세요.\n')
                     self._update_progress(idx + 1, total)
                     continue
                 no_result_streak = 0
@@ -2831,10 +2845,10 @@ class App:
                     if result == 'unverified':
                         fail += 1
                         unverified_streak += 1
-                        self._log('✗  (받는 사람에 담기지 않았습니다)\n')
+                        self._log('✗  (받는 사람에 추가되지 않았습니다)\n')
                         if unverified_streak == 3:
                             self._log(
-                                '     연달아 담기지 않았습니다. [위치 설정] 탭에서 '
+                                '     연달아 추가되지 않았습니다. [위치 설정] 탭에서 '
                                 '결과 첫 줄과 선택 버튼 위치를 확인해 보세요.\n')
                         self._mark_failed(idx, FAIL_NOT_ADDED)
                         self._update_progress(idx + 1, total)
@@ -2873,7 +2887,11 @@ class App:
         pyautogui.press('enter')
 
     def _click_add_once(self) -> bool:
-        """결과 첫 줄과 선택 버튼을 한 번 누른다. 중복 팝업이 떴으면 True."""
+        """결과 첫 줄과 선택 버튼을 한 번 누른다.
+
+        이미 선택된 사용자라는 안내창이 떴으면 True. 그 사람이 받는 사람에
+        들어 있다는 뜻이다.
+        """
         rx = self.config.data['result_first_x']
         ry = self.config.data['result_first_y']
         ax = self.config.data['add_button_x']
@@ -2887,32 +2905,35 @@ class App:
         time.sleep(0.4)
         new_hwnds = self._snapshot_dialogs() - before
         if new_hwnds and self._is_duplicate_popup(new_hwnds):
-            pyautogui.press('enter')
-            time.sleep(0.15)
+            self._close_dialogs(new_hwnds)
             return True
+        if new_hwnds:
+            # 무슨 안내창인지는 몰라도 열린 채로 두면 다음 클릭이 다 막힌다.
+            self._close_dialogs(new_hwnds)
         return False
 
     def _do_select(self) -> str:
-        """담고, 정말 담겼는지 확인한다.
+        """추가하고, 정말 추가됐는지 확인한다.
 
-        선택 버튼을 눌렀다는 것만으로는 담겼는지 알 수 없다. 클릭이 빗나가도
+        선택 버튼을 눌렀다는 것만으로는 추가됐는지 알 수 없다. 클릭이 빗나가도
         소통메신저는 아무 말을 하지 않아서, 받는 사람에 없는 사람이 성공으로
         기록됐다.
 
-        이미 담긴 사람을 다시 담으려 하면 중복 팝업이 뜬다. 그 팝업을 담겼다는
-        증거로 쓴다. 같은 자리를 한 번 더 눌러 팝업이 뜨면 앞선 클릭이 통한
-        것이고, 끝까지 팝업이 없으면 담기지 않은 것이라 실패로 남긴다.
+        이미 선택된 사용자를 다시 선택하려 하면 '선택된 사용자 입니다.' 안내창이
+        뜬다. 그 안내창을 추가됐다는 증거로 쓴다. 같은 자리를 한 번 더 눌러
+        안내창이 뜨면 앞선 클릭이 통한 것이고, 끝까지 안내창이 없으면 추가되지
+        않은 것이라 실패로 남긴다.
         """
         time.sleep(0.2)
         if self._click_add_once():
-            return 'duplicate'      # 명단을 돌리기 전부터 이미 담혀 있던 사람
+            return 'duplicate'      # 명단을 돌리기 전부터 받는 사람에 있던 사람
         if not self.config.data.get('verify_add', True):
             return 'ok'
         for _ in range(VERIFY_ADD_TRIES):
             if self.stop_flag.is_set():
                 return 'stopped'
             if self._click_add_once():
-                return 'ok'         # 앞선 클릭으로 담긴 것이 확인됐다
+                return 'ok'         # 앞선 클릭으로 추가된 것이 확인됐다
         return 'unverified'
 
     def _snapshot_dialogs(self) -> set:
@@ -2931,7 +2952,7 @@ class App:
             return set()
 
     def _is_duplicate_popup(self, hwnds: set) -> bool:
-        """새 다이얼로그의 텍스트에 '이미'가 포함되면 중복 팝업으로 판정."""
+        """새로 뜬 안내창이 이미 선택된 사용자라는 안내인가."""
         try:
             import win32gui
             for hwnd in hwnds:
@@ -2941,10 +2962,23 @@ class App:
                     if t:
                         texts.append(t)
                 win32gui.EnumChildWindows(hwnd, collect, None)
-                if any('이미' in t for t in texts):
+                if looks_like_duplicate_popup(texts):
                     return True
         except Exception as exc:
-            logging.debug("중복 팝업 확인 실패: %s", exc)
+            logging.debug("안내창 확인 실패: %s", exc)
+        return False
+
+    def _close_dialogs(self, hwnds: set) -> bool:
+        """안내창을 닫는다. 남아 있으면 한 번 더 누른다.
+
+        안내창이 열린 채로 남으면 그다음 클릭이 전부 먹지 않는다.
+        """
+        for _ in range(2):
+            pyautogui.press('enter')
+            time.sleep(0.15)
+            if not (self._snapshot_dialogs() & hwnds):
+                return True
+        logging.warning('안내창이 닫히지 않았습니다')
         return False
 
     def _result_region(self) -> tuple:
@@ -2967,23 +3001,30 @@ class App:
             left, top = max(0, left), max(0, top)
         return left, top, RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT
 
+    def _result_pixels(self):
+        """결과 첫 줄 영역의 픽셀과 크기. 화면을 못 읽으면 None."""
+        left, top, width, height = self._result_region()
+        try:
+            shot = pyautogui.screenshot(region=(left, top, width, height))
+            width, height = shot.size
+            pixels = tuple(shot.convert('RGB').getdata())
+        except Exception as exc:
+            logging.debug('결과 영역을 못 읽었습니다: %s', exc)
+            return None
+        if len(pixels) < width * height:
+            return None
+        return pixels, width, height
+
     def _has_result(self) -> bool:
         """결과 첫 줄 둘레를 훑어 글자가 그려졌는지 본다.
 
         한 점만 보던 때에는 이름 길이에 따라 그 점이 글자 사이 빈 칸에 떨어져,
         검색은 됐는데도 결과가 없다고 판정하고 마우스를 아예 움직이지 않았다.
         """
-        left, top, width, height = self._result_region()
-        try:
-            shot = pyautogui.screenshot(region=(left, top, width, height))
-            width, height = shot.size
-            pixels = list(shot.convert('RGB').getdata())
-        except Exception as exc:
-            logging.debug('결과 영역을 못 읽어 한 점만 봅니다: %s', exc)
+        current = self._result_pixels()
+        if current is None:
             return self._has_result_at_point()
-        if len(pixels) < width * height:
-            return self._has_result_at_point()
-        return looks_like_result(pixels, width, height)
+        return looks_like_result(*current)
 
     def _has_result_at_point(self) -> bool:
         """영역을 못 읽을 때 쓰는 예전 방식: 결과 좌표 한 점의 밝기만 본다."""
@@ -2998,21 +3039,40 @@ class App:
         except Exception as exc:
             raise RuntimeError(f'좌표 오류: 결과 위치 확인 실패 ({exc})') from exc
 
-    def _wait_for_result(self) -> bool:
-        """결과가 그려질 때까지 잠깐 더 기다린다.
+    def _wait_for_result(self, previous=None) -> str:
+        """검색 결과가 새로 그려질 때까지 기다린다.
 
-        기관이나 이름에 따라 결과가 늦게 오는데, 한 번 보고 없다고 넘기면
-        멀쩡히 있는 사람이 명단에서 빠진다.
+        글자가 있는지만 보면, 앞사람의 결과가 아직 남아 있는 사이에 통과해서
+        그 사람을 누르게 된다. 누락도 이렇게 생기고, 더 나쁘게는 엉뚱한 사람이
+        받는 사람에 들어갈 수 있다. 그래서 검색 전과 달라졌는지까지 본다.
+
+        돌려주는 값
+            new     새 결과가 그려졌다
+            empty   결과가 없다 (그 이름으로 검색된 사람이 없다)
+            stale   결과가 있지만 검색 전과 그대로다 (검색이 먹지 않았다)
+            stopped 사용자가 중지했다
         """
         delay = self.config.data.get('search_delay', 0.5) or 0.5
         deadline = time.monotonic() + max(RESULT_WAIT_MIN, delay * 3)
+        state = 'empty'
         while True:
             if self.stop_flag.is_set():
-                return False
-            if self._has_result():
-                return True
+                return 'stopped'
+            current = self._result_pixels()
+            if current is None:
+                # 화면 영역을 못 읽는 환경에서는 예전처럼 한 점만 본다.
+                if self._has_result_at_point():
+                    return 'new'
+            else:
+                pixels = current[0]
+                if looks_like_result(*current):
+                    if previous is None or pixels != previous:
+                        return 'new'
+                    state = 'stale'
+                else:
+                    state = 'empty'
             if time.monotonic() >= deadline:
-                return False
+                return state
             time.sleep(0.15)
 
     def _show_continue(self, name: str):
@@ -3042,7 +3102,7 @@ class App:
                 f'  ✓ 성공: {ok}명\n'
                 f'  ✗ 실패: {fail}명\n\n'
                 f'[1. 명단 입력] 탭에서 빨간색 항목을 확인하세요.\n'
-                f'(검색 결과 없음, 이미 선택된 사용자, 담기지 않음)'
+                f'(검색 결과 없음, 이미 선택된 사용자, 추가 안 됨)'
             )
         else:
             self.status_var.set(f'완료 — 성공: {ok}명')
