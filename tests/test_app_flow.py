@@ -848,6 +848,38 @@ class AppFlowTest(unittest.TestCase):
             self.assertEqual(self.app._do_select(), 'unchecked')
         self.assertEqual(clicked.call_count, 1)
 
+    def test_guide_images_are_in_the_repository(self):
+        """안내 그림 파일 이름이 저장소와 맞는가.
+
+        이름이 어긋나면 앱은 조용히 글 안내만 보여 준다. 그걸 여기서 잡는다.
+        """
+        m = self.app_module
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for step, name in m.GUIDE_IMAGES.items():
+            path = os.path.join(base, 'assets', 'guide', name)
+            self.assertTrue(os.path.exists(path),
+                            f'{step}번 안내 그림이 없습니다: assets/guide/{name}')
+
+    def test_guide_images_are_png(self):
+        """tk 가 읽을 수 있어야 한다. PNG 머리글을 확인한다."""
+        m = self.app_module
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for name in m.GUIDE_IMAGES.values():
+            path = os.path.join(base, 'assets', 'guide', name)
+            with open(path, 'rb') as image:
+                self.assertEqual(image.read(8), b'\x89PNG\r\n\x1a\n',
+                                 f'PNG 가 아닙니다: {name}')
+
+    def test_capture_steps_point_at_the_three_saved_spots(self):
+        """캡처하는 세 자리가 안내 차례의 3·4·5 번과 같아야 한다."""
+        m = self.app_module
+        self.assertEqual(set(m.CAPTURE_STEP_KEYS.values()), {'3', '4', '5'})
+        numbers = [number for number, _title, _desc in m.MESSENGER_STEPS]
+        self.assertEqual(numbers, ['1', '2', '3', '4', '5'])
+        for key in ('search_field', 'result_first', 'add_button'):
+            self.assertIn(key, m.CAPTURE_HINTS)
+            self.assertIn(key, m.CAPTURE_STEP_KEYS)
+
     # ── 실패 명단 ──────────────────────────────
     def test_retry_keeps_the_whole_item(self):
         """다시 실행할 때 검색어를 잃지 않는다.
