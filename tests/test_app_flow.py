@@ -812,10 +812,7 @@ class AppFlowTest(unittest.TestCase):
         self.assertFalse(looks_like_duplicate_popup([None, '', '확인']))
 
     # ── 추가됐는지 확인 ────────────────────────
-    def _use_verify(self, on=True, windows=True):
-        saved = self.app.config.data.get('verify_add')
-        self.app.config.data['verify_add'] = on
-        self.addCleanup(lambda: self.app.config.data.__setitem__('verify_add', saved))
+    def _use_verify(self, windows=True):
         if windows:
             # 리눅스 테스트에는 win32gui 가 없다. 창을 볼 수 있는 윈도우처럼 둔다.
             patcher = patch.object(self.app, '_win32gui', return_value=object())
@@ -824,7 +821,7 @@ class AppFlowTest(unittest.TestCase):
 
     def test_add_is_confirmed_by_the_duplicate_popup(self):
         """두 번째 클릭에서 중복 안내창이 뜨면 첫 클릭이 통한 것이다."""
-        self._use_verify(True)
+        self._use_verify()
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_click_add_once',
                              side_effect=[False, True]) as clicked:
@@ -835,7 +832,7 @@ class AppFlowTest(unittest.TestCase):
         """끝까지 안내창이 없으면 담기지 않은 것이라 실패로 남긴다."""
         from automation import VERIFY_ADD_TRIES
 
-        self._use_verify(True)
+        self._use_verify()
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_click_add_once',
                              return_value=False) as clicked:
@@ -844,20 +841,11 @@ class AppFlowTest(unittest.TestCase):
 
     def test_already_added_person_is_reported_as_duplicate(self):
         """첫 클릭에서 안내창이 뜨면 돌리기 전부터 담혀 있던 사람이다."""
-        self._use_verify(True)
+        self._use_verify()
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_click_add_once',
                              return_value=True) as clicked:
             self.assertEqual(self.app._do_select(), 'duplicate')
-        self.assertEqual(clicked.call_count, 1)
-
-    def test_verification_can_be_turned_off(self):
-        """확인을 끄면 클릭은 한 번이고, 결과는 확인 못 함으로 남는다."""
-        self._use_verify(False)
-        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_click_add_once',
-                             return_value=False) as clicked:
-            self.assertEqual(self.app._do_select(), 'unchecked')
         self.assertEqual(clicked.call_count, 1)
 
     def test_guide_images_are_in_the_repository(self):
@@ -982,7 +970,7 @@ class AppFlowTest(unittest.TestCase):
 
         멀쩡한 사람을 실패로 몰지도, 확인하지 않은 것을 성공이라 하지도 않는다.
         """
-        self._use_verify(True, windows=False)
+        self._use_verify(windows=False)
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_win32gui', return_value=None), \
                 patch.object(self.app, '_click_add_once',
@@ -995,7 +983,7 @@ class AppFlowTest(unittest.TestCase):
         from automation import VERIFY_ADD_TRIES
 
         self.assertEqual(VERIFY_ADD_TRIES, 1)
-        self._use_verify(True)
+        self._use_verify()
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_click_add_once',
                              return_value=False) as clicked:
@@ -1003,7 +991,7 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual(clicked.call_count, 2)
 
     def test_verification_stops_when_the_user_stops(self):
-        self._use_verify(True)
+        self._use_verify()
         self.app.stop_flag.set()
         try:
             with patch.object(self.app_module.time, 'sleep', lambda *_: None), \

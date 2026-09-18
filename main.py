@@ -424,8 +424,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   4단계는 이미 선택된 사용자를 다시 선택할 때 뜨는
   '선택된 사용자 입니다.' 안내창을 추가됐다는 증거로 씁니다.
   안내창이 끝까지 없으면 추가되지 않은 것이라 빨간 항목으로
-  남깁니다. [위치 설정] 탭에서 끌 수 있지만, 끄면 빠진 사람을
-  알 수 없습니다.
+  남깁니다.
 
   수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
@@ -1515,20 +1514,6 @@ class App:
             font=('맑은 고딕', 9), justify='left', anchor='w'
         ).grid(row=1, column=0, columnspan=3, sticky='w', padx=8, pady=4)
 
-        self.verify_var = tk.BooleanVar(
-            value=self.config.data.get('verify_add', True)
-        )
-        tk.Checkbutton(
-            setting_frame,
-            text='추가됐는지 확인하고 넘어가기 (권장)\n'
-                 '한 사람마다 선택 버튼을 한 번 더 눌러 봅니다. 이미 들어가 있으면 소통메신저가\n'
-                 "'선택된 사용자 입니다.' 안내창을 띄우는데, 그것을 추가됐다는 증거로 씁니다.\n"
-                 '안내창이 끝까지 없으면 추가되지 않은 것이라 빨간 항목으로 남깁니다.\n'
-                 '끄면 빨라지지만 빠진 사람을 알 수 없습니다.',
-            variable=self.verify_var,
-            font=('맑은 고딕', 9), justify='left', anchor='w'
-        ).grid(row=2, column=0, columnspan=3, sticky='w', padx=8, pady=4)
-
         tk.Button(
             frame, text='✅  설정 저장',
             bg='#4CAF50', fg='white', disabledforeground='#ECEFF1', activebackground='#4CAF50',
@@ -2074,11 +2059,10 @@ class App:
         else:
             positions = '완료' if self.config.is_calibrated() else '미설정'
             manual = '켜짐' if self.config.data.get('manual_confirm', False) else '꺼짐'
-            verify = '켜짐' if self.config.data.get('verify_add', True) else '꺼짐'
             delay = self.config.data.get('search_delay', 0.5)
             label.config(
                 text=f'{where}  |  명단 {count}명  ·  위치 {positions}  ·  '
-                     f'수동 확인 {manual}  ·  추가 확인 {verify}  ·  대기 {delay}초'
+                     f'수동 확인 {manual}  ·  대기 {delay}초'
             )
 
     def _refresh_failed_retry_state(self):
@@ -2942,7 +2926,6 @@ class App:
     def _save_calib(self):
         self.config.data['search_delay'] = round(self.delay_var.get(), 1)
         self.config.data['manual_confirm'] = self.manual_var.get()
-        self.config.data['verify_add'] = self.verify_var.get()
         self.config.save()
         self.calib_msg.config(text='✅ 설정 저장 완료')
         self.root.after(2000, lambda: self.calib_msg.config(text=''))
@@ -3136,8 +3119,7 @@ class App:
         total = len(run_items)
         no_result_streak = 0
         unverified_streak = 0
-        if (not manual and self.config.data.get('verify_add', True)
-                and self._win32gui() is None):
+        if not manual and self._win32gui() is None:
             self._log('⚠  이 PC 에서는 안내창을 볼 수 없어 추가 확인을 건너뜁니다.\n\n')
 
         for idx, item in enumerate(run_items):
@@ -3292,8 +3274,6 @@ class App:
         time.sleep(0.2)
         if self._click_add_once(POPUP_WAIT_ADD):
             return 'duplicate'      # 명단을 돌리기 전부터 받는 사람에 있던 사람
-        if not self.config.data.get('verify_add', True):
-            return 'unchecked'
         if self._win32gui() is None:
             # 창을 들여다볼 수 없으면 확인할 방법이 없다. 멀쩡히 추가된 사람을
             # 실패로 몰아세우지도, 확인하지 않은 것을 성공이라 하지도 않는다.
