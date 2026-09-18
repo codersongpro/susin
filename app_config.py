@@ -47,8 +47,11 @@ COORD_DEFAULTS = {
     'empty_pixel_rgb': None,
     'search_delay': 0.5,
     'manual_confirm': True,
-    # 선택 버튼을 누른 뒤 정말 담겼는지 한 번 더 눌러 확인한다.
+    # 선택 버튼을 누른 뒤 정말 추가됐는지 한 번 더 눌러 확인한다.
     'verify_add': True,
+    # 좌표를 잡을 때의 화면 크기. 해상도나 배율이 바뀌면 알려 주기 위해 남긴다.
+    'screen_w': None,
+    'screen_h': None,
 }
 
 # 에듀파인 일괄등록 양식에 매번 들어가지만 사람마다 고정인 값

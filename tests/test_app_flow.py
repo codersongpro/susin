@@ -669,6 +669,71 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual((left, top), (0, 0))
         self.assertEqual((width, height), (RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT))
 
+    def test_coordinate_outside_the_main_monitor_is_refused(self):
+        """보조 모니터 좌표를 주 모니터 안으로 끌어와 보지 않는다.
+
+        끌어오면 엉뚱한 자리를 결과로 읽어 다른 사람을 넣을 수 있다.
+        """
+        self._use_result_coords(x=2600, y=400)
+        with patch.object(self.app_module, 'pyautogui',
+                          _fake_screen([], 0, 0, screen=(1920, 1080))):
+            with self.assertRaises(RuntimeError) as caught:
+                self.app._result_region()
+        message = str(caught.exception)
+        self.assertIn('좌표 오류', message)
+        self.assertIn('주 모니터', message)
+
+    def test_negative_coordinate_is_refused(self):
+        self._use_result_coords(x=-300, y=400)
+        with patch.object(self.app_module, 'pyautogui',
+                          _fake_screen([], 0, 0, screen=(1920, 1080))):
+            with self.assertRaises(RuntimeError):
+                self.app._result_region()
+
+    def test_start_warns_when_the_screen_size_changed(self):
+        """해상도가 바뀌었으면 묻고, 사용자가 아니라고 하면 시작하지 않는다."""
+        saved = {k: self.app.config.data.get(k) for k in ('screen_w', 'screen_h')}
+        self.app.config.data['screen_w'] = 1920
+        self.app.config.data['screen_h'] = 1080
+        try:
+            with patch.object(self.app_module, 'pyautogui',
+                              _fake_screen([], 0, 0, screen=(2560, 1440))), \
+                    patch.object(self.app_module.messagebox, 'askyesno',
+                                 return_value=False) as asked:
+                self.assertFalse(self.app._confirm_screen_unchanged())
+            asked.assert_called_once()
+            self.assertIn('1920', asked.call_args.args[1])
+            self.assertIn('2560', asked.call_args.args[1])
+        finally:
+            self.app.config.data.update(saved)
+
+    def test_start_does_not_warn_when_the_screen_is_the_same(self):
+        saved = {k: self.app.config.data.get(k) for k in ('screen_w', 'screen_h')}
+        self.app.config.data['screen_w'] = 1920
+        self.app.config.data['screen_h'] = 1080
+        try:
+            with patch.object(self.app_module, 'pyautogui',
+                              _fake_screen([], 0, 0, screen=(1920, 1080))), \
+                    patch.object(self.app_module.messagebox, 'askyesno') as asked:
+                self.assertTrue(self.app._confirm_screen_unchanged())
+            asked.assert_not_called()
+        finally:
+            self.app.config.data.update(saved)
+
+    def test_no_saved_screen_size_does_not_block_the_start(self):
+        """예전 설정에는 화면 크기가 없다. 그것 때문에 막지 않는다."""
+        saved = {k: self.app.config.data.get(k) for k in ('screen_w', 'screen_h')}
+        self.app.config.data['screen_w'] = None
+        self.app.config.data['screen_h'] = None
+        try:
+            with patch.object(self.app_module, 'pyautogui',
+                              _fake_screen([], 0, 0, screen=(1920, 1080))), \
+                    patch.object(self.app_module.messagebox, 'askyesno') as asked:
+                self.assertTrue(self.app._confirm_screen_unchanged())
+            asked.assert_not_called()
+        finally:
+            self.app.config.data.update(saved)
+
     def _result_frames(self, *frames):
         """_result_pixels 가 차례대로 돌려줄 화면들을 만든다."""
         from automation import RESULT_SCAN_HEIGHT, RESULT_SCAN_WIDTH

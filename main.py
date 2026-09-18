@@ -2609,6 +2609,11 @@ class App:
         def on_captured(x, y):
             self.config.data[key + '_x'] = x
             self.config.data[key + '_y'] = y
+            # 어느 크기의 화면에서 잡았는지 남긴다. 해상도나 배율이 바뀌면
+            # 좌표가 어긋나는데, 그걸 시작할 때 알려 주기 위해서다.
+            size = self._screen_size()
+            if size:
+                self.config.data['screen_w'], self.config.data['screen_h'] = size
             # 잡자마자 저장한다. [설정 저장] 을 누르지 않고 앱을 닫아
             # 다시 잡아야 하는 일이 없도록.
             self.config.save()
@@ -2722,6 +2727,8 @@ class App:
                 '알림', '위치 설정 탭에서 검색창·결과·선택 버튼 위치를 모두 설정하세요.'
             )
             return
+        if not self._confirm_screen_unchanged():
+            return
         self.stop_flag.clear()
         self.continue_event.set()
         for item in self.names_list:
@@ -2740,6 +2747,29 @@ class App:
         self.worker_thread = threading.Thread(
             target=self._worker, args=(run_items,), daemon=True)
         self.worker_thread.start()
+
+    def _confirm_screen_unchanged(self) -> bool:
+        """위치를 잡을 때와 화면 크기가 같은지 보고, 다르면 물어본다.
+
+        해상도나 배율을 바꾸면 저장된 좌표가 엉뚱한 곳을 가리킨다. 그대로
+        돌리면 다른 사람을 받는 사람에 넣을 수 있어서 먼저 알린다.
+        """
+        saved_w = self.config.data.get('screen_w')
+        saved_h = self.config.data.get('screen_h')
+        current = self._screen_size()
+        if not (saved_w and saved_h and current):
+            return True
+        if (saved_w, saved_h) == current:
+            return True
+        return messagebox.askyesno(
+            '화면 크기가 달라졌습니다',
+            f'위치를 잡을 때 화면은 {saved_w}×{saved_h} 였고, 지금은 '
+            f'{current[0]}×{current[1]} 입니다.\n\n'
+            f'해상도나 확대 배율이 바뀌면 저장해 둔 위치가 어긋나서 엉뚱한 곳을 '
+            f'누를 수 있습니다. [2. 위치 설정] 탭에서 세 곳을 다시 잡는 것이 '
+            f'안전합니다.\n\n'
+            f'그래도 지금 이대로 시작할까요?'
+        )
 
     def _stop(self):
         if not self._automation_is_running():
@@ -2981,20 +3011,40 @@ class App:
         logging.warning('안내창이 닫히지 않았습니다')
         return False
 
+    def _screen_size(self):
+        """주 모니터 크기. 못 구하면 None."""
+        try:
+            width, height = pyautogui.size()
+        except Exception as exc:
+            logging.debug('화면 크기 확인 실패: %s', exc)
+            return None
+        if not width or not height:
+            return None
+        return int(width), int(height)
+
     def _result_region(self) -> tuple:
-        """결과 첫 줄을 가로로 넓게 덮는 화면 영역 (left, top, 너비, 높이)."""
+        """결과 첫 줄을 가로로 넓게 덮는 화면 영역 (left, top, 너비, 높이).
+
+        화면을 읽는 기능은 주 모니터만 볼 수 있다. 보조 모니터에 잡아 둔
+        좌표를 주 모니터 안으로 끌어와 보면, 엉뚱한 자리를 결과라고 판단한다.
+        그럴 때는 조용히 넘어가지 않고 사유를 남긴다.
+        """
         x = self.config.data.get('result_first_x')
         y = self.config.data.get('result_first_y')
         if x is None or y is None:
             raise RuntimeError('좌표 오류: 결과 위치 미설정')
-        left = int(x) - RESULT_SCAN_WIDTH // 2
-        top = int(y) - RESULT_SCAN_HEIGHT // 2
-        try:
-            screen_w, screen_h = pyautogui.size()
-        except Exception as exc:
-            logging.debug('화면 크기 확인 실패: %s', exc)
-            screen_w = screen_h = 0
-        if screen_w and screen_h:
+        x, y = int(x), int(y)
+        left = x - RESULT_SCAN_WIDTH // 2
+        top = y - RESULT_SCAN_HEIGHT // 2
+        size = self._screen_size()
+        if size:
+            screen_w, screen_h = size
+            if not (0 <= x < screen_w and 0 <= y < screen_h):
+                raise RuntimeError(
+                    f'좌표 오류: 결과 위치({x}, {y})가 주 모니터'
+                    f'({screen_w}×{screen_h}) 밖입니다. 소통메신저를 주 모니터로 '
+                    f'옮기고 위치를 다시 잡아 주세요'
+                )
             left = min(max(0, left), max(0, screen_w - RESULT_SCAN_WIDTH))
             top = min(max(0, top), max(0, screen_h - RESULT_SCAN_HEIGHT))
         else:
