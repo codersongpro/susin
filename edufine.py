@@ -470,12 +470,17 @@ def known_names(codes: dict, index: dict = None) -> set:
     return set(index) | set((codes or {}).get('기관', {}))
 
 
-def parse_and_resolve(text: str, codes: dict, index: dict = None):
+def parse_and_resolve(text: str, codes: dict, index: dict = None,
+                      deduplicate: bool = True):
     """명단 텍스트 → 코드 사전까지 반영한 기관 목록.
 
     앱과 테스트가 같은 경로를 타도록 여기 한 곳에 모아 둔다.
     """
     from sotong_parser import parse_orgs
     index = index if index is not None else index_by_short_name(codes)
-    rows = parse_orgs(text, known=known_names(codes, index))
+    rows = parse_orgs(
+        text,
+        known=known_names(codes, index),
+        deduplicate=deduplicate,
+    )
     return apply_codes(rows, codes, index)

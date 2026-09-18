@@ -40,6 +40,18 @@ class _Text:
     def delete(self, *args, **kwargs):
         self._text = ''
 
+    def winfo_rootx(self):
+        return 100
+
+    def winfo_rooty(self):
+        return 150
+
+    def winfo_width(self):
+        return 500
+
+    def winfo_height(self):
+        return 180
+
     def __getattr__(self, name):
         return MagicMock()
 
@@ -47,6 +59,7 @@ class _Text:
 class _Listbox:
     def __init__(self, *args, **kwargs):
         self.items = []
+        self._mocks = {}
 
     def insert(self, index, value):
         self.items.append(value)
@@ -60,8 +73,22 @@ class _Listbox:
     def get(self, index):
         return self.items[index]
 
+    def winfo_rootx(self):
+        return 100
+
+    def winfo_rooty(self):
+        return 360
+
+    def winfo_width(self):
+        return 500
+
+    def winfo_height(self):
+        return 200
+
     def __getattr__(self, name):
-        return MagicMock()
+        if name not in self._mocks:
+            self._mocks[name] = MagicMock(name=name)
+        return self._mocks[name]
 
 
 class _WidgetBase:
@@ -79,6 +106,27 @@ class _WidgetBase:
 
     def __setitem__(self, key, value):
         pass
+
+    def winfo_rootx(self):
+        return 80
+
+    def winfo_rooty(self):
+        return 120
+
+    def winfo_width(self):
+        return 420
+
+    def winfo_height(self):
+        return 120
+
+    def winfo_screenwidth(self):
+        return 1920
+
+    def winfo_screenheight(self):
+        return 1080
+
+    def winfo_exists(self):
+        return True
 
 
 class _Notebook(_WidgetBase):
@@ -201,8 +249,11 @@ class AppFlowTest(unittest.TestCase):
     def test_config_is_isolated(self):
         import app_config
         self.assertNotEqual(app_config.CONFIG_FILE, self._real_config)
-        self.assertFalse(os.path.exists(self._real_config),
-                         '테스트가 실제 설정 파일을 만들었습니다')
+        self.assertTrue(
+            os.path.abspath(app_config.CONFIG_FILE).startswith(
+                os.path.abspath(self._tmp.name)),
+            '테스트 설정 파일이 임시 폴더 밖을 가리킵니다',
+        )
 
     def setUp(self):
         from app_config import TARGET_EDUFINE
@@ -211,6 +262,7 @@ class AppFlowTest(unittest.TestCase):
         self.app._apply_target()
         self.app.input_text.delete('1.0', 'end')
         self.app.names_list.clear()
+        self.app.last_org_duplicates = []
 
     def parse(self, text):
         self.app.input_text.delete('1.0', 'end')
@@ -220,6 +272,26 @@ class AppFlowTest(unittest.TestCase):
 
     def test_app_builds(self):
         self.assertEqual(self.app_module.APP_NAME, '신통픽')
+
+    def test_each_product_has_its_own_video_guide(self):
+        self.assertEqual(
+            self.app_module.GUIDE_VIDEO_URLS['messenger'],
+            'https://youtu.be/shZnB5NRN5g',
+        )
+        self.assertEqual(
+            self.app_module.GUIDE_VIDEO_URLS['edufine'],
+            'https://youtu.be/IcFX3UKdMEw',
+        )
+        self.assertIn('소통픽 사용법', self.app_module.HELP_TEXTS['messenger'])
+        self.assertNotIn(
+            '■ 에듀파인 — 수신그룹 일괄등록',
+            self.app_module.HELP_TEXTS['messenger'],
+        )
+        self.assertIn('수신픽 사용법', self.app_module.HELP_TEXTS['edufine'])
+        self.assertIn(
+            '[확인 필요 기관 일괄 수정]',
+            self.app_module.HELP_TEXTS['edufine'],
+        )
 
     def test_target_switching_does_not_crash(self):
         from app_config import TARGET_EDUFINE, TARGET_MESSENGER
@@ -239,7 +311,9 @@ class AppFlowTest(unittest.TestCase):
             self.assertIn(tab, visible, '소통메신저 탭이 없습니다')
         for tab, _ in self.app.edufine_tabs:
             self.assertNotIn(tab, visible)
-        self.assertIs(visible[-1], self.app.tab_help, '사용 방법은 맨 뒤여야 합니다')
+        messenger_help, messenger_title = self.app.help_tabs[TARGET_MESSENGER]
+        self.assertIs(visible[-1], messenger_help, '소통픽 사용법은 맨 뒤여야 합니다')
+        self.assertIn('소통픽 사용법', messenger_title)
         self.assertEqual(len(visible), 4)
 
         self.app._choose_target(TARGET_EDUFINE)
@@ -249,7 +323,9 @@ class AppFlowTest(unittest.TestCase):
             self.assertIn(tab, visible, '에듀파인 탭이 없습니다')
         for tab, _ in self.app.messenger_tabs:
             self.assertNotIn(tab, visible)
-        self.assertIs(visible[-1], self.app.tab_help)
+        edufine_help, edufine_title = self.app.help_tabs[TARGET_EDUFINE]
+        self.assertIs(visible[-1], edufine_help)
+        self.assertIn('수신픽 사용법', edufine_title)
         self.assertEqual(len(visible), 3)
 
     def test_switching_back_and_forth_keeps_tabs(self):
@@ -273,14 +349,14 @@ class AppFlowTest(unittest.TestCase):
         from app_config import TARGET_EDUFINE, TARGET_MESSENGER
 
         self.app._choose_target(TARGET_EDUFINE)
-        for name in ('browse_btn', 'make_excel_btn'):
+        for name in ('browse_btn', 'make_excel_btn', 'bulk_fix_btn', 'org_history_btn'):
             btn = getattr(self.app, name)
             self.assertTrue(btn.pack.called, f'{name} 이 화면에 붙지 않았습니다')
             btn.pack.reset_mock()
             btn.pack_forget.reset_mock()
 
         self.app._choose_target(TARGET_MESSENGER)
-        for name in ('browse_btn', 'make_excel_btn'):
+        for name in ('browse_btn', 'make_excel_btn', 'bulk_fix_btn', 'org_history_btn'):
             btn = getattr(self.app, name)
             self.assertTrue(btn.pack_forget.called, f'{name} 이 감춰지지 않았습니다')
 
@@ -338,6 +414,42 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual(grades.count('exact'), 2, grades)
         self.assertIn('ambiguous', grades, grades)
 
+    def test_duplicate_orgs_are_counted_named_and_kept_once(self):
+        before = len(self.app.config.org_extract_history)
+        rows = self.parse('학성초\n학성초\n학성초\n한천초')
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]['source_count'], 3)
+        self.assertEqual(
+            self.app.last_org_duplicates,
+            [{'name': '학성초등학교', 'count': 3}],
+        )
+        self.assertIn('입력 3회', self.app.parsed_list.items[0])
+
+        history = self.app.config.org_extract_history
+        self.assertEqual(len(history), before + 1)
+        self.assertEqual(history[-1]['duplicates'][0]['count'], 3)
+        self.assertEqual(history[-1]['items'][0]['name'], '학성초등학교')
+
+    def test_review_required_orgs_are_red_and_bulk_fix_is_enabled(self):
+        self.app.parsed_list.itemconfig.reset_mock()
+        row = self.parse('행정과')[0]
+
+        self.assertTrue(self.app._org_needs_review(row))
+        self.app.parsed_list.itemconfig.assert_called_with(
+            'end', {'bg': '#FFEBEE', 'fg': '#B71C1C'})
+        self.app.bulk_fix_btn.config.assert_called_with(state='normal')
+
+    def test_bulk_confirmation_updates_the_original_row(self):
+        row = self.parse('행정과')[0]
+        picked = '충청북도청주교육지원청 행정과'
+
+        self.assertTrue(self.app._confirm_org_item(row, picked))
+        self.assertEqual(row['org'], picked)
+        self.assertEqual(row['grade'], 'exact')
+        self.assertFalse(row['code_missing'])
+        self.assertFalse(self.app._org_needs_review(row))
+
     def test_only_confirmed_rows_are_exported(self):
         self.parse('학성초\n행정과')
         ready, missing = self.app._split_confirmed()
@@ -378,13 +490,44 @@ class AppFlowTest(unittest.TestCase):
     def test_both_tools_have_a_step_by_step_guide(self):
         from app_config import TARGET_EDUFINE, TARGET_MESSENGER
 
+        targets = self.app._guide_target_map()
         for target in (TARGET_MESSENGER, TARGET_EDUFINE):
             steps = self.app_module.GUIDE_STEPS[target]
             self.assertGreaterEqual(len(steps), 4)
-            for tab_key, heading, body in steps:
+            for tab_key, widget_key, heading, body in steps:
                 self.assertIn(tab_key, {'input', 'calib', 'auto', 'edufine'})
+                self.assertIn(widget_key, targets)
                 self.assertTrue(heading.strip())
                 self.assertTrue(body.strip())
+
+    def test_guide_does_not_open_automatically(self):
+        """앱 실행과 도구 전환만으로 안내창이 나타나면 안 된다."""
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+
+        self.assertIsNone(self.app.guide_dialog)
+        self.app._choose_target(TARGET_MESSENGER)
+        self.assertIsNone(self.app.guide_dialog)
+        self.app._choose_target(TARGET_EDUFINE)
+        self.assertIsNone(self.app.guide_dialog)
+
+    def test_guide_highlights_each_real_control_and_cleans_up(self):
+        """가이드 단계가 실제 위젯을 강조하고 종료할 때 테두리를 치운다."""
+        from app_config import TARGET_EDUFINE
+
+        self.app._show_onboarding(TARGET_EDUFINE)
+        guide = self.app.guide_dialog
+        self.assertIsNotNone(guide)
+        self.assertIs(guide.highlight_target, self.app.input_text)
+        self.assertTrue(all(border.place.called for border in guide.highlight_frames))
+
+        guide.next()
+        self.assertIs(guide.highlight_target, self.app.parse_button)
+
+        borders = list(guide.highlight_frames)
+        guide.finish()
+        self.assertIsNone(self.app.guide_dialog)
+        self.assertTrue(all(border.place_forget.called for border in borders))
+        self.assertTrue(all(border.destroy.called for border in borders))
 
     def test_clipboard_walker_receives_only_code_missing_orgs(self):
         self.app.names_list = [

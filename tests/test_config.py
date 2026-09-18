@@ -82,15 +82,20 @@ class ConfigTest(unittest.TestCase):
             app_config.CHUNGBUK_OFFICE_CODE,
         )
 
-    def test_guide_seen_state_is_saved(self):
+    def test_org_extract_history_is_saved_and_limited(self):
         cfg, path = self._config_with(None)
-        cfg.guides_seen[TARGET_MESSENGER] = True
+        cfg.org_extract_history = [
+            {'timestamp': f'2026-09-18 {i:02d}:00', 'confirmed': i}
+            for i in range(35)
+        ]
         cfg.save()
 
         with mock.patch.object(app_config, 'CONFIG_FILE', path):
             again = app_config.Config()
-        self.assertTrue(again.guides_seen[TARGET_MESSENGER])
-        self.assertFalse(again.guides_seen[TARGET_EDUFINE])
+
+        self.assertEqual(len(again.org_extract_history), 30)
+        self.assertEqual(again.org_extract_history[0]['confirmed'], 5)
+        self.assertEqual(again.org_extract_history[-1]['confirmed'], 34)
 
     def test_edufine_ready(self):
         cfg, _ = self._config_with(None)

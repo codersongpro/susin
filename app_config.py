@@ -33,6 +33,7 @@ TARGET_SYSTEMS = {
 }
 
 CHUNGBUK_OFFICE_CODE = 'M100000001'
+MAX_ORG_EXTRACT_HISTORY = 30
 
 TARGET_SUMMARIES = {
     TARGET_MESSENGER: '소통메신저에서 쪽지·대화 상대를 자동으로 골라 담습니다',
@@ -68,7 +69,7 @@ class Config:
     def __init__(self):
         self.data = dict(COORD_DEFAULTS)
         self.edufine = dict(EDUFINE_DEFAULTS)
-        self.guides_seen = {target: False for target in TARGETS}
+        self.org_extract_history = []
         self.target = TARGET_MESSENGER
         self._load()
 
@@ -106,9 +107,11 @@ class Config:
         # 신통픽은 충청북도교육청 전용이므로 이전 설정값과 관계없이 고정한다.
         self.edufine['등록교육청코드'] = CHUNGBUK_OFFICE_CODE
 
-        if isinstance(raw.get('guides_seen'), dict):
-            self.guides_seen.update(
-                {k: bool(v) for k, v in raw['guides_seen'].items() if k in TARGETS})
+        history = raw.get('org_extract_history')
+        if isinstance(history, list):
+            self.org_extract_history = [
+                entry for entry in history if isinstance(entry, dict)
+            ][-MAX_ORG_EXTRACT_HISTORY:]
 
         if raw.get('target') in TARGETS:
             self.target = raw['target']
@@ -117,7 +120,7 @@ class Config:
         payload = {
             'coords': self.data,
             'edufine': self.edufine,
-            'guides_seen': self.guides_seen,
+            'org_extract_history': self.org_extract_history[-MAX_ORG_EXTRACT_HISTORY:],
             'target': self.target,
         }
         # 예전 판이 읽을 수 있도록 좌표를 최상위에도 둔다

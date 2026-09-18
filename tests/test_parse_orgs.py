@@ -93,6 +93,14 @@ class ParseOrgsTest(unittest.TestCase):
         self.assertEqual(rows[0]['grade'], GRADE_FUZZY)
         self.assertIn('오송솔미초등학교', rows[0]['candidates'])
 
+    def test_can_preserve_duplicates_for_extraction_summary(self):
+        rows = parse_orgs('학성초\n학성초\n학성초', deduplicate=False)
+        self.assertEqual(len(rows), 3)
+        self.assertTrue(all(row['name'] == '학성초등학교' for row in rows))
+
+        # 기본 호출은 기존 동작을 유지한다.
+        self.assertEqual(len(parse_orgs('학성초\n학성초\n학성초')), 1)
+
     def test_auto_rows_have_no_candidates(self):
         for row in parse_orgs('학성초\n한천초'):
             self.assertIn(row['grade'], AUTO_GRADES)

@@ -369,13 +369,15 @@ def _org_from_line(line: str, known=None):
     return target, name, grade
 
 
-def parse_orgs(text: str, known=None) -> list:
+def parse_orgs(text: str, known=None, deduplicate: bool = True) -> list:
     """명단 텍스트 → 기관 목록.
 
     known 에 기관코드 사전이 아는 이름들을 넘기면, org_db 에 없는 부서명도 살려 둔다.
 
     반환: [{'raw', 'line', 'name', 'grade', 'candidates'}, ...]
-    입력 순서를 유지하고 중복은 제거한다. 사람 이름만 있는 줄은 건너뛴다.
+    입력 순서를 유지한다. deduplicate=True이면 기존처럼 중복을 제거하고,
+    False이면 호출부가 기관별 입력 횟수를 셀 수 있도록 중복 행도 돌려준다.
+    사람 이름만 있는 줄은 건너뛴다.
     해석에 실패한 줄도 grade='none' 으로 남긴다 — 조용히 삼키지 않는다.
     """
     results, seen = [], set()
@@ -391,7 +393,7 @@ def parse_orgs(text: str, known=None) -> list:
                 continue
             raw, name, grade = found
             key = name or f'?{raw}'
-            if key in seen:
+            if deduplicate and key in seen:
                 continue
             seen.add(key)
             results.append({

@@ -8,7 +8,7 @@
   "redirects": [
     {
       "source": "/download",
-      "destination": "https://github.com/codersongpro/susin/releases/latest",
+      "destination": "https://github.com/codersongpro/susin/releases/latest/download/sintongpick.exe",
       "permanent": false
     },
     {

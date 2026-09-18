@@ -25,6 +25,12 @@ def format_item_label(item: dict) -> str:
         mark = GRADE_MARKS.get(item.get('grade'), '')
         if mark:
             label = f'{label}      {mark}'
+        if item.get('code_missing'):
+            label = f'{label}      !  기관코드 없음 — 확인 필요'
+        source_count = int(item.get('source_count') or 1)
+        if source_count > 1:
+            label = (f'{label}      [입력 {source_count}회 · '
+                     f'중복 {source_count - 1}건 제거]')
     else:
         label = f'[{org}]  {name}' if org else f'{name}  (소속없음)'
 

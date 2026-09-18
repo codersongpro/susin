@@ -54,7 +54,8 @@ def main():
         labels = [app.nb.tab(t, 'text').strip() for t in app.nb.tabs()]
         assert len(labels) == expected[target], (target, labels)
         assert labels[0].endswith('명단 입력'), labels
-        assert labels[-1].endswith('사용 방법'), labels
+        expected_help = '수신픽 사용법' if target == TARGET_EDUFINE else '소통픽 사용법'
+        assert labels[-1].endswith(expected_help), labels
         print(f'출구 전환 ok — {target}: {labels}')
 
     # 명단 추출까지 돌려 본다 (기관 경로)
