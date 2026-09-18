@@ -684,6 +684,70 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(self.app, '_has_result', return_value=False):
             self.assertFalse(self.app._wait_for_result())
 
+    # ── 담겼는지 확인 ──────────────────────────
+    def _use_verify(self, on=True):
+        saved = self.app.config.data.get('verify_add')
+        self.app.config.data['verify_add'] = on
+        self.addCleanup(lambda: self.app.config.data.__setitem__('verify_add', saved))
+
+    def test_add_is_confirmed_by_the_duplicate_popup(self):
+        """두 번째 클릭에서 중복 안내창이 뜨면 첫 클릭이 통한 것이다."""
+        self._use_verify(True)
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_click_add_once',
+                             side_effect=[False, True]) as clicked:
+            self.assertEqual(self.app._do_select(), 'ok')
+        self.assertEqual(clicked.call_count, 2)
+
+    def test_add_that_never_shows_the_popup_is_a_failure(self):
+        """끝까지 안내창이 없으면 담기지 않은 것이라 실패로 남긴다."""
+        from automation import VERIFY_ADD_TRIES
+
+        self._use_verify(True)
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_click_add_once',
+                             return_value=False) as clicked:
+            self.assertEqual(self.app._do_select(), 'unverified')
+        self.assertEqual(clicked.call_count, 1 + VERIFY_ADD_TRIES)
+
+    def test_already_added_person_is_reported_as_duplicate(self):
+        """첫 클릭에서 안내창이 뜨면 돌리기 전부터 담혀 있던 사람이다."""
+        self._use_verify(True)
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_click_add_once',
+                             return_value=True) as clicked:
+            self.assertEqual(self.app._do_select(), 'duplicate')
+        self.assertEqual(clicked.call_count, 1)
+
+    def test_verification_can_be_turned_off(self):
+        self._use_verify(False)
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_click_add_once',
+                             return_value=False) as clicked:
+            self.assertEqual(self.app._do_select(), 'ok')
+        self.assertEqual(clicked.call_count, 1)
+
+    def test_verification_stops_when_the_user_stops(self):
+        self._use_verify(True)
+        self.app.stop_flag.set()
+        try:
+            with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                    patch.object(self.app, '_click_add_once', return_value=False):
+                self.assertEqual(self.app._do_select(), 'stopped')
+        finally:
+            self.app.stop_flag.clear()
+
+    def test_missing_coordinates_are_reported(self):
+        keys = ('result_first_x', 'result_first_y', 'add_button_x', 'add_button_y')
+        saved = {k: self.app.config.data.get(k) for k in keys}
+        self.app.config.data['result_first_x'] = None
+        try:
+            with self.assertRaises(RuntimeError) as caught:
+                self.app._click_add_once()
+            self.assertIn('좌표', str(caught.exception))
+        finally:
+            self.app.config.data.update(saved)
+
     def test_waiting_stops_when_the_user_stops(self):
         self.app.stop_flag.set()
         try:

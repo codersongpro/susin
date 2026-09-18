@@ -2,9 +2,14 @@
 
 FAIL_NO_USER = '사용자 없음'
 FAIL_DUPLICATE = '중복'
+FAIL_NOT_ADDED = '담기지 않음'
 FAIL_COORDINATE = '좌표 오류'
 FAIL_MANUAL_STOP = '수동 중지'
 FAIL_AUTOMATION = '자동화 오류'
+
+# 담겼는지 확인하려고 같은 자리를 다시 누르는 횟수. 이미 담긴 사람을 또 담으려
+# 하면 중복 팝업이 뜨므로, 그 팝업이 담겼다는 증거가 된다.
+VERIFY_ADD_TRIES = 2
 
 
 def failure_reason_from_error(exc: Exception) -> str:

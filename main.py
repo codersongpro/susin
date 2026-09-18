@@ -36,9 +36,11 @@ from automation import (
     FAIL_DUPLICATE,
     FAIL_MANUAL_STOP,
     FAIL_NO_USER,
+    FAIL_NOT_ADDED,
     RESULT_SCAN_HEIGHT,
     RESULT_SCAN_WIDTH,
     RESULT_WAIT_MIN,
+    VERIFY_ADD_TRIES,
     failure_reason_from_error,
     looks_like_result,
 )
@@ -248,11 +250,17 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   ─ 소통메신저를 고르면 ─
   소통메신저에서 아래 3단계를 자동으로 반복합니다.
 
-    1단계: 검색 입력창에 이름 입력 → 검색
-    2단계: 검색 결과 첫 번째 항목 클릭 (선택)
-    3단계: [사용자 선택] 버튼 클릭 (추가 완료)
+    1단계: 검색 입력창에 이름을 넣고 검색합니다
+    2단계: 검색 결과 첫 번째 항목을 누릅니다
+    3단계: [사용자 선택] 버튼을 눌러 담습니다
+    4단계: 정말 담겼는지 선택 버튼을 한 번 더 눌러 확인합니다
 
-  수십~수백 명을 일일이 처리하는 반복 작업을 자동화합니다.
+  4단계는 이미 담긴 사람을 또 담으려 할 때 뜨는 중복 안내창을
+  담겼다는 증거로 씁니다. 안내창이 끝까지 없으면 담기지 않은
+  것이라 빨간 항목으로 남깁니다. [위치 설정] 탭에서 끌 수 있지만,
+  끄면 빠진 사람을 알 수 없습니다.
+
+  수십에서 수백 명을 일일이 담는 반복 작업을 대신합니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1203,6 +1211,19 @@ class App:
             font=('맑은 고딕', 9), justify='left', anchor='w'
         ).grid(row=1, column=0, columnspan=3, sticky='w', padx=8, pady=4)
 
+        self.verify_var = tk.BooleanVar(
+            value=self.config.data.get('verify_add', True)
+        )
+        tk.Checkbutton(
+            setting_frame,
+            text='담겼는지 확인하고 넘어가기 (권장)\n'
+                 '한 사람마다 선택 버튼을 한 번 더 눌러 봅니다. 이미 담겼으면 중복 안내창이\n'
+                 '뜨는데, 그것을 담겼다는 증거로 씁니다. 안내창이 끝까지 없으면 담기지 않은\n'
+                 '것이라 빨간 항목으로 남깁니다. 끄면 빨라지지만 빠진 사람을 알 수 없습니다.',
+            variable=self.verify_var,
+            font=('맑은 고딕', 9), justify='left', anchor='w'
+        ).grid(row=2, column=0, columnspan=3, sticky='w', padx=8, pady=4)
+
         tk.Button(
             frame, text='✅  설정 저장',
             bg='#4CAF50', fg='white', activebackground='#4CAF50',
@@ -1740,10 +1761,11 @@ class App:
         else:
             positions = '완료' if self.config.is_calibrated() else '미설정'
             manual = '켜짐' if self.config.data.get('manual_confirm', False) else '꺼짐'
+            verify = '켜짐' if self.config.data.get('verify_add', True) else '꺼짐'
             delay = self.config.data.get('search_delay', 0.5)
             label.config(
                 text=f'{where}  |  명단 {count}명  ·  위치 {positions}  ·  '
-                     f'수동 확인 {manual}  ·  대기 {delay}초'
+                     f'수동 확인 {manual}  ·  담김 확인 {verify}  ·  대기 {delay}초'
             )
 
     def _refresh_failed_retry_state(self):
@@ -2387,6 +2409,7 @@ class App:
             auto_intro.config(text=(
                 '소통메신저 [사용자 선택] 창을 열고 [전체조직] 탭을 켜 두세요.\n'
                 '이름마다 ① 검색 입력  ② 결과 첫 번째 클릭  ③ 선택 버튼 클릭  이 반복됩니다.\n'
+                '담겼는지 확인하려고 선택 버튼을 한 번 더 누릅니다. 중복 안내창이 뜨면 담긴 것입니다.\n'
                 '⚠  마우스를 화면 왼쪽 위 모서리로 옮기면 긴급 중지됩니다.'
             ))
 
@@ -2597,6 +2620,7 @@ class App:
     def _save_calib(self):
         self.config.data['search_delay'] = round(self.delay_var.get(), 1)
         self.config.data['manual_confirm'] = self.manual_var.get()
+        self.config.data['verify_add'] = self.verify_var.get()
         self.config.save()
         self.calib_msg.config(text='✅ 설정 저장 완료')
         self.root.after(2000, lambda: self.calib_msg.config(text=''))
@@ -2750,6 +2774,7 @@ class App:
         manual = self.config.data.get('manual_confirm', False)
         total = len(run_items)
         no_result_streak = 0
+        unverified_streak = 0
 
         for idx, item in enumerate(run_items):
             if self.stop_flag.is_set():
@@ -2793,12 +2818,28 @@ class App:
                     self._log('✓\n')
                 else:
                     result = self._do_select()
+                    if result == 'stopped':
+                        self._log('\n')
+                        self._mark_failed(idx, FAIL_MANUAL_STOP)
+                        break
                     if result == 'duplicate':
                         fail += 1
                         self._log('⚠  (이미 선택된 사용자)\n')
                         self._mark_failed(idx, FAIL_DUPLICATE)
                         self._update_progress(idx + 1, total)
                         continue
+                    if result == 'unverified':
+                        fail += 1
+                        unverified_streak += 1
+                        self._log('✗  (받는 사람에 담기지 않았습니다)\n')
+                        if unverified_streak == 3:
+                            self._log(
+                                '     연달아 담기지 않았습니다. [위치 설정] 탭에서 '
+                                '결과 첫 줄과 선택 버튼 위치를 확인해 보세요.\n')
+                        self._mark_failed(idx, FAIL_NOT_ADDED)
+                        self._update_progress(idx + 1, total)
+                        continue
+                    unverified_streak = 0
                     ok += 1
                     self._log('✓\n')
             except pyautogui.FailSafeException:
@@ -2831,15 +2872,14 @@ class App:
         time.sleep(delay)
         pyautogui.press('enter')
 
-    def _do_select(self) -> str:
-        """3단계: 결과 클릭 → 선택 버튼 클릭 → 팝업 감지"""
+    def _click_add_once(self) -> bool:
+        """결과 첫 줄과 선택 버튼을 한 번 누른다. 중복 팝업이 떴으면 True."""
         rx = self.config.data['result_first_x']
         ry = self.config.data['result_first_y']
         ax = self.config.data['add_button_x']
         ay = self.config.data['add_button_y']
         if None in (rx, ry, ax, ay):
             raise RuntimeError('좌표 오류: 결과 또는 선택 버튼 위치 미설정')
-        time.sleep(0.2)
         pyautogui.click(rx, ry)
         time.sleep(0.15)
         before = self._snapshot_dialogs()
@@ -2849,8 +2889,31 @@ class App:
         if new_hwnds and self._is_duplicate_popup(new_hwnds):
             pyautogui.press('enter')
             time.sleep(0.15)
-            return 'duplicate'
-        return 'ok'
+            return True
+        return False
+
+    def _do_select(self) -> str:
+        """담고, 정말 담겼는지 확인한다.
+
+        선택 버튼을 눌렀다는 것만으로는 담겼는지 알 수 없다. 클릭이 빗나가도
+        소통메신저는 아무 말을 하지 않아서, 받는 사람에 없는 사람이 성공으로
+        기록됐다.
+
+        이미 담긴 사람을 다시 담으려 하면 중복 팝업이 뜬다. 그 팝업을 담겼다는
+        증거로 쓴다. 같은 자리를 한 번 더 눌러 팝업이 뜨면 앞선 클릭이 통한
+        것이고, 끝까지 팝업이 없으면 담기지 않은 것이라 실패로 남긴다.
+        """
+        time.sleep(0.2)
+        if self._click_add_once():
+            return 'duplicate'      # 명단을 돌리기 전부터 이미 담혀 있던 사람
+        if not self.config.data.get('verify_add', True):
+            return 'ok'
+        for _ in range(VERIFY_ADD_TRIES):
+            if self.stop_flag.is_set():
+                return 'stopped'
+            if self._click_add_once():
+                return 'ok'         # 앞선 클릭으로 담긴 것이 확인됐다
+        return 'unverified'
 
     def _snapshot_dialogs(self) -> set:
         """현재 열려있는 #32770 다이얼로그 핸들 집합 반환."""
@@ -2979,7 +3042,7 @@ class App:
                 f'  ✓ 성공: {ok}명\n'
                 f'  ✗ 실패: {fail}명\n\n'
                 f'[1. 명단 입력] 탭에서 빨간색 항목을 확인하세요.\n'
-                f'(검색 결과 없음 또는 이미 선택된 사용자)'
+                f'(검색 결과 없음, 이미 선택된 사용자, 담기지 않음)'
             )
         else:
             self.status_var.set(f'완료 — 성공: {ok}명')

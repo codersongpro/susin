@@ -47,6 +47,8 @@ COORD_DEFAULTS = {
     'empty_pixel_rgb': None,
     'search_delay': 0.5,
     'manual_confirm': True,
+    # 선택 버튼을 누른 뒤 정말 담겼는지 한 번 더 눌러 확인한다.
+    'verify_add': True,
 }
 
 # 에듀파인 일괄등록 양식에 매번 들어가지만 사람마다 고정인 값
