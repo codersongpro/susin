@@ -64,7 +64,7 @@ class _Listbox:
         return MagicMock()
 
 
-class _Widget:
+class _WidgetBase:
     """위젯 스텁. 같은 이름은 같은 mock 을 돌려줘야 호출 기록을 검사할 수 있다."""
 
     def __init__(self, *args, **kwargs):
@@ -78,6 +78,48 @@ class _Widget:
 
     def __setitem__(self, key, value):
         pass
+
+
+class _Notebook(_WidgetBase):
+    """ttk.Notebook 스텁 — add/hide/insert 를 진짜처럼 흉내 낸다.
+
+    tkinter 는 등록하지 않은 탭에 hide()/insert() 를 부르면 TclError 를 던진다.
+    스텁이 조용히 넘어가면, 탭이 하나만 남는 버그를 여기서 못 잡는다. 실제로 놓쳤다.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        object.__setattr__(self, 'managed', [])     # 등록된 순서
+        object.__setattr__(self, 'visible', [])     # 화면에 보이는 순서
+
+    def add(self, tab, **kwargs):
+        if tab not in self.managed:
+            self.managed.append(tab)
+        if tab not in self.visible:
+            self.visible.append(tab)
+
+    def hide(self, tab):
+        if tab not in self.managed:
+            raise RuntimeError('등록되지 않은 탭은 숨길 수 없습니다')
+        if tab in self.visible:
+            self.visible.remove(tab)
+
+    def insert(self, index, tab, **kwargs):
+        if tab not in self.managed:
+            raise RuntimeError('등록되지 않은 탭은 배치할 수 없습니다')
+        if tab in self.visible:
+            self.visible.remove(tab)
+        if index == 'end':
+            self.visible.append(tab)
+        else:
+            self.visible.insert(int(index), tab)
+
+    def tabs(self):
+        return list(self.visible)
+
+
+class _Widget(_WidgetBase):
+    pass
 
 
 def install_tk_stubs():
@@ -104,9 +146,10 @@ def install_tk_stubs():
     tk.scrolledtext = sys.modules['tkinter.scrolledtext']
     tk.filedialog = sys.modules['tkinter.filedialog']
     tk.scrolledtext.ScrolledText = _Text
-    for attr in ('Frame', 'Notebook', 'Entry', 'Scrollbar', 'Style', 'LabelFrame',
+    for attr in ('Frame', 'Entry', 'Scrollbar', 'Style', 'LabelFrame',
                  'Progressbar', 'Spinbox', 'Label', 'Button', 'Combobox'):
         setattr(tk.ttk, attr, _Widget)
+    tk.ttk.Notebook = _Notebook
     return saved
 
 
@@ -176,21 +219,36 @@ class AppFlowTest(unittest.TestCase):
             self.assertEqual(self.app.config.target, target)
             self.assertEqual(self.app.target_var.get(), target)
 
-    def test_edufine_hides_the_coordinate_tabs(self):
-        # 에듀파인은 엑셀을 만들어 올리는 방식이라 마우스 위치를 잡을 일이 없다
+    def test_each_target_shows_its_own_tabs(self):
+        """탭이 1번만 남고 사라지던 버그의 회귀 방지선."""
         from app_config import TARGET_EDUFINE, TARGET_MESSENGER
-        self.app._choose_target(TARGET_MESSENGER)     # setUp 이 이미 에듀파인이라
-        self.app.nb.hide.reset_mock()
-        self.app._choose_target(TARGET_EDUFINE)
-        hidden = [call.args[0] for call in self.app.nb.hide.call_args_list]
-        for tab, _ in self.app.messenger_tabs:
-            self.assertIn(tab, hidden)
 
-        self.app.nb.hide.reset_mock()
         self.app._choose_target(TARGET_MESSENGER)
-        hidden = [call.args[0] for call in self.app.nb.hide.call_args_list]
+        visible = self.app.nb.tabs()
+        self.assertIn(self.app.tab_input, visible)
+        for tab, _ in self.app.messenger_tabs:
+            self.assertIn(tab, visible, '소통메신저 탭이 없습니다')
         for tab, _ in self.app.edufine_tabs:
-            self.assertIn(tab, hidden)
+            self.assertNotIn(tab, visible)
+        self.assertIs(visible[-1], self.app.tab_help, '사용 방법은 맨 뒤여야 합니다')
+        self.assertEqual(len(visible), 4)
+
+        self.app._choose_target(TARGET_EDUFINE)
+        visible = self.app.nb.tabs()
+        self.assertIn(self.app.tab_input, visible)
+        for tab, _ in self.app.edufine_tabs:
+            self.assertIn(tab, visible, '에듀파인 탭이 없습니다')
+        for tab, _ in self.app.messenger_tabs:
+            self.assertNotIn(tab, visible)
+        self.assertIs(visible[-1], self.app.tab_help)
+        self.assertEqual(len(visible), 3)
+
+    def test_switching_back_and_forth_keeps_tabs(self):
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+        for target in (TARGET_MESSENGER, TARGET_EDUFINE) * 3:
+            self.app._choose_target(target)
+            self.assertGreaterEqual(len(self.app.nb.tabs()), 3,
+                                    f'{target} 에서 탭이 사라졌습니다')
 
     def test_blank_template_exists_to_be_saved(self):
         import os

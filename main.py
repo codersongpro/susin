@@ -595,16 +595,24 @@ class App:
         nb.grid(row=1, column=0, sticky='nsew', padx=4, pady=(0, 4))
 
         self.nb = nb
-        f1 = ttk.Frame(nb); nb.add(f1, text='  1. 명단 입력  ')
+        f1 = ttk.Frame(nb)
         f2 = ttk.Frame(nb)
         f3 = ttk.Frame(nb)
         f4 = ttk.Frame(nb)
         f5 = ttk.Frame(nb)
 
         # 출구에 따라 넣고 빼므로 순서와 이름을 기억해 둔다
+        self.tab_input = f1
         self.tab_help = f5
         self.messenger_tabs = [(f2, '  2. 위치 설정  '), (f3, '  3. 자동 선택  ')]
         self.edufine_tabs = [(f4, '  2. 수신그룹 엑셀  ')]
+
+        # 모두 먼저 등록한다. 등록하지 않은 탭에 hide() 를 부르면 tkinter 가
+        # 예외를 던져서, 뒤따르는 탭 배치가 통째로 건너뛰어진다.
+        nb.add(f1, text='  1. 명단 입력  ')
+        for tab, label in self.messenger_tabs + self.edufine_tabs:
+            nb.add(tab, text=label)
+        nb.add(f5, text='  📖 사용 방법  ')
 
         self._tab_input(f1)
         self._tab_calib(f2)
@@ -1577,14 +1585,23 @@ class App:
         # 마우스 위치를 잡을 일이 없다.
         show = self.edufine_tabs if edufine_on else self.messenger_tabs
         hide = self.messenger_tabs if edufine_on else self.edufine_tabs
-        try:
-            for tab, _ in hide:
+
+        # 하나가 실패해도 나머지 배치는 이어져야 한다.
+        # 예전에 전부 한 try 로 묶었다가, 첫 hide() 가 던지면서 탭이 1번만 남았다.
+        for tab, _ in hide:
+            try:
                 self.nb.hide(tab)
-            for index, (tab, label) in enumerate(show, start=1):
+            except Exception as exc:
+                logging.info('탭 숨김 실패: %s', exc)
+        for index, (tab, label) in enumerate(show, start=1):
+            try:
                 self.nb.insert(index, tab, text=label)
+            except Exception as exc:
+                logging.info('탭 배치 실패: %s', exc)
+        try:
             self.nb.insert('end', self.tab_help, text='  📖 사용 방법  ')
         except Exception as exc:
-            logging.info('탭 표시 전환 실패: %s', exc)
+            logging.info('도움말 탭 배치 실패: %s', exc)
 
         browse = getattr(self, 'browse_btn', None)
         if browse:

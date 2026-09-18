@@ -44,12 +44,18 @@ def main():
     app = app_module.App(root)
     print(f'App 생성 ok — {app_module.APP_NAME} v{app_module.APP_VERSION}')
 
-    # 두 출구를 오가며 탭 표시 전환이 터지지 않는지 본다
+    # 두 출구를 오가며 탭이 제대로 남는지 본다.
+    # 진짜 tkinter 로만 드러나는 문제가 있었다 — 등록하지 않은 탭에 hide() 를
+    # 부르면 예외가 나면서 탭이 1번 하나만 남았다.
     from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+    expected = {TARGET_MESSENGER: 4, TARGET_EDUFINE: 3}
     for target in (TARGET_EDUFINE, TARGET_MESSENGER, TARGET_EDUFINE):
-        app.target_var.set(target)
-        app._on_target_change()
-        print(f'출구 전환 ok — {target}')
+        app._choose_target(target)
+        labels = [app.nb.tab(t, 'text').strip() for t in app.nb.tabs()]
+        assert len(labels) == expected[target], (target, labels)
+        assert labels[0].endswith('명단 입력'), labels
+        assert labels[-1].endswith('사용 방법'), labels
+        print(f'출구 전환 ok — {target}: {labels}')
 
     # 명단 추출까지 돌려 본다 (기관 경로)
     app.input_text.insert('1.0', '학성초\n청주교육지원청 행정과\n행정과')
