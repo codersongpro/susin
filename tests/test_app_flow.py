@@ -425,3 +425,57 @@ class VersionFileTest(unittest.TestCase):
                        "StringStruct('FileVersion', '2.0.1')"):
             self.assertIn(needed, text, needed)
         self.assertIn('(2, 0, 1, 0)', text)
+
+
+class VersionConsistencyTest(unittest.TestCase):
+    """버전이 세 곳에 흩어져 있어 어긋나기 쉽다. 실제로 v1.7.2 가 남아 있었다."""
+
+    def setUp(self):
+        import os
+        sys.path.insert(0, os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
+        import bump_version
+        self.mod = bump_version
+
+    def test_landing_page_matches_the_app(self):
+        version = self.mod.read_version()
+        found = self.mod.html_versions()
+        self.assertTrue(found, '랜딩페이지에서 버전 표기를 찾지 못했습니다')
+        for shown in found:
+            self.assertEqual(shown, version,
+                             f'랜딩페이지 v{shown} 와 앱 v{version} 이 다릅니다')
+
+    def test_changelog_has_the_current_version(self):
+        version = self.mod.read_version()
+        self.assertIn(version, self.mod.changelog_versions(),
+                      f'CHANGELOG.md 에 "## v{version}" 단락이 없습니다')
+
+    def test_changelog_is_newest_first(self):
+        def key(v):
+            return [int(p) for p in v.split('.')]
+        versions = self.mod.changelog_versions()
+        self.assertEqual(versions, sorted(versions, key=key, reverse=True),
+                         'CHANGELOG 는 최신 버전이 맨 위여야 합니다')
+
+
+class ReleaseNotesTest(unittest.TestCase):
+    def setUp(self):
+        import os
+        sys.path.insert(0, os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
+        import make_release_notes
+        self.mod = make_release_notes
+
+    def test_picks_the_right_section(self):
+        text = ('## v2.0.0\n첫판\n\n## v2.1.0\n둘째판\n')
+        self.assertEqual(self.mod.section_for('v2.1.0', text), '둘째판')
+        self.assertEqual(self.mod.section_for('2.0.0', text), '첫판')
+        self.assertIsNone(self.mod.section_for('v9.9.9', text))
+
+    def test_body_includes_changelog_and_footer(self):
+        version = __import__('bump_version').read_version()
+        body = self.mod.build(version)
+        self.assertIn('백신이 막는다면', body, '고정 안내문이 빠졌습니다')
+        self.assertIn('받는 방법', body)
+        self.assertNotIn('CHANGELOG.md 에 없습니다', body,
+                         '현재 버전의 변경 내용이 CHANGELOG 에 없습니다')

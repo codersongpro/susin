@@ -181,7 +181,7 @@ python3 tools/merge_edufine_orgs.py --apply   # 수확한 기관명을 org_db �
 
 ```bash
 pip install -r requirements.txt
-python3 -m unittest discover -s tests    # 87개
+python3 -m unittest discover -s tests    # 92개
 python main.py
 ```
 
@@ -191,29 +191,29 @@ CI 는 onefile exe 와 onedir zip 을 모두 만들고, `tools/make_version_file
 
 ### 릴리즈
 
-방법은 두 가지다. 어느 쪽이든 GitHub Actions 가 Windows 러너에서 exe 를 만들어
-Release 에 붙인다.
-
-**태그를 민다**
+**`CHANGELOG.md` 를 먼저 갱신한다.** 거기 적은 내용이 그대로 Release 본문이 된다.
 
 ```bash
-git tag -a v2.0.1 -m "무엇을 고쳤는지"
-git push origin v2.0.1
+# 1. CHANGELOG.md 맨 위에 '## vX.Y.Z' 단락을 쓴다
+# 2. 버전을 한꺼번에 맞춘다 (main.py, index.html)
+python3 tools/bump_version.py 2.1.1
+# 3. 테스트
+python3 -m unittest discover -s tests
+# 4. 커밋하고 작업 브랜치와 main 둘 다 push
 ```
 
-**또는 Actions 탭에서 돌린다**
+그 다음 둘 중 하나로 릴리즈한다.
 
-`Actions → 릴리즈 빌드 → Run workflow` 에서 `version` 에 `v2.0.1` 을 적는다.
-러너가 태그까지 만들어 주므로 **태그를 밀 권한이 없어도 된다.**
-`version` 을 비워 두면 빌드만 하고 exe 를 artifact 로만 남긴다.
+- **Actions 탭** `릴리즈 빌드 → Run workflow` 에서 `version` 에 `v2.1.1` 을 적는다.
+  러너가 태그까지 만들어 주므로 태그를 밀 권한이 없어도 된다.
+- **태그를 민다** `git tag -a v2.1.1 -m "..." && git push origin v2.1.1`
 
-워크플로는 `.github/workflows/release.yml` 이고 세 가지를 순서대로 한다.
+릴리즈 본문은 `CHANGELOG.md` 의 해당 단락에 `docs/release_footer.md`(받는 방법·백신
+안내)를 붙여 만든다 (`tools/make_release_notes.py`). 고정 안내문을 고칠 일이 있으면
+워크플로가 아니라 `docs/release_footer.md` 를 고친다.
 
-1. **테스트** (ubuntu) — GUI 없이 도는 부분 전부
-2. **스모크 테스트** (windows) — `tools/smoke_gui.py` 로 탭 생성·도구 전환·명단 추출까지
-   실제로 돌려 본다. exe 를 만들기 전에 여기서 걸러야 사용자가 받고 나서 아는 일이 없다.
-   대화상자는 전부 실패로 처리한다 — CI 에는 누를 사람이 없어 모달이 뜨면 영영 멈춘다.
-3. **빌드 + Release 첨부**
+버전이 어긋나면 테스트가 잡는다. 랜딩페이지 표기와 `APP_VERSION`, `CHANGELOG` 단락이
+모두 같아야 통과한다.
 
 빌드만 확인하고 싶으면 `version` 을 비워 두고 돌린다. Release 없이 exe 만 남는다.
 
