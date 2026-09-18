@@ -8,7 +8,7 @@
 """
 
 APP_NAME    = '신통픽'
-APP_VERSION = '2.1.2'
+APP_VERSION = '2.1.3'
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
@@ -22,6 +22,7 @@ import webbrowser
 import urllib.request
 
 from app_config import (
+    APP_DATA_DIR,
     Config,
     TARGET_EDUFINE,
     TARGET_LABELS,
@@ -46,10 +47,15 @@ from sotong_parser import (
 )
 from ui_helpers import format_item_label
 
-LOG_FILE = os.path.join(os.path.expanduser("~"), ".chungbuk_auto.log")
+LOG_FILE = os.path.join(APP_DATA_DIR, 'app.log')
 LATEST_RELEASE_API = 'https://api.github.com/repos/codersongpro/susin/releases/latest'
 RELEASES_PAGE = 'https://github.com/codersongpro/susin/releases/latest'
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO, encoding='utf-8')
+try:
+    os.makedirs(APP_DATA_DIR, exist_ok=True)
+    logging.basicConfig(filename=LOG_FILE, level=logging.INFO, encoding='utf-8')
+except OSError:
+    # 로그를 못 써도 앱의 핵심 기능은 실행되어야 한다.
+    logging.basicConfig(level=logging.INFO)
 
 try:
     import pyautogui
@@ -384,12 +390,12 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   ① 내 정보 넣기  (처음 한 번만)
   ──────────────────────────────────────────────────────
-    [4. 수신그룹 엑셀] 탭 → STEP 2
+    [2. 수신그룹 엑셀] 탭 → STEP 1
 
-      등록교육청 : 본인이 속한 교육지원청을 목록에서 고릅니다
       사용자ID   : 에듀파인 로그인 ID
       사용자명   : 결재선에 뜨는 이름
 
+    등록교육청은 충청북도교육청으로 자동 적용됩니다.
     한 번 넣으면 저장되니 다음부터는 건너뜁니다.
 
 
@@ -438,31 +444,22 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   ④ 엑셀 만들어 올리기
   ──────────────────────────────────────────────────────
-    [4. 수신그룹 엑셀] 탭 STEP 3 에 수신그룹명을 적고
+    [2. 수신그룹 엑셀] 탭 STEP 2 에 수신그룹명을 적고
     [수신그룹 엑셀 만들기] 를 누릅니다.
 
+    그룹명은 에듀파인에서 나중에 찾기 쉬운 이름으로 적습니다.
+    예) 2026 진천 초등학교, 2학기 업무담당자
+    그룹기호는 선택 사항이므로 필요 없으면 비워 둡니다.
+
     코드가 없는 기관이 있으면 목록으로 알려 줍니다. 조용히 빠지지 않습니다.
-    그런 기관은 [클립보드 순차 복사] 로 조직도에 직접 넣으면 됩니다.
+    그런 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.
 
     만들어진 엑셀을 에듀파인
     [개인설정 > 개인수신그룹관리 > 일괄등록] 에서 올립니다.
 
     ※ 처음에는 기관 2~3곳짜리 시험 그룹으로 한 번 확인해 보세요.
 
-
-  ⑤ 기관코드 갱신  (평소에는 필요 없음)
-  ──────────────────────────────────────────────────────
-    충북 770곳의 코드가 이미 들어 있습니다. STEP 1 은 건너뛰어도 됩니다.
-
-    학교 신설·통폐합으로 갱신이 필요하면,
-    에듀파인에서 수신그룹을 하나 만들어 저장한 뒤
-    [파일양식받기] 를 누르면 등록한 내용이 코드와 함께 내려옵니다.
-    그 파일을 STEP 1 의 [기관코드 가져오기…] 로 넣으면 됩니다.
-
-    코드가 바뀐 기관이 있으면 무엇이 어떻게 바뀌는지 먼저 보여 줍니다.
-
-
-  ⑥ 클립보드 순차 복사
+  ⑤ 코드 없는 기관 순차 복사
   ──────────────────────────────────────────────────────
     기관명을 한 건씩 클립보드에 넣어 줍니다.
     조직명 칸에 Ctrl+V → Enter → 체크 → [>>] 만 반복하면 됩니다.
@@ -479,6 +476,45 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   {APP_NAME}  |  버전 v{APP_VERSION}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+
+GUIDE_STEPS = {
+    TARGET_MESSENGER: [
+        ('input', '명단을 넣으세요',
+         '소속기관과 이름이 들어 있는 표를 붙여넣거나 엑셀·HWP 파일을 여세요.\n'
+         '그다음 [명단 추출]을 눌러 결과를 확인합니다.'),
+        ('input', '추출 결과를 확인하세요',
+         '소속없음이나 이름 오류가 있으면 항목을 더블클릭해 고칩니다.\n'
+         '동명이인이 있으면 수동 확인 모드를 사용하는 편이 안전합니다.'),
+        ('calib', '클릭할 위치 세 곳을 잡으세요',
+         '검색 입력창, 결과 첫 번째 행, 사용자 선택 버튼을 차례로 설정합니다.\n'
+         '소통메신저 창을 옮겼다면 위치를 다시 잡아야 합니다.'),
+        ('auto', '소통메신저를 준비하세요',
+         '[사용자 선택] 창의 [전체조직] 탭을 열어 둡니다.\n'
+         '처음에는 수동 확인 모드로 2~3명만 시험해 보세요.'),
+        ('auto', '자동 선택을 시작하세요',
+         '[자동 선택 시작]을 누르면 명단을 한 명씩 검색합니다.\n'
+         '문제가 생기면 [중지]를 누르거나 마우스를 화면 왼쪽 위로 옮기세요.'),
+    ],
+    TARGET_EDUFINE: [
+        ('input', '기관 명단을 넣으세요',
+         '기관명을 줄바꿈·쉼표·탭으로 구분해 붙여넣습니다.\n'
+         '예: 학성초, 충북외고, 청주교육지원청 행정과'),
+        ('input', '추출 결과를 확인하세요',
+         '[명단 추출]을 누른 뒤 같은 이름이 여럿이거나 추정된 기관을 확인합니다.\n'
+         '확인이 필요한 항목은 더블클릭해 정확한 기관을 고르세요.'),
+        ('edufine', '내 정보를 한 번만 입력하세요',
+         '에듀파인 사용자ID와 사용자명을 입력합니다.\n'
+         '등록교육청은 충청북도교육청으로 자동 적용됩니다.'),
+        ('edufine', '수신그룹 이름을 정하세요',
+         '그룹명은 나중에 찾기 쉬운 이름으로 적습니다.\n'
+         '예: 2026 진천 초등학교, 2학기 업무담당자\n'
+         '그룹기호는 선택 사항이므로 필요 없으면 비워 두세요.'),
+        ('edufine', '엑셀을 만들고 올리세요',
+         '[수신그룹 엑셀 만들기]를 눌러 파일을 저장합니다.\n'
+         '에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록]에서 올리면 됩니다.'),
+    ],
+}
 
 
 # ─────────────────────────────────────────────
@@ -613,6 +649,90 @@ class ClipboardWalker(tk.Toplevel):
         self._copy_current()
 
 
+class WalkthroughDialog(tk.Toplevel):
+    """처음 사용하는 사람이 한 단계씩 따라가는 간단한 안내 창."""
+
+    def __init__(self, parent, title, steps, on_step, on_close):
+        super().__init__(parent)
+        self.steps = list(steps)
+        self.on_step = on_step
+        self.on_close = on_close
+        self.idx = 0
+        self._closed = False
+
+        self.title(title)
+        self.geometry('520x330')
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        self.configure(bg='#F5F7FA')
+        self.protocol('WM_DELETE_WINDOW', self.finish)
+
+        self.progress_var = tk.StringVar()
+        tk.Label(self, textvariable=self.progress_var, bg='#1565C0', fg='white',
+                 font=('맑은 고딕', 10, 'bold'), anchor='w', padx=16, pady=10).pack(fill='x')
+
+        self.heading_var = tk.StringVar()
+        tk.Label(self, textvariable=self.heading_var, bg='#F5F7FA', fg='#0D47A1',
+                 font=('맑은 고딕', 16, 'bold'), anchor='w').pack(
+                     fill='x', padx=24, pady=(24, 10))
+
+        self.body_var = tk.StringVar()
+        tk.Label(self, textvariable=self.body_var, bg='#F5F7FA', fg='#37474F',
+                 font=('맑은 고딕', 11), justify='left', anchor='nw',
+                 wraplength=470).pack(fill='both', expand=True, padx=24)
+
+        buttons = tk.Frame(self, bg='#F5F7FA')
+        buttons.pack(fill='x', padx=20, pady=18)
+        self.prev_btn = tk.Button(
+            buttons, text='이전', command=self.prev,
+            bg='#90A4AE', fg='white', relief='flat', padx=14, pady=6)
+        self.prev_btn.pack(side='left')
+        tk.Button(
+            buttons, text='건너뛰기', command=self.finish,
+            bg='#B0BEC5', fg='white', relief='flat', padx=14, pady=6).pack(
+                side='right', padx=(8, 0))
+        self.next_btn = tk.Button(
+            buttons, text='다음', command=self.next,
+            bg='#1565C0', fg='white', relief='flat', padx=18, pady=6)
+        self.next_btn.pack(side='right')
+
+        self.bind('<Left>', lambda _e: self.prev())
+        self.bind('<Right>', lambda _e: self.next())
+        self.bind('<Escape>', lambda _e: self.finish())
+        self._render()
+
+    def _render(self):
+        tab_key, heading, body = self.steps[self.idx]
+        total = len(self.steps)
+        self.progress_var.set(f'{self.idx + 1} / {total}  {self.title()}')
+        self.heading_var.set(heading)
+        self.body_var.set(body)
+        self.prev_btn.config(state='normal' if self.idx else 'disabled')
+        self.next_btn.config(text='시작하기' if self.idx == total - 1 else '다음')
+        self.on_step(tab_key)
+
+    def next(self):
+        if self.idx >= len(self.steps) - 1:
+            self.finish()
+            return
+        self.idx += 1
+        self._render()
+
+    def prev(self):
+        if self.idx == 0:
+            return
+        self.idx -= 1
+        self._render()
+
+    def finish(self):
+        if self._closed:
+            return
+        self._closed = True
+        self.on_close()
+        self.destroy()
+
+
 class App:
     def __init__(self, root: tk.Tk):
         self.root = root
@@ -626,12 +746,15 @@ class App:
         self.stop_flag = threading.Event()
         self.continue_event = threading.Event()
         self.continue_event.set()
+        self.worker_thread = None
+        self.guide_dialog = None
 
         self._apply_theme()
         self._build_ui()
         self._refresh_calib_labels()
         self._check_deps()
         self._check_for_update_async()
+        self.root.after(400, self._show_current_guide)
 
     # ── 테마 (충북교육청 블루) ─────────────────
     def _apply_theme(self):
@@ -702,8 +825,16 @@ class App:
             picker, text='', bg='#263238', fg='#B0BEC5',
             font=('맑은 고딕', 9), anchor='w'
         )
-        self.target_hint.grid(row=2, column=0, columnspan=2, sticky='w',
+        self.target_hint.grid(row=2, column=0, sticky='w',
                               padx=14, pady=(0, 10))
+
+        tk.Button(
+            picker, text='처음 사용 가이드',
+            command=lambda: self._show_onboarding(self.config.target, force=True),
+            bg='#455A64', fg='white', activebackground='#37474F',
+            relief='flat', font=('맑은 고딕', 9), padx=10, pady=4,
+            cursor='hand2'
+        ).grid(row=2, column=1, sticky='e', padx=14, pady=(0, 8))
 
         # 탭 노트북
         nb = ttk.Notebook(self.root)
@@ -948,77 +1079,45 @@ class App:
             justify='left', anchor='w', padx=10, pady=8
         ).grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 6))
 
-        # ① 기관코드 사전
-        code_frame = ttk.LabelFrame(frame, text='STEP 1 — 기관코드 사전')
-        code_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=4)
-        code_frame.columnconfigure(0, weight=1)
-
         self.codes_status = tk.Label(
-            code_frame, text='', anchor='w', justify='left',
-            font=('맑은 고딕', 9), bg='#F5F7FA'
+            frame, text='', anchor='w', justify='left',
+            font=('맑은 고딕', 9, 'bold'), bg='#E8F5E9', fg='#1B5E20',
+            padx=10, pady=7
         )
-        self.codes_status.grid(row=0, column=0, sticky='ew', padx=8, pady=(6, 2))
+        self.codes_status.grid(row=1, column=0, sticky='ew', padx=10, pady=4)
 
-        tk.Label(
-            code_frame,
-            text='에듀파인에서 수신그룹을 하나 만든 뒤 [파일양식받기] 로 내려받은 엑셀을 고르세요.\n'
-                 '그 파일에 기관코드가 들어 있습니다. 한 번 가져오면 계속 쓰입니다.',
-            fg='#555', font=('맑은 고딕', 8), justify='left', anchor='w', bg='#F5F7FA'
-        ).grid(row=1, column=0, sticky='w', padx=8, pady=(0, 4))
-
-        tk.Button(
-            code_frame, text='기관코드 가져오기…', command=self._import_codes,
-            bg='#00695C', fg='white', activebackground='#004D40',
-            relief='flat', font=('맑은 고딕', 9, 'bold'), padx=12, pady=5, cursor='hand2'
-        ).grid(row=2, column=0, sticky='w', padx=8, pady=(0, 8))
-
-        # ② 내 정보 — 매번 같은 값이라 한 번만 넣는다
-        me_frame = ttk.LabelFrame(frame, text='STEP 2 — 내 정보 (한 번만 입력)')
+        # ① 내 정보 — 매번 같은 값이라 한 번만 넣는다
+        me_frame = ttk.LabelFrame(frame, text='STEP 1 — 내 정보 (한 번만 입력)')
         me_frame.grid(row=2, column=0, sticky='ew', padx=10, pady=4)
         me_frame.columnconfigure(1, weight=1)
         me_frame.columnconfigure(3, weight=1)
 
-        self.edufine_vars = {}
+        self.edufine_vars = {
+            '등록교육청코드': tk.StringVar(value=edufine.REGISTERING_OFFICE_CODE),
+        }
 
-        # 등록교육청은 코드를 외울 수 없으니 목록에서 고르게 한다
-        tk.Label(me_frame, text='등록교육청', bg='#F5F7FA',
-                 font=('맑은 고딕', 9)).grid(row=0, column=0, sticky='w', padx=(8, 4), pady=5)
-        self.edufine_vars['등록교육청코드'] = tk.StringVar(
-            value=self.config.edufine.get('등록교육청코드', ''))
-        self.office_var = tk.StringVar()
-        self.office_combo = ttk.Combobox(me_frame, textvariable=self.office_var,
-                                         state='readonly', width=24)
-        self.office_combo.grid(row=0, column=1, sticky='ew', padx=(0, 10), pady=5)
-        self.office_combo.bind('<<ComboboxSelected>>', self._on_office_selected)
-        self._reload_office_choices()
-
-        for key, r, c in [('사용자ID', 0, 2), ('사용자명', 1, 0)]:
+        for key, c in [('사용자ID', 0), ('사용자명', 2)]:
             tk.Label(me_frame, text=key, bg='#F5F7FA',
-                     font=('맑은 고딕', 9)).grid(row=r, column=c, sticky='w', padx=(8, 4), pady=5)
+                     font=('맑은 고딕', 9)).grid(row=0, column=c, sticky='w', padx=(8, 4), pady=5)
             var = tk.StringVar(value=self.config.edufine.get(key, ''))
             self.edufine_vars[key] = var
             entry = ttk.Entry(me_frame, textvariable=var, width=20)
-            entry.grid(row=r, column=c + 1, sticky='ew', padx=(0, 10), pady=5)
+            entry.grid(row=0, column=c + 1, sticky='ew', padx=(0, 10), pady=5)
             entry.bind('<FocusOut>', lambda e: self._save_edufine_fields())
-
-        self.office_code_label = tk.Label(
-            me_frame, text='', fg='#555', font=('맑은 고딕', 8), bg='#F5F7FA', anchor='w')
-        self.office_code_label.grid(row=1, column=2, columnspan=2, sticky='w',
-                                    padx=8, pady=(0, 4))
 
         tk.Label(
             me_frame,
-            text='등록교육청은 본인이 속한 교육지원청입니다. 사용자ID·이름은 [파일양식받기] 파일에서도 채워집니다.',
+            text='등록교육청은 충청북도교육청으로 자동 적용됩니다. 사용자ID와 사용자명만 입력하세요.',
             fg='#555', font=('맑은 고딕', 8), bg='#F5F7FA', anchor='w'
-        ).grid(row=2, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 6))
+        ).grid(row=1, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 6))
 
-        # ③ 그룹 만들기
-        group_frame = ttk.LabelFrame(frame, text='STEP 3 — 수신그룹 만들기')
+        # ② 그룹 만들기
+        group_frame = ttk.LabelFrame(frame, text='STEP 2 — 수신그룹 만들기')
         group_frame.grid(row=3, column=0, sticky='ew', padx=10, pady=4)
         group_frame.columnconfigure(1, weight=1)
         group_frame.columnconfigure(3, weight=1)
 
-        for key, c, hint in [('그룹명', 0, '예: 2026 도내 교육지원청'), ('그룹기호', 2, '비워도 됩니다')]:
+        for key, c in [('그룹명', 0), ('그룹기호', 2)]:
             tk.Label(group_frame, text=key, bg='#F5F7FA',
                      font=('맑은 고딕', 9)).grid(row=0, column=c, sticky='w', padx=(8, 4), pady=6)
             var = tk.StringVar(value=self.config.edufine.get(key, ''))
@@ -1026,8 +1125,19 @@ class App:
             ttk.Entry(group_frame, textvariable=var, width=20).grid(
                 row=0, column=c + 1, sticky='ew', padx=(0, 10), pady=6)
 
+        tk.Label(
+            group_frame,
+            text='그룹명은 에듀파인에서 찾기 쉬운 이름으로 적으세요. 예: 2026 진천 초등학교, 2학기 업무담당자',
+            fg='#37474F', font=('맑은 고딕', 8), bg='#F5F7FA', anchor='w'
+        ).grid(row=1, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 2))
+        tk.Label(
+            group_frame,
+            text='그룹기호는 선택 사항입니다. 따로 쓰지 않으면 비워 두어도 됩니다.',
+            fg='#37474F', font=('맑은 고딕', 8), bg='#F5F7FA', anchor='w'
+        ).grid(row=2, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 7))
+
         btn_row = tk.Frame(group_frame, bg='#F5F7FA')
-        btn_row.grid(row=1, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 8))
+        btn_row.grid(row=3, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 8))
 
         tk.Button(
             btn_row, text='수신그룹 엑셀 만들기', command=self._build_group_excel,
@@ -1036,7 +1146,7 @@ class App:
         ).pack(side='left')
 
         tk.Button(
-            btn_row, text='클립보드 순차 복사', command=self._open_clipboard_walker,
+            btn_row, text='코드 없는 기관 순차 복사', command=self._open_clipboard_walker,
             bg='#6A1B9A', fg='white', activebackground='#4A148C',
             relief='flat', font=('맑은 고딕', 9, 'bold'), padx=14, pady=6, cursor='hand2'
         ).pack(side='left', padx=(8, 0))
@@ -1049,7 +1159,7 @@ class App:
 
         # 빈 양식 받기 — 에듀파인이 요구하는 서식을 눈으로 확인하고 싶을 때
         sample_row = tk.Frame(group_frame, bg='#F5F7FA')
-        sample_row.grid(row=2, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 8))
+        sample_row.grid(row=4, column=0, columnspan=4, sticky='w', padx=8, pady=(0, 8))
         tk.Button(
             sample_row, text='빈 양식 받기', command=self._save_blank_template,
             bg='#546E7A', fg='white', activebackground='#455A64',
@@ -1206,39 +1316,6 @@ class App:
 
         refresh()
 
-    def _reload_office_choices(self):
-        """등록교육청 목록을 코드 사전에서 다시 읽는다."""
-        combo = getattr(self, 'office_combo', None)
-        if not combo:
-            return
-        self.office_choices = edufine.registering_offices(self.codes)
-        combo['values'] = [name for name, _ in self.office_choices]
-
-        current = self.edufine_vars['등록교육청코드'].get().strip()
-        for name, code in self.office_choices:
-            if code == current:
-                self.office_var.set(name)
-                break
-        else:
-            self.office_var.set('')
-        self._refresh_office_code_label()
-
-    def _refresh_office_code_label(self):
-        label = getattr(self, 'office_code_label', None)
-        if not label:
-            return
-        code = self.edufine_vars['등록교육청코드'].get().strip()
-        label.config(text=f'코드 {code}' if code else '교육지원청을 골라주세요')
-
-    def _on_office_selected(self, event=None):
-        picked = self.office_var.get()
-        for name, code in getattr(self, 'office_choices', []):
-            if name == picked:
-                self.edufine_vars['등록교육청코드'].set(code)
-                break
-        self._save_edufine_fields()
-        self._refresh_office_code_label()
-
     def _save_blank_template(self):
         """에듀파인 일괄등록 빈 양식을 저장한다.
 
@@ -1275,21 +1352,20 @@ class App:
     def _save_edufine_fields(self):
         for key, var in getattr(self, 'edufine_vars', {}).items():
             self.config.edufine[key] = var.get().strip()
+        self.config.edufine['등록교육청코드'] = edufine.REGISTERING_OFFICE_CODE
         self.config.save()
         self._refresh_edufine_status()
 
     def _refresh_edufine_status(self):
         label = getattr(self, 'codes_status', None)
-        if not label:
-            return
         orgs = self.codes.get('기관', {})
-        collected = self.codes.get('수집일') or '-'
-        if orgs:
-            label.config(text=f'기관코드 {len(orgs)}곳 보유  ·  수집일 {collected}',
-                         fg='#1B5E20')
-        else:
-            label.config(text='기관코드가 아직 없습니다 — 아래에서 먼저 가져오세요',
-                         fg='#C62828')
+        if label:
+            if orgs:
+                label.config(
+                    text=f'충청북도교육청으로 고정  ·  기관코드 {len(orgs)}곳 기본 제공',
+                    fg='#1B5E20')
+            else:
+                label.config(text='내장 기관코드 파일을 찾을 수 없습니다', fg='#C62828')
 
         msg = getattr(self, 'edufine_msg', None)
         if msg and self.names_list:
@@ -1310,74 +1386,23 @@ class App:
         rows = [{'name': item['org']} for item in self._confirmed_orgs()]
         return edufine.split_by_code(rows, self.codes)
 
-    def _import_codes(self):
-        path = filedialog.askopenfilename(
-            title='에듀파인에서 받은 수신그룹 엑셀을 고르세요',
-            filetypes=[('엑셀 파일', '*.xlsx'), ('모든 파일', '*.*')]
-        )
-        if not path:
-            return
-        try:
-            harvested = edufine.read_group_workbook(path)
-        except Exception as exc:
-            logging.exception('기관코드 가져오기 실패')
-            messagebox.showerror('가져오기 실패', f'파일을 읽지 못했습니다.\n\n{exc}')
-            return
-
-        if not harvested['기관']:
-            messagebox.showwarning(
-                '가져올 코드가 없습니다',
-                '이 파일에는 기관코드가 들어 있지 않습니다.\n\n'
-                '에듀파인에서 수신그룹을 먼저 저장한 뒤 [파일양식받기] 를 누르면\n'
-                '등록한 기관이 코드와 함께 내려옵니다.')
-            return
-
-        codes, added, changed = edufine.merge_codes(self.codes, harvested)
-        if changed:
-            lines = '\n'.join(f'· {n}: {old} → {new}' for n, old, new in changed[:10])
-            more = f'\n… 외 {len(changed) - 10}곳' if len(changed) > 10 else ''
-            if not messagebox.askyesno(
-                    '코드가 바뀐 기관이 있습니다',
-                    f'{len(changed)}곳의 코드가 기존과 다릅니다. 새 값으로 바꿀까요?\n\n'
-                    f'{lines}{more}'):
-                return
-
-        self.codes = codes
-        edufine.save_codes(self.codes)
-        self._reload_office_choices()
-
-        # 이미 채워 둔 값은 건드리지 않는다. 조직도를 통째로 내보낸 파일에는
-        # 본인 것이 아닌 등록교육청코드가 들어 있을 수 있다.
-        for key, value in (('등록교육청코드', harvested.get('등록교육청코드')),
-                           ('사용자ID', harvested.get('사용자ID')),
-                           ('사용자명', harvested.get('사용자명'))):
-            if value and key in self.edufine_vars and not self.edufine_vars[key].get().strip():
-                self.edufine_vars[key].set(value)
-        self._save_edufine_fields()
-        self._reload_office_choices()
-
-        messagebox.showinfo(
-            '가져오기 완료',
-            f'기관코드 {len(self.codes["기관"])}곳을 보유하게 되었습니다.\n'
-            f'(새로 추가 {added}곳, 코드 변경 {len(changed)}곳)')
-
     def _build_group_excel(self):
         self._save_edufine_fields()
 
         if not self.codes.get('기관'):
             messagebox.showwarning(
-                '기관코드가 없습니다',
-                'STEP 1 에서 기관코드를 먼저 가져오세요.')
+                '기관코드를 찾을 수 없습니다',
+                '앱에 포함된 기관코드 파일이 없습니다. 프로그램을 다시 받아주세요.')
             return
         if not self.config.edufine_ready():
             messagebox.showwarning(
                 '내 정보가 비었습니다',
-                'STEP 2 의 등록교육청코드·사용자ID·사용자명을 채워주세요.')
+                'STEP 1 의 사용자ID와 사용자명을 채워주세요.')
             return
 
         group_name = self.config.edufine.get('그룹명', '').strip()
         if not group_name:
-            messagebox.showwarning('그룹명이 필요합니다', 'STEP 3 에 수신그룹명을 적어주세요.')
+            messagebox.showwarning('그룹명이 필요합니다', 'STEP 2 에 수신그룹명을 적어주세요.')
             return
 
         pending = [i for i in self.names_list if i.get('grade') not in AUTO_GRADES]
@@ -1406,7 +1431,7 @@ class App:
                     '코드가 없는 기관이 있습니다',
                     f'{len(missing)}곳은 엑셀에 들어가지 않습니다. 계속할까요?\n\n'
                     f'{lines}{more}\n\n'
-                    '이 기관들은 [클립보드 순차 복사] 로 조직도에 직접 넣으면 됩니다.'):
+                    '이 기관들은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.'):
                 return
 
         path = filedialog.asksaveasfilename(
@@ -1433,12 +1458,13 @@ class App:
 
     # ── 클립보드 순차 복사 ─────────────────────
     def _open_clipboard_walker(self):
-        items = [i['org'] for i in self._confirmed_orgs()]
+        _, missing = self._split_confirmed()
+        items = [i.get('name') or i.get('raw', '') for i in missing
+                 if i.get('reason') == '코드 없음']
         if not items:
-            leftovers = [i.get('raw', '') for i in self.names_list if i.get('raw')]
-            items = [x for x in leftovers if x]
-        if not items:
-            messagebox.showinfo('명단이 비었습니다', '먼저 [명단 입력] 탭에서 기관을 추출하세요.')
+            messagebox.showinfo(
+                '코드 없는 기관이 없습니다',
+                '확정된 기관 가운데 기관코드가 없어 직접 넣어야 할 곳이 없습니다.')
             return
         ClipboardWalker(self.root, items)
 
@@ -1485,6 +1511,13 @@ class App:
             cursor='hand2', state='disabled', command=self._retry_failed
         )
         self.retry_failed_btn.pack(side='left', padx=4)
+
+        tk.Button(
+            btn_frame, text='로그 지우기',
+            bg='#607D8B', fg='white', activebackground='#455A64',
+            relief='flat', font=('맑은 고딕', 9), padx=9, pady=6,
+            cursor='hand2', command=self._log_clear
+        ).pack(side='left', padx=4)
 
         tk.Label(frame, text='진행 상황:', anchor='w',
                  font=('맑은 고딕', 9)).grid(
@@ -1672,8 +1705,64 @@ class App:
     def is_edufine(self) -> bool:
         return self.config.target == TARGET_EDUFINE
 
+    def _show_current_guide(self):
+        self._show_onboarding(self.config.target)
+
+    def _show_onboarding(self, target: str, force: bool = False):
+        if not force and self.config.guides_seen.get(target):
+            return
+        current = self.guide_dialog
+        if current is not None:
+            try:
+                if current.winfo_exists():
+                    current.lift()
+                    return
+            except tk.TclError:
+                self.guide_dialog = None
+
+        tab_map = {
+            'input': self.tab_input,
+            'calib': self.messenger_tabs[0][0],
+            'auto': self.messenger_tabs[1][0],
+            'edufine': self.edufine_tabs[0][0],
+        }
+
+        def show_tab(tab_key):
+            tab = tab_map.get(tab_key)
+            if tab is not None:
+                self.nb.select(tab)
+
+        def close_guide():
+            self.config.guides_seen[target] = True
+            self.config.save()
+            self.guide_dialog = None
+
+        self.guide_dialog = WalkthroughDialog(
+            self.root,
+            f'{TARGET_LABELS[target]} 처음 사용 가이드',
+            GUIDE_STEPS[target],
+            show_tab,
+            close_guide,
+        )
+
+    def _automation_is_running(self) -> bool:
+        """소통픽 자동화 워커가 아직 움직이고 있는가."""
+        return bool(self.worker_thread and self.worker_thread.is_alive())
+
+    def _block_while_running(self) -> bool:
+        """실행 중 명단이나 도구가 바뀌지 않도록 막는다."""
+        if not self._automation_is_running():
+            return False
+        messagebox.showwarning(
+            '자동 선택 실행 중',
+            '자동 선택이 끝나거나 중지될 때까지 명단과 도구를 바꿀 수 없습니다.')
+        return True
+
     def _choose_target(self, target: str):
         if target == self.config.target:
+            return
+        if self._block_while_running():
+            self.target_var.set(self.config.target)
             return
         self.target_var.set(target)
         self.config.use_target(target)
@@ -1683,6 +1772,7 @@ class App:
         self.parsed_list.delete(0, 'end')
         self.parse_status.config(text='')
         self._apply_target()
+        self.root.after(100, lambda t=target: self._show_onboarding(t))
 
     def _on_target_change(self):
         """target_var 에 들어 있는 값으로 전환한다."""
@@ -1785,6 +1875,8 @@ class App:
         self._refresh_edufine_status()
 
     def _parse(self):
+        if self._block_while_running():
+            return
         if self.is_edufine():
             return self._parse_orgs()
         raw = self.input_text.get('1.0', 'end')
@@ -1881,6 +1973,8 @@ class App:
         self._refresh_edufine_status()
 
     def _clear_input(self):
+        if self._block_while_running():
+            return
         self.input_text.delete('1.0', 'end')
         self.parsed_list.delete(0, 'end')
         self.names_list.clear()
@@ -1889,6 +1983,8 @@ class App:
         self._refresh_failed_retry_state()
 
     def _delete_selected(self):
+        if self._block_while_running():
+            return
         for i in reversed(self.parsed_list.curselection()):
             del self.names_list[i]
         self._rebuild_parsed_list()
@@ -1912,6 +2008,8 @@ class App:
         self._refresh_edufine_status()
 
     def _edit_item(self, event=None):
+        if self._block_while_running():
+            return
         sel = self.parsed_list.curselection()
         if not sel:
             return
@@ -2078,6 +2176,9 @@ class App:
 
     # ── 자동 선택 시작/중지/계속 ───────────────
     def _start(self):
+        if self._automation_is_running():
+            messagebox.showwarning('이미 실행 중입니다', '진행 중인 자동 선택을 먼저 끝내세요.')
+            return
         if pyautogui is None or pyperclip is None:
             messagebox.showerror('오류', '필수 패키지 미설치')
             return
@@ -2100,17 +2201,26 @@ class App:
         total = len(self.names_list)
         self.progress.config(maximum=total, value=0)
         self.prog_label.config(text=f'0 / {total}')
-        self._log_clear()
-        self._log(f'자동 선택 시작 — 총 {total}명\n\n')
-        threading.Thread(target=self._worker, daemon=True).start()
+        started_at = time.strftime('%Y-%m-%d %H:%M:%S')
+        self._log(f'\n{"─" * 44}\n{started_at}  자동 선택 시작  ·  총 {total}명\n\n')
+        logging.info('자동 선택 시작: 총 %s명', total)
+        run_items = tuple(self.names_list)
+        self.worker_thread = threading.Thread(
+            target=self._worker, args=(run_items,), daemon=True)
+        self.worker_thread.start()
 
     def _stop(self):
+        if not self._automation_is_running():
+            return
         self.stop_flag.set()
         self.continue_event.set()
-        self.start_btn.config(state='normal')
+        # 워커가 실제로 끝날 때까지 다시 시작할 수 없게 둔다. 여기서 시작 버튼을
+        # 켜면 새 실행이 stop_flag를 지워 두 워커가 동시에 마우스를 움직일 수 있다.
+        self.start_btn.config(state='disabled')
         self.stop_btn.config(state='disabled')
         self.continue_btn.config(state='disabled')
-        self._log('\n⏹  중지\n')
+        self.status_var.set('중지 처리 중입니다...')
+        self._log('\n⏹  중지 요청\n')
 
     def _resume(self):
         self.continue_event.set()
@@ -2131,12 +2241,12 @@ class App:
         self._start()
 
     # ── 자동화 워커 ────────────────────────────
-    def _worker(self):
+    def _worker(self, run_items):
         ok = fail = 0
         manual = self.config.data.get('manual_confirm', False)
-        total = len(self.names_list)
+        total = len(run_items)
 
-        for idx, item in enumerate(self.names_list):
+        for idx, item in enumerate(run_items):
             if self.stop_flag.is_set():
                 break
             org = item.get('org', '')
@@ -2189,7 +2299,8 @@ class App:
             self._update_progress(idx + 1, total)
             time.sleep(0.1)
 
-        self.root.after(0, lambda: self._done(ok, fail))
+        stopped = self.stop_flag.is_set()
+        self.root.after(0, lambda: self._done(ok, fail, stopped))
 
     def _do_search(self, search_str: str):
         x = self.config.data['search_field_x']
@@ -2278,13 +2389,18 @@ class App:
         )
         self.continue_btn.config(state='normal')
 
-    def _done(self, ok: int, fail: int):
+    def _done(self, ok: int, fail: int, stopped: bool = False):
+        self.worker_thread = None
         self.start_btn.config(state='normal')
         self.stop_btn.config(state='disabled')
         self.continue_btn.config(state='disabled')
         self._refresh_failed_retry_state()
         sep = '─' * 44
-        self._log(f'\n{sep}\n완료  ✓ {ok}명   ✗ {fail}명\n')
+        result_word = '중지' if stopped else '완료'
+        self._log(f'\n{sep}\n{result_word}  ✓ {ok}명   ✗ {fail}명\n')
+        if stopped:
+            self.status_var.set(f'중지됨  ·  성공: {ok}명, 실패: {fail}명')
+            return
         if fail:
             self.status_var.set(f'완료 — 성공: {ok}명, 실패: {fail}명  ← 빨간색 항목 확인')
             messagebox.showwarning(
@@ -2308,6 +2424,8 @@ class App:
         )
 
     def _mark_failed(self, idx: int, reason: str):
+        # 파일 로그에는 개인정보를 남기지 않고 순번과 사유만 기록한다.
+        logging.warning('명단 추가 실패: 순번=%s, 사유=%s', idx + 1, reason)
         def apply():
             if idx >= len(self.names_list):
                 return

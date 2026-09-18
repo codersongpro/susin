@@ -13,6 +13,8 @@ import os
 import re
 import sys
 
+from app_config import APP_DATA_DIR, CHUNGBUK_OFFICE_CODE
+
 try:
     import openpyxl
 except ImportError:                                  # pragma: no cover
@@ -34,6 +36,7 @@ COL_USER_NAME = 8      # I 수신사용자명
 
 KIND_INTERNAL = 'NS'   # 대내조직 (MG:LDAP, MP:문서24조직, 99:사용자)
 TYPE_DOCUMENT = '02'   # 문서 (01:메모, 04:메일, 05:공람, 06:일정)
+REGISTERING_OFFICE_CODE = CHUNGBUK_OFFICE_CODE
 
 # 에듀파인 기관코드는 영문자 1글자 + 숫자 9자리 (예: M100000795, 충북은 M10 으로 시작)
 CODE_RE = re.compile(r'^[A-Z]\d{9}$')
@@ -47,7 +50,12 @@ def _resource_path(name: str) -> str:
     return os.path.join(base, name)
 
 
-CODES_FILE = _resource_path('org_codes.json')
+BUNDLED_CODES_FILE = _resource_path('org_codes.json')
+# 앱에 포함된 파일은 읽기 전용 기본값이다. PyInstaller onefile에서는 _MEIPASS가
+# 임시 폴더이므로, 사용자가 가져온 기관코드는 사용자 데이터 폴더에 따로 저장한다.
+USER_CODES_FILE = os.path.join(APP_DATA_DIR, 'org_codes.json')
+# 개발 도구와 기존 호출부가 저장소의 기본 사전을 계속 가리키도록 이름을 유지한다.
+CODES_FILE = BUNDLED_CODES_FILE
 TEMPLATE_FILE = _resource_path(os.path.join('assets', '수신그룹_양식.xlsx'))
 
 
@@ -66,7 +74,8 @@ def empty_codes() -> dict:
 
 
 def load_codes(path: str = None) -> dict:
-    path = path or CODES_FILE
+    if path is None:
+        path = USER_CODES_FILE if os.path.exists(USER_CODES_FILE) else BUNDLED_CODES_FILE
     if not os.path.exists(path):
         return empty_codes()
     with open(path, 'r', encoding='utf-8') as f:
@@ -77,10 +86,14 @@ def load_codes(path: str = None) -> dict:
 
 
 def save_codes(codes: dict, path: str = None) -> str:
-    path = path or CODES_FILE
-    with open(path, 'w', encoding='utf-8') as f:
+    path = path or USER_CODES_FILE
+    parent = os.path.dirname(os.path.abspath(path))
+    os.makedirs(parent, exist_ok=True)
+    temporary = path + '.tmp'
+    with open(temporary, 'w', encoding='utf-8') as f:
         json.dump(codes, f, ensure_ascii=False, indent=2, sort_keys=True)
         f.write('\n')
+    os.replace(temporary, path)
     return path
 
 

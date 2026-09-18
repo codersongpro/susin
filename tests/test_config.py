@@ -69,11 +69,33 @@ class ConfigTest(unittest.TestCase):
             self.assertEqual(again.data['add_button_x'], 9)
             self.assertEqual(again.edufine['사용자ID'], 'dungst')
 
+    def test_registering_office_is_always_chungbuk_office(self):
+        cfg, _ = self._config_with({
+            'edufine': {
+                '등록교육청코드': 'M100000098',
+                '사용자ID': 'dungst',
+                '사용자명': '송동석',
+            },
+        })
+        self.assertEqual(
+            cfg.edufine['등록교육청코드'],
+            app_config.CHUNGBUK_OFFICE_CODE,
+        )
+
+    def test_guide_seen_state_is_saved(self):
+        cfg, path = self._config_with(None)
+        cfg.guides_seen[TARGET_MESSENGER] = True
+        cfg.save()
+
+        with mock.patch.object(app_config, 'CONFIG_FILE', path):
+            again = app_config.Config()
+        self.assertTrue(again.guides_seen[TARGET_MESSENGER])
+        self.assertFalse(again.guides_seen[TARGET_EDUFINE])
+
     def test_edufine_ready(self):
         cfg, _ = self._config_with(None)
         self.assertFalse(cfg.edufine_ready())
-        cfg.edufine.update({'등록교육청코드': 'M100000098',
-                            '사용자ID': 'dungst', '사용자명': '송동석'})
+        cfg.edufine.update({'사용자ID': 'dungst', '사용자명': '송동석'})
         self.assertTrue(cfg.edufine_ready())
 
     def test_unknown_target_rejected(self):

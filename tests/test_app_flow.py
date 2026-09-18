@@ -10,7 +10,7 @@ import sys
 import tempfile
 import types
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class _Var:
@@ -356,14 +356,95 @@ class AppFlowTest(unittest.TestCase):
         rows = self.parse('충주중학교\t홍길동')
         self.assertEqual(rows, [{'org': '충주중학교', 'name': '홍길동'}])
 
-    def test_registering_office_choices_are_loaded(self):
-        names = [n for n, _ in self.app.office_choices]
-        self.assertIn('충청북도진천교육지원청', names)
+    def test_registering_office_is_fixed_to_chungbuk(self):
+        """수신픽 화면에서 교육청을 고르지 않아도 충북교육청 코드가 적용된다."""
+        from app_config import CHUNGBUK_OFFICE_CODE
 
-    def test_picking_an_office_fills_the_code(self):
-        self.app.office_var.set('충청북도진천교육지원청')
-        self.app._on_office_selected()
-        self.assertEqual(self.app.edufine_vars['등록교육청코드'].get(), 'M100000098')
+        self.assertFalse(hasattr(self.app, 'office_combo'))
+        self.assertFalse(hasattr(self.app, 'office_var'))
+        self.assertEqual(
+            self.app.edufine_vars['등록교육청코드'].get(),
+            CHUNGBUK_OFFICE_CODE,
+        )
+
+        # 저장 직전에 잘못된 값이 들어와도 고정 코드를 다시 적용한다.
+        self.app.edufine_vars['등록교육청코드'].set('M100000098')
+        self.app._save_edufine_fields()
+        self.assertEqual(
+            self.app.config.edufine['등록교육청코드'],
+            CHUNGBUK_OFFICE_CODE,
+        )
+
+    def test_both_tools_have_a_step_by_step_guide(self):
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+
+        for target in (TARGET_MESSENGER, TARGET_EDUFINE):
+            steps = self.app_module.GUIDE_STEPS[target]
+            self.assertGreaterEqual(len(steps), 4)
+            for tab_key, heading, body in steps:
+                self.assertIn(tab_key, {'input', 'calib', 'auto', 'edufine'})
+                self.assertTrue(heading.strip())
+                self.assertTrue(body.strip())
+
+    def test_clipboard_walker_receives_only_code_missing_orgs(self):
+        self.app.names_list = [
+            {'org': '코드 있는 기관', 'grade': 'exact'},
+            {'org': '코드 없는 기관', 'grade': 'exact'},
+        ]
+        split = (
+            [{'name': '코드 있는 기관', 'code': 'M100000001'}],
+            [{'name': '코드 없는 기관', 'reason': '코드 없음'}],
+        )
+        with patch.object(self.app, '_split_confirmed', return_value=split), \
+                patch.object(self.app_module, 'ClipboardWalker') as walker:
+            self.app._open_clipboard_walker()
+        walker.assert_called_once_with(self.app.root, ['코드 없는 기관'])
+
+    def test_stop_keeps_start_disabled_until_worker_finishes(self):
+        worker = MagicMock()
+        worker.is_alive.return_value = True
+        self.app.worker_thread = worker
+        try:
+            self.app._stop()
+            self.app.start_btn.config.assert_called_with(state='disabled')
+            self.assertTrue(self.app.stop_flag.is_set())
+        finally:
+            self.app.worker_thread = None
+            self.app.stop_flag.clear()
+
+    def test_start_keeps_previous_screen_log(self):
+        """새 실행을 시작해도 앞선 실패 기록을 자동으로 지우지 않는다."""
+        from app_config import CALIBRATION_KEYS
+
+        old_coords = {key: self.app.config.data.get(key) for key in CALIBRATION_KEYS}
+        self.app.names_list = [{'org': '학교', 'name': '홍길동'}]
+        for key in CALIBRATION_KEYS:
+            self.app.config.data[key] = 10
+
+        thread = MagicMock()
+        thread.is_alive.return_value = False
+        try:
+            with patch.object(self.app_module, 'pyautogui', MagicMock()), \
+                    patch.object(self.app_module, 'pyperclip', MagicMock()), \
+                    patch.object(self.app_module.threading, 'Thread', return_value=thread), \
+                    patch.object(self.app, '_log_clear') as clear_log, \
+                    patch.object(self.app, '_log') as append_log:
+                self.app._start()
+
+            clear_log.assert_not_called()
+            self.assertIn('자동 선택 시작', append_log.call_args.args[0])
+            thread.start.assert_called_once_with()
+        finally:
+            self.app.worker_thread = None
+            self.app.names_list = []
+            for key, value in old_coords.items():
+                self.app.config.data[key] = value
+
+    def test_failed_addition_is_written_to_application_log(self):
+        self.app.names_list = [{'org': '학교', 'name': '홍길동'}]
+        with self.assertLogs(level='WARNING') as captured:
+            self.app._mark_failed(0, '검색 결과 없음')
+        self.assertTrue(any('명단 추가 실패' in line for line in captured.output))
 
 
 if __name__ == '__main__':
@@ -493,7 +574,8 @@ class SmokeScriptTest(unittest.TestCase):
 
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         script = os.path.join(root, 'tools', 'smoke_gui.py')
-        source = open(script, encoding='utf-8').read()
+        with open(script, encoding='utf-8') as source_file:
+            source = source_file.read()
         self.assertIn('reconfigure', source,
                       '출력 인코딩 보정이 빠졌습니다')
 

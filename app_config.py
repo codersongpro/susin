@@ -11,7 +11,11 @@ import logging
 import os
 
 
-CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".chungbuk_auto_config.json")
+APP_DATA_DIR = os.path.join(
+    os.environ.get('LOCALAPPDATA') or os.path.expanduser('~'), 'SintongPick')
+DEFAULT_CONFIG_FILE = os.path.join(APP_DATA_DIR, 'config.json')
+LEGACY_CONFIG_FILE = os.path.join(os.path.expanduser('~'), '.chungbuk_auto_config.json')
+CONFIG_FILE = DEFAULT_CONFIG_FILE
 
 TARGET_MESSENGER = 'messenger'
 TARGET_EDUFINE = 'edufine'
@@ -27,6 +31,8 @@ TARGET_SYSTEMS = {
     TARGET_MESSENGER: '소통메신저',
     TARGET_EDUFINE: '에듀파인',
 }
+
+CHUNGBUK_OFFICE_CODE = 'M100000001'
 
 TARGET_SUMMARIES = {
     TARGET_MESSENGER: '소통메신저에서 쪽지·대화 상대를 자동으로 골라 담습니다',
@@ -44,7 +50,7 @@ COORD_DEFAULTS = {
 
 # 에듀파인 일괄등록 양식에 매번 들어가지만 사람마다 고정인 값
 EDUFINE_DEFAULTS = {
-    '등록교육청코드': '',
+    '등록교육청코드': CHUNGBUK_OFFICE_CODE,
     '사용자ID': '',
     '사용자명': '',
     '그룹명': '',
@@ -62,6 +68,7 @@ class Config:
     def __init__(self):
         self.data = dict(COORD_DEFAULTS)
         self.edufine = dict(EDUFINE_DEFAULTS)
+        self.guides_seen = {target: False for target in TARGETS}
         self.target = TARGET_MESSENGER
         self._load()
 
@@ -73,9 +80,14 @@ class Config:
     # ── 저장/불러오기 ────────────────────────
     def _load(self):
         try:
-            if not os.path.exists(CONFIG_FILE):
+            path = CONFIG_FILE
+            # 기존 버전 설정은 처음 한 번 그대로 읽고, 다음 저장부터 새 폴더로 옮긴다.
+            if (path == DEFAULT_CONFIG_FILE and not os.path.exists(path)
+                    and os.path.exists(LEGACY_CONFIG_FILE)):
+                path = LEGACY_CONFIG_FILE
+            if not os.path.exists(path):
                 return
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 raw = json.load(f)
         except Exception as exc:
             logging.warning("설정 파일을 읽지 못했습니다: %s", exc)
@@ -91,6 +103,12 @@ class Config:
         if isinstance(raw.get('edufine'), dict):
             self.edufine.update(
                 {k: v for k, v in raw['edufine'].items() if k in EDUFINE_DEFAULTS})
+        # 신통픽은 충청북도교육청 전용이므로 이전 설정값과 관계없이 고정한다.
+        self.edufine['등록교육청코드'] = CHUNGBUK_OFFICE_CODE
+
+        if isinstance(raw.get('guides_seen'), dict):
+            self.guides_seen.update(
+                {k: bool(v) for k, v in raw['guides_seen'].items() if k in TARGETS})
 
         if raw.get('target') in TARGETS:
             self.target = raw['target']
@@ -99,12 +117,17 @@ class Config:
         payload = {
             'coords': self.data,
             'edufine': self.edufine,
+            'guides_seen': self.guides_seen,
             'target': self.target,
         }
         # 예전 판이 읽을 수 있도록 좌표를 최상위에도 둔다
         payload.update(self.data)
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        parent = os.path.dirname(os.path.abspath(CONFIG_FILE))
+        os.makedirs(parent, exist_ok=True)
+        temporary = CONFIG_FILE + '.tmp'
+        with open(temporary, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
+        os.replace(temporary, CONFIG_FILE)
 
     # ── 상태 확인 ────────────────────────────
     def is_calibrated(self) -> bool:
@@ -113,4 +136,4 @@ class Config:
     def edufine_ready(self) -> bool:
         """일괄등록 엑셀을 만들 수 있을 만큼 개인 설정이 채워졌는가."""
         return all(str(self.edufine.get(k, '')).strip()
-                   for k in ('등록교육청코드', '사용자ID', '사용자명'))
+                   for k in ('사용자ID', '사용자명'))

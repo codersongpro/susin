@@ -26,17 +26,22 @@ def _hwpx_zipxml(path: str) -> str:
 
 
 def _hwp_win32com(path: str) -> str:
+    hwp = None
     try:
         import win32com.client as client
         hwp = client.gencache.EnsureDispatch('HWPFrame.HwpObject')
         hwp.RegisterModule('FilePathCheckDLL', 'FilePathCheckerModule')
         hwp.Open(path, 'HWP', 'forceopen:true')
-        text = hwp.GetTextFile('TEXT', '').strip()
-        hwp.Quit()
-        return text
+        return hwp.GetTextFile('TEXT', '').strip()
     except Exception as exc:
         logging.debug("HWP COM 텍스트 추출 실패: %s", exc)
         return ''
+    finally:
+        if hwp is not None:
+            try:
+                hwp.Quit()
+            except Exception as exc:
+                logging.debug("HWP COM 종료 실패: %s", exc)
 
 
 def _hwp_olefile(path: str) -> str:
@@ -50,6 +55,7 @@ def _hwp_olefile(path: str) -> str:
         import struct
     except ImportError:
         return ''
+    ole = None
     try:
         ole = olefile.OleFileIO(path)
         header = ole.openstream('FileHeader').read()
@@ -84,11 +90,16 @@ def _hwp_olefile(path: str) -> str:
                     if txt:
                         texts.append(txt)
                 offset += size
-        ole.close()
         return '\n'.join(texts)
     except Exception as exc:
         logging.debug("HWP OLE 텍스트 추출 실패: %s", exc)
         return ''
+    finally:
+        if ole is not None:
+            try:
+                ole.close()
+            except Exception as exc:
+                logging.debug("HWP OLE 종료 실패: %s", exc)
 
 
 def extract_hwp_text(filepath: str) -> str:

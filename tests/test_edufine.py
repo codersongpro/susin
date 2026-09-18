@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 import edufine
 
@@ -37,6 +38,27 @@ class HarvestTest(unittest.TestCase):
         self.assertEqual(added2, 0)
         self.assertEqual(changed2,
                          [('충청북도진천교육지원청 학성초등학교', 'M100000795', 'M100009999')])
+
+
+class CodePersistenceTest(unittest.TestCase):
+    def test_user_file_overrides_bundled_file_and_is_saved_atomically(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundled = os.path.join(tmp, 'bundled.json')
+            user = os.path.join(tmp, 'user', 'org_codes.json')
+            base = {'등록교육청코드': '', '수집일': '',
+                    '기관': {'기본 기관': 'M100000001'}}
+            updated = {'등록교육청코드': '', '수집일': '2026-09-18',
+                       '기관': {'갱신 기관': 'M100000002'}}
+            edufine.save_codes(base, bundled)
+
+            with mock.patch.object(edufine, 'BUNDLED_CODES_FILE', bundled), \
+                    mock.patch.object(edufine, 'USER_CODES_FILE', user):
+                self.assertEqual(edufine.load_codes()['기관'], base['기관'])
+                saved = edufine.save_codes(updated)
+                self.assertEqual(saved, user)
+                self.assertTrue(os.path.exists(user))
+                self.assertFalse(os.path.exists(user + '.tmp'))
+                self.assertEqual(edufine.load_codes()['기관'], updated['기관'])
 
 
 class LookupTest(unittest.TestCase):
