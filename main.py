@@ -1386,7 +1386,8 @@ class App:
 
         self.parsed_list = tk.Listbox(
             list_frame, font=('맑은 고딕', 9), selectmode='extended',
-            activestyle='none', selectbackground='#1565C0', selectforeground='white'
+            activestyle='none', exportselection=False,
+            selectbackground='#1565C0', selectforeground='white'
         )
         self.parsed_list.grid(row=0, column=0, sticky='nsew')
         sb = ttk.Scrollbar(list_frame, orient='vertical',
@@ -1694,8 +1695,8 @@ class App:
         list_wrap = tk.Frame(dlg)
         list_wrap.pack(fill='both', expand=True, padx=16)
         box = tk.Listbox(list_wrap, font=('맑은 고딕', 10), selectmode='extended',
-                         activestyle='none', selectbackground='#1565C0',
-                         selectforeground='white')
+                         activestyle='none', exportselection=False,
+                         selectbackground='#1565C0', selectforeground='white')
         box.pack(side='left', fill='both', expand=True)
         bar = ttk.Scrollbar(list_wrap, orient='vertical', command=box.yview)
         bar.pack(side='right', fill='y')
@@ -2274,6 +2275,7 @@ class App:
         dlg = tk.Toplevel(self.root)
         dlg.title('확인 필요 기관 일괄 수정')
         dlg.geometry('820x560')
+        dlg.minsize(760, 520)
         dlg.grab_set()
         dlg.transient(self.root)
         dlg.configure(bg='#F5F7FA')
@@ -2283,7 +2285,7 @@ class App:
 
         tk.Label(
             dlg,
-            text='왼쪽의 붉은 기관을 하나씩 선택하고, 오른쪽에서 정확한 기관을 찾아 확정하세요.',
+            text='1. 왼쪽에서 기관을 하나 고릅니다   2. 오른쪽 목록에서 맞는 기관을 고릅니다   3. [선택 기관으로 확정] 을 누릅니다',
             bg='#FFEBEE', fg='#B71C1C', font=('맑은 고딕', 10, 'bold'),
             anchor='w', padx=12, pady=9
         ).grid(row=0, column=0, columnspan=2, sticky='ew')
@@ -2296,24 +2298,31 @@ class App:
                  font=('맑은 고딕', 10, 'bold'), anchor='w').grid(
                      row=1, column=1, sticky='ew', padx=12, pady=(10, 4))
 
+        # exportselection 을 끄지 않으면, 오른쪽 검색창에 글자를 넣는 순간
+        # 이 목록의 선택이 풀린다. 그러면 어느 기관을 고치는 중인지 잃어버려
+        # 검색 결과가 비고 [선택 기관으로 확정] 도 듣지 않는다.
         pending_box = tk.Listbox(
-            dlg, font=('맑은 고딕', 9), activestyle='none',
-            selectbackground='#C62828', selectforeground='white')
+            dlg, font=('맑은 고딕', 9), activestyle='none', exportselection=False,
+            fg='#B71C1C', selectbackground='#C62828', selectforeground='white')
         pending_box.grid(row=2, column=0, sticky='nsew', padx=(12, 6), pady=(0, 8))
 
         right = tk.Frame(dlg, bg='#F5F7FA')
         right.grid(row=2, column=1, sticky='nsew', padx=(6, 12), pady=(0, 8))
         right.columnconfigure(0, weight=1)
-        right.rowconfigure(2, weight=1)
+        right.rowconfigure(3, weight=1)
         tk.Label(right, text='기관 검색', bg='#F5F7FA', fg='#555',
                  font=('맑은 고딕', 9)).grid(row=0, column=0, sticky='w')
         query = tk.StringVar()
+        hint_var = tk.StringVar(value='')
         search_entry = ttk.Entry(right, textvariable=query, font=('맑은 고딕', 10))
-        search_entry.grid(row=1, column=0, sticky='ew', pady=(2, 6))
+        search_entry.grid(row=1, column=0, sticky='ew', pady=(2, 2))
+        tk.Label(right, textvariable=hint_var, bg='#F5F7FA', fg='#00695C',
+                 font=('맑은 고딕', 9), anchor='w').grid(
+                     row=2, column=0, sticky='ew', pady=(0, 4))
         result_box = tk.Listbox(
-            right, font=('맑은 고딕', 9), activestyle='none',
+            right, font=('맑은 고딕', 9), activestyle='none', exportselection=False,
             selectbackground='#1565C0', selectforeground='white')
-        result_box.grid(row=2, column=0, sticky='nsew')
+        result_box.grid(row=3, column=0, sticky='nsew')
 
         pending_indices = []
         shown = []
@@ -2341,6 +2350,11 @@ class App:
                 result_box.insert('end', full)
             if shown:
                 result_box.selection_set(0)
+                result_box.activate(0)
+                hint_var.set(f'{len(shown)}곳을 찾았습니다. 맞는 곳을 고르세요.')
+            else:
+                # 빈 상자만 보여 주면 무엇을 해야 할지 알 수 없다.
+                hint_var.set('찾지 못했습니다. 검색어를 줄여 보세요 (예: 원남초).')
 
         def load_selected(*_):
             _, item = current_pair()
@@ -2362,6 +2376,7 @@ class App:
             if not pending_indices:
                 detail_var.set('모든 기관을 확인했습니다.')
                 result_box.delete(0, 'end')
+                hint_var.set('')
                 query.set('')
                 return
             position = min(select_at, len(pending_indices) - 1)
@@ -2941,8 +2956,8 @@ class App:
                  bg='#F5F7FA', fg='#555', font=('맑은 고딕', 9)).pack(pady=(0, 8))
 
         box = tk.Listbox(dlg, font=('맑은 고딕', 10), height=9,
-                         activestyle='none', selectbackground='#1565C0',
-                         selectforeground='white')
+                         activestyle='none', exportselection=False,
+                         selectbackground='#1565C0', selectforeground='white')
         box.pack(fill='both', expand=True, padx=16)
 
         candidates = list(item.get('candidates') or [])

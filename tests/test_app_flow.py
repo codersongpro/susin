@@ -60,6 +60,7 @@ class _Listbox:
     def __init__(self, *args, **kwargs):
         self.items = []
         self._mocks = {}
+        self.options = dict(kwargs)
 
     def insert(self, index, value):
         self.items.append(value)
@@ -496,6 +497,68 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual(row['grade'], 'exact')
         self.assertFalse(row['code_missing'])
         self.assertFalse(self.app._org_needs_review(row))
+
+    def test_bulk_editor_listboxes_keep_their_selection(self):
+        """검색창에 글자를 넣어도 목록 선택이 풀리면 안 된다.
+
+        tkinter Listbox 는 exportselection 이 켜져 있으면, 다른 위젯이 선택을
+        가져갈 때 제 선택을 놓는다. 그 탓에 어느 기관을 고치는 중인지 잃어버려
+        검색 결과가 비고 [선택 기관으로 확정] 도 듣지 않았다.
+        """
+        m = self.app_module
+        made = []
+
+        class Recorder(_Listbox):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                made.append(self.options)
+
+        self.parse('행정과')          # 확인이 필요한 기관 한 줄
+        try:
+            with patch.object(m.tk, 'Listbox', Recorder):
+                self.app._open_bulk_org_editor()
+            self.assertEqual(len(made), 2, '목록이 두 개여야 합니다')
+            for options in made:
+                self.assertIs(options.get('exportselection'), False,
+                              'exportselection 을 끄지 않으면 선택이 풀립니다')
+        finally:
+            self.app.names_list.clear()
+
+    def test_every_listbox_keeps_its_selection(self):
+        """목록은 모두 제 선택을 지켜야 한다.
+
+        같은 창에 입력칸이 있으면, 거기에 글자를 넣는 순간 목록 선택이 풀린다.
+        그러면 [선택 삭제] 나 [선택한 것 넣기] 가 아무 일도 하지 않는다.
+        """
+        import re
+
+        main_py = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'main.py')
+        with open(main_py, encoding='utf-8') as f:
+            source = f.read()
+        calls = re.findall(r'tk\.Listbox\((?:[^()]|\([^()]*\))*\)', source)
+        self.assertTrue(calls, '목록을 하나도 찾지 못했습니다')
+        for call in calls:
+            self.assertIn('exportselection=False', call,
+                          f'선택이 풀리는 목록이 있습니다: {call[:60]}')
+
+    def test_bulk_editor_marks_rows_in_red(self):
+        """왼쪽 목록은 붉게 보여야 안내와 맞는다."""
+        m = self.app_module
+        made = []
+
+        class Recorder(_Listbox):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                made.append(self.options)
+
+        self.parse('행정과')
+        try:
+            with patch.object(m.tk, 'Listbox', Recorder):
+                self.app._open_bulk_org_editor()
+            self.assertEqual(made[0].get('fg'), '#B71C1C')
+        finally:
+            self.app.names_list.clear()
 
     def test_only_confirmed_rows_are_exported(self):
         self.parse('학성초\n행정과')
