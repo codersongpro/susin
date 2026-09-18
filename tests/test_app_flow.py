@@ -223,6 +223,36 @@ def edufine_module():
     return edufine
 
 
+class _FakeShot:
+    """pyautogui.screenshot 이 돌려주는 PIL 이미지 흉내."""
+
+    def __init__(self, pixels, width, height):
+        self._pixels = list(pixels)
+        self.size = (width, height)
+
+    def convert(self, mode):
+        return self
+
+    def getdata(self):
+        return list(self._pixels)
+
+
+def _fake_pixels(width, height, painted, color=(40, 40, 40)):
+    return [
+        color if (row, col) in painted else (255, 255, 255)
+        for row in range(height)
+        for col in range(width)
+    ]
+
+
+def _fake_screen(pixels, width, height, screen=(1920, 1080)):
+    return types.SimpleNamespace(
+        size=lambda: screen,
+        screenshot=lambda region=None: _FakeShot(pixels, width, height),
+        pixel=lambda x, y: (255, 255, 255),
+    )
+
+
 class AppFlowTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -593,6 +623,75 @@ class AppFlowTest(unittest.TestCase):
         with self.assertLogs(level='WARNING') as captured:
             self.app._mark_failed(0, '검색 결과 없음')
         self.assertTrue(any('명단 추가 실패' in line for line in captured.output))
+
+    # ── 검색 결과 판정 ─────────────────────────
+    def _use_result_coords(self, x=500, y=400):
+        """결과 좌표를 임시로 정해 두고, 테스트가 끝나면 되돌린다."""
+        keys = ('result_first_x', 'result_first_y')
+        saved = {k: self.app.config.data.get(k) for k in keys}
+        self.app.config.data['result_first_x'] = x
+        self.app.config.data['result_first_y'] = y
+        self.addCleanup(lambda: self.app.config.data.update(saved))
+
+    def test_result_is_found_when_the_exact_point_is_blank(self):
+        """좌표 한 점이 글자 사이 빈 칸이어도 옆의 글자를 보고 결과로 판정한다."""
+        from automation import RESULT_SCAN_HEIGHT, RESULT_SCAN_WIDTH
+
+        width, height = RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT
+        mid_row, mid_col = height // 2, width // 2
+        painted = {(mid_row, mid_col + off) for off in range(6, 20)}
+        pixels = _fake_pixels(width, height, painted)
+        self.assertEqual(pixels[mid_row * width + mid_col], (255, 255, 255),
+                         '좌표 한 점은 빈 칸이어야 하는 상황입니다')
+
+        self._use_result_coords()
+        with patch.object(self.app_module, 'pyautogui',
+                          _fake_screen(pixels, width, height)):
+            self.assertTrue(self.app._has_result())
+
+    def test_blank_result_area_is_reported_as_no_user(self):
+        from automation import RESULT_SCAN_HEIGHT, RESULT_SCAN_WIDTH
+
+        width, height = RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT
+        pixels = _fake_pixels(width, height, set())
+        self._use_result_coords()
+        with patch.object(self.app_module, 'pyautogui',
+                          _fake_screen(pixels, width, height)):
+            self.assertFalse(self.app._has_result())
+
+    def test_result_region_stays_inside_the_screen(self):
+        from automation import RESULT_SCAN_HEIGHT, RESULT_SCAN_WIDTH
+
+        self._use_result_coords(x=2, y=1)
+        with patch.object(self.app_module, 'pyautogui',
+                          _fake_screen([], 0, 0, screen=(1920, 1080))):
+            left, top, width, height = self.app._result_region()
+        self.assertEqual((left, top), (0, 0))
+        self.assertEqual((width, height), (RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT))
+
+    def test_late_result_is_waited_for(self):
+        """결과가 늦게 떠도 바로 실패로 넘기지 않는다."""
+        self.app.config.data['search_delay'] = 0.1
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_has_result',
+                             side_effect=[False, False, True]):
+            self.assertTrue(self.app._wait_for_result())
+
+    def test_waiting_gives_up_after_the_deadline(self):
+        self.app.config.data['search_delay'] = 0.01
+        with patch.object(self.app_module, 'RESULT_WAIT_MIN', 0.05), \
+                patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_has_result', return_value=False):
+            self.assertFalse(self.app._wait_for_result())
+
+    def test_waiting_stops_when_the_user_stops(self):
+        self.app.stop_flag.set()
+        try:
+            with patch.object(self.app, '_has_result') as looked:
+                self.assertFalse(self.app._wait_for_result())
+            looked.assert_not_called()
+        finally:
+            self.app.stop_flag.clear()
 
 
 if __name__ == '__main__':

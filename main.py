@@ -36,7 +36,11 @@ from automation import (
     FAIL_DUPLICATE,
     FAIL_MANUAL_STOP,
     FAIL_NO_USER,
+    RESULT_SCAN_HEIGHT,
+    RESULT_SCAN_WIDTH,
+    RESULT_WAIT_MIN,
     failure_reason_from_error,
+    looks_like_result,
 )
 from hwp_extract import extract_hwp_text
 from sotong_parser import (
@@ -2745,6 +2749,7 @@ class App:
         ok = fail = 0
         manual = self.config.data.get('manual_confirm', False)
         total = len(run_items)
+        no_result_streak = 0
 
         for idx, item in enumerate(run_items):
             if self.stop_flag.is_set():
@@ -2760,12 +2765,22 @@ class App:
                 self._do_search(search_str)
                 time.sleep(self.config.data.get('search_delay', 0.5))
 
-                if not self._has_result():
+                if not self._wait_for_result():
+                    if self.stop_flag.is_set():
+                        self._log('\n')
+                        self._mark_failed(idx, FAIL_MANUAL_STOP)
+                        break
                     fail += 1
+                    no_result_streak += 1
                     self._log('—  (사용자 없음)\n')
+                    if no_result_streak == 3:
+                        self._log(
+                            '     연달아 결과를 못 찾았습니다. [위치 설정] 탭에서 '
+                            '결과 첫 줄 위치가 맞는지 확인해 보세요.\n')
                     self._mark_failed(idx, FAIL_NO_USER)
                     self._update_progress(idx + 1, total)
                     continue
+                no_result_streak = 0
 
                 if manual:
                     self.continue_event.clear()
@@ -2869,8 +2884,46 @@ class App:
             logging.debug("중복 팝업 확인 실패: %s", exc)
         return False
 
+    def _result_region(self) -> tuple:
+        """결과 첫 줄을 가로로 넓게 덮는 화면 영역 (left, top, 너비, 높이)."""
+        x = self.config.data.get('result_first_x')
+        y = self.config.data.get('result_first_y')
+        if x is None or y is None:
+            raise RuntimeError('좌표 오류: 결과 위치 미설정')
+        left = int(x) - RESULT_SCAN_WIDTH // 2
+        top = int(y) - RESULT_SCAN_HEIGHT // 2
+        try:
+            screen_w, screen_h = pyautogui.size()
+        except Exception as exc:
+            logging.debug('화면 크기 확인 실패: %s', exc)
+            screen_w = screen_h = 0
+        if screen_w and screen_h:
+            left = min(max(0, left), max(0, screen_w - RESULT_SCAN_WIDTH))
+            top = min(max(0, top), max(0, screen_h - RESULT_SCAN_HEIGHT))
+        else:
+            left, top = max(0, left), max(0, top)
+        return left, top, RESULT_SCAN_WIDTH, RESULT_SCAN_HEIGHT
+
     def _has_result(self) -> bool:
-        """검색 결과 첫 항목 위치의 픽셀 밝기로 결과 유무 자동 판단."""
+        """결과 첫 줄 둘레를 훑어 글자가 그려졌는지 본다.
+
+        한 점만 보던 때에는 이름 길이에 따라 그 점이 글자 사이 빈 칸에 떨어져,
+        검색은 됐는데도 결과가 없다고 판정하고 마우스를 아예 움직이지 않았다.
+        """
+        left, top, width, height = self._result_region()
+        try:
+            shot = pyautogui.screenshot(region=(left, top, width, height))
+            width, height = shot.size
+            pixels = list(shot.convert('RGB').getdata())
+        except Exception as exc:
+            logging.debug('결과 영역을 못 읽어 한 점만 봅니다: %s', exc)
+            return self._has_result_at_point()
+        if len(pixels) < width * height:
+            return self._has_result_at_point()
+        return looks_like_result(pixels, width, height)
+
+    def _has_result_at_point(self) -> bool:
+        """영역을 못 읽을 때 쓰는 예전 방식: 결과 좌표 한 점의 밝기만 본다."""
         x = self.config.data.get('result_first_x')
         y = self.config.data.get('result_first_y')
         if x is None or y is None:
@@ -2881,6 +2934,23 @@ class App:
             return not (r > 240 and g > 240 and b > 240)
         except Exception as exc:
             raise RuntimeError(f'좌표 오류: 결과 위치 확인 실패 ({exc})') from exc
+
+    def _wait_for_result(self) -> bool:
+        """결과가 그려질 때까지 잠깐 더 기다린다.
+
+        기관이나 이름에 따라 결과가 늦게 오는데, 한 번 보고 없다고 넘기면
+        멀쩡히 있는 사람이 명단에서 빠진다.
+        """
+        delay = self.config.data.get('search_delay', 0.5) or 0.5
+        deadline = time.monotonic() + max(RESULT_WAIT_MIN, delay * 3)
+        while True:
+            if self.stop_flag.is_set():
+                return False
+            if self._has_result():
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.15)
 
     def _show_continue(self, name: str):
         name = name or ''
