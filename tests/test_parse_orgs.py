@@ -198,6 +198,31 @@ class TitleColumnTest(unittest.TestCase):
                           '오송솔미초등학교', '충북여자고등학교'])
         self.assertNotIn(None, names, '머리글 줄이 기관으로 남았습니다')
 
+    def test_hwp_cell_per_line_table(self):
+        """한글 파일에서 뽑은 표는 칸 하나가 한 줄로 내려온다.
+
+        순 / 역할 / 소속 / 직위 / 성명 / 연락처 여섯 칸짜리 실제 명단에서
+        '교사' 가 이름 자리를 차지하고 '송동석' 이 버려지던 문제의 회귀 방지선.
+        """
+        from sotong_parser import parse_input
+        cells = ['2026. 충북 GEG 성찰중심의 학습공동체 회원 명단',
+                 '순', '역할', '소속 학교(기관)', '직위', '성명', '개인 연락처(휴대폰)',
+                 '1', '회장', '학성초등학교', '교사', '송동석', '010-1234-5678',
+                 '2', '총무', '새터초등학교', '교사', '박동훈', '',
+                 '3', '자문', '음성교육지원청', '교육장', '안병권', '',
+                 '4', '자문', '미래교육추진단', '단장', '이혜원', '',
+                 '5', '회원', '오송솔미초등학교', '연구사', '김은정', '']
+        text = '\n'.join(cells)
+        self.assertEqual([(r['org'], r['name']) for r in parse_input(text)],
+                         [('학성초등학교', '송동석'),
+                          ('새터초등학교', '박동훈'),
+                          ('충청북도음성교육지원청', '안병권'),
+                          ('미래교육추진단', '이혜원'),
+                          ('오송솔미초등학교', '김은정')])
+        self.assertEqual([r['name'] for r in parse_orgs(text)],
+                         ['학성초등학교', '새터초등학교', '충청북도음성교육지원청',
+                          '미래교육추진단', '오송솔미초등학교'])
+
     def test_space_separated_table_with_numbering(self):
         from sotong_parser import parse_input
         text = ('번호 소속 직위 성명\n'

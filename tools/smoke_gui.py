@@ -65,10 +65,17 @@ def main():
     assert grades.count('exact') == 2, grades
     assert 'ambiguous' in grades, grades
 
-    # 도구 선택은 탭 밖(창 맨 위)에 있어야 한다
+    # 도구 선택은 탭 밖(창 맨 위)에 있어야 한다.
+    # 위젯 경로 문자열을 부분 비교하면 늘 참이 되어 아무것도 못 잡는다.
+    # 카드를 담은 틀이 창의 직계 자식인지, 탭보다 위 행에 있는지로 본다.
     card = app.target_cards['edufine'][0]
-    assert str(card.winfo_parent()) not in str(app.tab_input), '선택 카드가 탭 안에 있습니다'
-    print('도구 선택 위치 ok')
+    picker = card.nametowidget(card.winfo_parent())
+    assert picker.winfo_parent() == str(root), (
+        '선택 카드가 창 바로 아래에 있지 않습니다', picker.winfo_parent())
+    picker_row = int(picker.grid_info()['row'])
+    tabs_row = int(app.nb.grid_info()['row'])
+    assert picker_row < tabs_row, ('선택 카드가 탭보다 아래에 있습니다', picker_row, tabs_row)
+    print(f'도구 선택 위치 ok — 선택 {picker_row}행, 탭 {tabs_row}행')
 
     root.destroy()
     print('스모크 테스트 통과')

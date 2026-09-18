@@ -262,9 +262,11 @@ class AppFlowTest(unittest.TestCase):
     def test_picker_lives_above_the_tabs(self):
         """도구 선택은 탭 안이 아니라 창 맨 위에 있어야 어느 화면에서든 바꾼다."""
         for target, (card, title, desc) in self.app.target_cards.items():
-            parent = card.master if hasattr(card, 'master') else None
-            self.assertIsNot(parent, self.app.tab_input,
+            picker = card.master
+            self.assertIsNot(picker, self.app.tab_input,
                              f'{target} 카드가 명단 입력 탭 안에 있습니다')
+            self.assertIs(picker.master, self.app.root,
+                          f'{target} 카드를 담은 틀이 창의 직계 자식이 아닙니다')
 
     def test_edufine_buttons_are_shown_and_hidden(self):
         """pack 을 빠뜨려 버튼이 아예 안 보이던 적이 있다."""
@@ -366,6 +368,88 @@ class AppFlowTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CaptureEnterTest(unittest.TestCase):
+    """위치 캡처에서 Enter 가 먹는지.
+
+    소통메신저를 눌러 앞으로 꺼내면 캡처 창이 키를 못 받아 Enter 로 확정이
+    안 됐다. 그래서 창 밖의 Enter 도 보도록 고쳤다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls._saved = install_tk_stubs()
+        import main as app_module
+        cls.app_module = app_module
+
+    @classmethod
+    def tearDownClass(cls):
+        restore(cls._saved)
+
+    def _dialog(self, keys):
+        """키 상태를 흉내 낸 캡처 창. keys 는 폴링 때마다 돌려줄 값의 목록."""
+        m = self.app_module
+        dlg = m.CaptureDialog.__new__(m.CaptureDialog)
+        dlg._finished = False
+        dlg._enter_released = False
+        dlg.captured = []
+        dlg.on_captured = lambda x, y: dlg.captured.append((x, y))
+        dlg.status = MagicMock()
+        dlg.winfo_exists = lambda: True
+        dlg.destroy = MagicMock()
+        dlg.after = MagicMock()
+        return dlg
+
+    def _run(self, dlg, key_sequence):
+        """key_sequence 의 상태를 하나씩 먹이며 폴링을 돌린다."""
+        m = self.app_module
+        pos = types.SimpleNamespace(x=100, y=200)
+        real_key, real_auto = m.key_is_down, m.pyautogui
+        m.pyautogui = types.SimpleNamespace(position=lambda: pos)
+        try:
+            for down in key_sequence:
+                m.key_is_down = lambda vk, d=down: d.get(vk, False)
+                dlg._poll_position()
+                if dlg._finished or dlg.destroy.called:
+                    break
+        finally:
+            m.key_is_down, m.pyautogui = real_key, real_auto
+
+    def test_enter_outside_the_window_confirms(self):
+        m = self.app_module
+        dlg = self._dialog(None)
+        dlg._enter_released = True
+        self._run(dlg, [{}, {m.VK_RETURN: True}])
+        self.assertEqual(dlg.captured, [(100, 200)])
+
+    def test_enter_still_held_from_the_button_does_not_confirm(self):
+        """[캡처 시작] 을 Enter 로 눌렀다면 그 Enter 로 바로 확정되면 안 된다."""
+        m = self.app_module
+        dlg = self._dialog(None)
+        dlg._enter_released = False
+        self._run(dlg, [{m.VK_RETURN: True}, {m.VK_RETURN: True}])
+        self.assertEqual(dlg.captured, [], '누른 채로 있던 Enter 가 확정됐습니다')
+        # 한 번 뗐다가 다시 누르면 그때는 확정된다
+        self._run(dlg, [{}, {m.VK_RETURN: True}])
+        self.assertEqual(dlg.captured, [(100, 200)])
+
+    def test_escape_outside_the_window_cancels(self):
+        m = self.app_module
+        dlg = self._dialog(None)
+        dlg._enter_released = True
+        self._run(dlg, [{m.VK_ESCAPE: True}])
+        self.assertTrue(dlg.destroy.called)
+        self.assertEqual(dlg.captured, [])
+
+    def test_key_is_down_is_false_without_pywin32(self):
+        m = self.app_module
+        real = m.win32api
+        m.win32api = None
+        try:
+            self.assertFalse(m.key_is_down(m.VK_RETURN))
+        finally:
+            m.win32api = real
 
 
 class SmokeScriptTest(unittest.TestCase):

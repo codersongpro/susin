@@ -68,6 +68,26 @@ try:
 except ImportError:
     openpyxl = None
 
+try:
+    # 위치 캡처 때 창 밖에서 누른 Enter 를 받으려면 전역으로 키를 봐야 한다.
+    import win32api
+except ImportError:
+    win32api = None
+
+VK_RETURN = 0x0D
+VK_ESCAPE = 0x1B
+
+
+def key_is_down(vk_code):
+    """다른 창이 떠 있어도 그 키가 지금 눌려 있는지 본다 (윈도우 전용)."""
+    if win32api is None:
+        return False
+    try:
+        return bool(win32api.GetAsyncKeyState(vk_code) & 0x8000)
+    except Exception as exc:
+        logging.info('키 상태 확인 실패: %s', exc)
+        return False
+
 # ─────────────────────────────────────────────
 #  CaptureDialog
 # ─────────────────────────────────────────────
@@ -76,6 +96,8 @@ class CaptureDialog(tk.Toplevel):
     def __init__(self, parent, on_captured, label='위치'):
         super().__init__(parent)
         self.on_captured = on_captured
+        self._finished = False
+        self._enter_released = False
         self.title('위치 캡처')
         self.geometry('420x270')
         self.resizable(False, False)
@@ -89,7 +111,8 @@ class CaptureDialog(tk.Toplevel):
         tk.Label(
             self,
             text='[캡처 시작] 버튼을 클릭한 뒤 소통메신저의 대상 위치로\n'
-                 '마우스를 이동하세요. Enter로 확정, Esc로 취소합니다.',
+                 '마우스를 이동하세요. 소통메신저를 눌러 앞으로 꺼내도 됩니다.\n'
+                 'Enter로 확정, Esc로 취소합니다.',
             font=('맑은 고딕', 10), justify='center', pady=12
         ).pack()
 
@@ -118,20 +141,44 @@ class CaptureDialog(tk.Toplevel):
         self.status.config(text='마우스 위치 확인 중...  Enter 확정 / Esc 취소')
         self.bind('<Return>', lambda _e: self._confirm())
         self.bind('<Escape>', lambda _e: self.destroy())
-        self.focus_set()
+        # 캡처 창이 앞에 있어야 Tk 가 키를 받는다. 그래도 사용자가 소통메신저를
+        # 클릭해 앞으로 꺼내면 이 창은 키를 못 받으므로 아래에서 전역으로도 본다.
+        try:
+            self.focus_force()
+        except tk.TclError as exc:
+            logging.info('캡처 창 포커스 실패: %s', exc)
+        # 버튼을 Enter 로 눌렀다면 그 Enter 가 아직 눌린 채다. 한 번 떼기 전에는
+        # 확정으로 치지 않는다.
+        self._enter_released = not key_is_down(VK_RETURN)
+        self._finished = False
         self._poll_position()
 
     def _poll_position(self):
-        if not self.winfo_exists():
+        if self._finished or not self.winfo_exists():
             return
         pos = pyautogui.position()
         self.status.config(text=f'현재 위치: ({pos.x}, {pos.y})  Enter 확정 / Esc 취소')
+
+        # 소통메신저가 앞에 나와 있어도 Enter 가 먹어야 한다.
+        if key_is_down(VK_ESCAPE):
+            self.destroy()
+            return
+        if key_is_down(VK_RETURN):
+            if self._enter_released:
+                self._confirm()
+                return
+        else:
+            self._enter_released = True
+
         self.after(120, self._poll_position)
 
     def _confirm(self):
+        if self._finished:
+            return
         self._done(pyautogui.position())
 
     def _done(self, pos):
+        self._finished = True
         self.status.config(text=f'✓ 캡처 완료: ({pos.x}, {pos.y})', fg='green')
         self.on_captured(pos.x, pos.y)
         self.after(1200, self.destroy)
@@ -212,9 +259,10 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   한 번만 설정하면 이후에는 자동으로 기억합니다.
 
   공통 캡처 방법:
-    [📍 위치 설정] 클릭 → [캡처 시작] 클릭 →
-    소통메신저의 해당 위치로 마우스를 이동한 뒤 Enter 키로 확정하세요.
-    잘못 눌렀다면 Esc 키로 취소할 수 있습니다.
+    [📍 위치 설정] 을 누르고 [캡처 시작] 을 누른 뒤,
+    소통메신저의 해당 위치로 마우스를 옮기고 Enter 를 누르면 확정됩니다.
+    소통메신저를 눌러 앞으로 꺼내도 Enter 는 그대로 먹습니다.
+    잘못 눌렀다면 Esc 로 취소할 수 있습니다.
 
   [ STEP 1 ]  검색 입력창 위치
     소통메신저 '이름 검색' 입력칸 위로 마우스를 이동한 뒤 Enter.
@@ -1692,7 +1740,8 @@ class App:
             intro.config(text=(
                 '소통메신저 [사용자 선택] 창을 열어 둔 상태에서 아래 3곳을 순서대로 설정하세요.\n'
                 'STEP 1: 검색 입력창  ·  STEP 2: 결과 첫 번째 항목  ·  STEP 3: 사용자 선택 버튼\n'
-                '[캡처 시작] 후 마우스를 대상 위치로 옮기고 Enter로 확정합니다. Esc로 취소합니다.'
+                '[캡처 시작] 을 누르고 마우스를 대상 위치로 옮긴 뒤 Enter 를 누르면 '
+                '확정됩니다. 소통메신저가 앞에 나와 있어도 됩니다. Esc 는 취소입니다.'
             ))
         auto_intro = getattr(self, 'auto_intro', None)
         if auto_intro:
