@@ -607,12 +607,7 @@ class App:
         self.messenger_tabs = [(f2, '  2. 위치 설정  '), (f3, '  3. 자동 선택  ')]
         self.edufine_tabs = [(f4, '  2. 수신그룹 엑셀  ')]
 
-        # 모두 먼저 등록한다. 등록하지 않은 탭에 hide() 를 부르면 tkinter 가
-        # 예외를 던져서, 뒤따르는 탭 배치가 통째로 건너뛰어진다.
-        nb.add(f1, text='  1. 명단 입력  ')
-        for tab, label in self.messenger_tabs + self.edufine_tabs:
-            nb.add(tab, text=label)
-        nb.add(f5, text='  📖 사용 방법  ')
+        # 탭 등록은 _apply_target 이 한다. 고른 출구에 따라 매번 다시 구성한다.
 
         self._tab_input(f1)
         self._tab_calib(f2)
@@ -1583,40 +1578,25 @@ class App:
 
         # 고른 출구에 필요한 탭만 남긴다. 에듀파인은 엑셀을 만들어 올리는 방식이라
         # 마우스 위치를 잡을 일이 없다.
-        show = self.edufine_tabs if edufine_on else self.messenger_tabs
-        hide = self.messenger_tabs if edufine_on else self.edufine_tabs
+        # hide() 로 감추고 insert() 로 끼워 넣는 방식을 썼더니, insert 가 감춘 탭을
+        # 되살려서 에듀파인인데 위치 설정·자동 선택이 같이 보였다.
+        # forget() 으로 전부 떼고 필요한 것만 순서대로 add() 하면 결과가 분명하다.
+        # (forget 은 탭 목록에서 빼는 것일 뿐 위젯은 그대로 살아 있다.)
+        order = [(self.tab_input, '  1. 명단 입력  ')]
+        order += self.edufine_tabs if edufine_on else self.messenger_tabs
+        order += [(self.tab_help, '  📖 사용 방법  ')]
 
-        # 하나가 실패해도 나머지 배치는 이어져야 한다.
-        # 예전에 전부 한 try 로 묶었다가, 첫 hide() 가 던지면서 탭이 1번만 남았다.
-        for tab, _ in hide:
-            try:
-                self.nb.hide(tab)
-            except Exception as exc:
-                logging.info('탭 숨김 실패: %s', exc)
-        for index, (tab, label) in enumerate(show, start=1):
-            try:
-                self.nb.insert(index, tab, text=label)
-            except Exception as exc:
-                logging.info('탭 배치 실패: %s', exc)
         try:
-            self.nb.insert('end', self.tab_help, text='  📖 사용 방법  ')
+            for tab in list(self.nb.tabs()):
+                self.nb.forget(tab)
         except Exception as exc:
-            logging.info('도움말 탭 배치 실패: %s', exc)
+            logging.info('탭 정리 실패: %s', exc)
+        for tab, label in order:
+            try:
+                self.nb.add(tab, text=label)
+            except Exception as exc:
+                logging.info('탭 배치 실패 (%s): %s', label.strip(), exc)
 
-        browse = getattr(self, 'browse_btn', None)
-        if browse:
-            if edufine_on:
-                browse.pack(side='left', padx=3)
-            else:
-                browse.pack_forget()
-
-        hint = getattr(self, 'target_hint', None)
-        if hint:
-            hint.config(text=(
-                '기관 명단을 넣고 수신그룹 엑셀을 만들어 에듀파인에 올립니다'
-                if edufine_on else
-                '소속기관 + 이름 명단을 넣으면 메신저에서 자동으로 골라 담습니다'
-            ))
         # 좌표 안내는 소통메신저 전용이다
         intro = getattr(self, 'calib_intro', None)
         if intro:

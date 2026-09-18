@@ -98,6 +98,13 @@ class _Notebook(_WidgetBase):
         if tab not in self.visible:
             self.visible.append(tab)
 
+    def forget(self, tab):
+        if tab not in self.managed:
+            raise RuntimeError('등록되지 않은 탭은 뗄 수 없습니다')
+        self.managed.remove(tab)
+        if tab in self.visible:
+            self.visible.remove(tab)
+
     def hide(self, tab):
         if tab not in self.managed:
             raise RuntimeError('등록되지 않은 탭은 숨길 수 없습니다')
@@ -107,6 +114,7 @@ class _Notebook(_WidgetBase):
     def insert(self, index, tab, **kwargs):
         if tab not in self.managed:
             raise RuntimeError('등록되지 않은 탭은 배치할 수 없습니다')
+        # 실제 Tk 에서는 insert 가 감춰 둔 탭까지 되살렸다. 그래서 이 방식을 버렸다.
         if tab in self.visible:
             self.visible.remove(tab)
         if index == 'end':
