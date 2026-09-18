@@ -141,17 +141,32 @@ class CaptureDialog(tk.Toplevel):
         self.status.config(text='마우스 위치 확인 중...  Enter 확정 / Esc 취소')
         self.bind('<Return>', lambda _e: self._confirm())
         self.bind('<Escape>', lambda _e: self.destroy())
-        # 캡처 창이 앞에 있어야 Tk 가 키를 받는다. 그래도 사용자가 소통메신저를
-        # 클릭해 앞으로 꺼내면 이 창은 키를 못 받으므로 아래에서 전역으로도 본다.
+
+        # 여기서부터는 사용자가 소통메신저를 만져야 한다. 잡아 둔 마우스를 놓지
+        # 않으면 윈도우가 마우스 입력을 이 창에만 주기 때문에, 소통메신저 위에서
+        # 마우스가 먹지 않는다. 캡처 중에는 반드시 놓는다.
+        self._release_grab()
+        # 소통메신저가 앞에 나와도 좌표는 계속 보여야 한다.
+        try:
+            self.attributes('-topmost', True)
+        except tk.TclError as exc:
+            logging.info('캡처 창 항상 위 설정 실패: %s', exc)
         try:
             self.focus_force()
         except tk.TclError as exc:
             logging.info('캡처 창 포커스 실패: %s', exc)
+
         # 버튼을 Enter 로 눌렀다면 그 Enter 가 아직 눌린 채다. 한 번 떼기 전에는
         # 확정으로 치지 않는다.
         self._enter_released = not key_is_down(VK_RETURN)
         self._finished = False
         self._poll_position()
+
+    def _release_grab(self):
+        try:
+            self.grab_release()
+        except tk.TclError as exc:
+            logging.info('캡처 창 grab 해제 실패: %s', exc)
 
     def _poll_position(self):
         if self._finished or not self.winfo_exists():
@@ -179,9 +194,23 @@ class CaptureDialog(tk.Toplevel):
 
     def _done(self, pos):
         self._finished = True
-        self.status.config(text=f'✓ 캡처 완료: ({pos.x}, {pos.y})', fg='green')
-        self.on_captured(pos.x, pos.y)
+        self._release_grab()
+        # 닫는 예약을 먼저 건다. 좌표를 넘기다 에러가 나도 창이 남아서
+        # 앱 전체가 멈추는 일이 없어야 한다.
         self.after(1200, self.destroy)
+        try:
+            self.status.config(text=f'✓ 캡처 완료: ({pos.x}, {pos.y})', fg='green')
+        except tk.TclError as exc:
+            logging.info('캡처 완료 표시 실패: %s', exc)
+        try:
+            self.on_captured(pos.x, pos.y)
+        except Exception as exc:
+            logging.exception('캡처 좌표 저장 실패: %s', exc)
+
+    def destroy(self):
+        self._finished = True
+        self._release_grab()
+        super().destroy()
 
 
 # ─────────────────────────────────────────────
@@ -1943,6 +1972,9 @@ class App:
         def on_captured(x, y):
             self.config.data[key + '_x'] = x
             self.config.data[key + '_y'] = y
+            # 잡자마자 저장한다. [설정 저장] 을 누르지 않고 앱을 닫아
+            # 다시 잡아야 하는 일이 없도록.
+            self.config.save()
             self._refresh_calib_labels()
 
         labels = {

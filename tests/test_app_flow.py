@@ -399,6 +399,7 @@ class CaptureEnterTest(unittest.TestCase):
         dlg.winfo_exists = lambda: True
         dlg.destroy = MagicMock()
         dlg.after = MagicMock()
+        dlg.grab_release = MagicMock()
         return dlg
 
     def _run(self, dlg, key_sequence):
@@ -441,6 +442,35 @@ class CaptureEnterTest(unittest.TestCase):
         self._run(dlg, [{m.VK_ESCAPE: True}])
         self.assertTrue(dlg.destroy.called)
         self.assertEqual(dlg.captured, [])
+
+    def test_capture_releases_the_mouse_grab(self):
+        """캡처 중에는 마우스를 놓아야 소통메신저 위에서 마우스가 먹는다."""
+        m = self.app_module
+        dlg = self._dialog(None)
+        dlg.start_btn = MagicMock()
+        dlg.bind = MagicMock()
+        dlg.attributes = MagicMock()
+        dlg.focus_force = MagicMock()
+        real_key, real_auto = m.key_is_down, m.pyautogui
+        m.key_is_down = lambda vk: False
+        m.pyautogui = types.SimpleNamespace(
+            position=lambda: types.SimpleNamespace(x=1, y=2))
+        try:
+            dlg._begin()
+        finally:
+            m.key_is_down, m.pyautogui = real_key, real_auto
+        self.assertTrue(dlg.grab_release.called,
+                        '캡처를 시작하면서 마우스를 놓지 않았습니다')
+        dlg.attributes.assert_called_with('-topmost', True)
+
+    def test_done_closes_even_if_saving_fails(self):
+        """좌표를 넘기다 터져도 창이 남아 앱을 막으면 안 된다."""
+        m = self.app_module
+        dlg = self._dialog(None)
+        dlg.on_captured = MagicMock(side_effect=RuntimeError('저장 실패'))
+        dlg._done(types.SimpleNamespace(x=10, y=20))
+        self.assertTrue(dlg.after.called, '창을 닫는 예약이 걸리지 않았습니다')
+        self.assertTrue(dlg.grab_release.called)
 
     def test_key_is_down_is_false_without_pywin32(self):
         m = self.app_module
