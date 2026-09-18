@@ -8,7 +8,7 @@
 """
 
 APP_NAME    = '신통픽'
-APP_VERSION = '2.2.4'
+APP_VERSION = '2.2.5'
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
