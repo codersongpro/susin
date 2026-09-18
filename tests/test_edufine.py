@@ -249,3 +249,36 @@ class RegisteringOfficesTest(unittest.TestCase):
 
     def test_empty_dictionary_is_safe(self):
         self.assertEqual(edufine.registering_offices(edufine.empty_codes()), [])
+
+
+class CategoryTest(unittest.TestCase):
+    """찾아보기 분류 필터."""
+
+    def setUp(self):
+        self.codes = edufine.load_codes()
+
+    def test_categorise(self):
+        cases = {
+            '충청북도진천교육지원청 학성초등학교': '초등학교',
+            '충청북도청주교육지원청 청주중학교': '중학교',
+            '충청북도교육청 충북외국어고등학교': '고등학교',
+            '충청북도청주교육지원청 행정과': '부서·기관',
+            '충청북도청주교육지원청': '교육지원청',
+        }
+        for full, want in cases.items():
+            self.assertEqual(edufine.categorise(full), want, full)
+
+    def test_counts_cover_everything(self):
+        counts = edufine.category_counts(self.codes)
+        self.assertEqual(sum(counts.values()), len(self.codes['기관']))
+
+    def test_filtered_search(self):
+        hits = edufine.search_orgs(self.codes, '청주', category='초등학교')
+        self.assertTrue(hits)
+        for h in hits:
+            self.assertIn('청주', h)
+            self.assertEqual(edufine.categorise(h), '초등학교')
+
+    def test_category_alone_lists_them_all(self):
+        offices = edufine.search_orgs(self.codes, '', category='교육지원청')
+        self.assertEqual(len(offices), 10)

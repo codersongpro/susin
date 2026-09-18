@@ -353,16 +353,6 @@ def display_name(codes: dict, full: str, index: dict = None) -> str:
     return short if len(index.get(short, [])) == 1 else full
 
 
-def search_orgs(codes: dict, query: str, limit: int = 300) -> list:
-    """찾아보기용 — 공백으로 나눈 조각이 모두 들어 있는 전체경로를 모은다."""
-    orgs = sorted((codes or {}).get('기관', {}))
-    pieces = [p for p in _tokens(query) if p]
-    if not pieces:
-        return orgs[:limit]
-    hits = [f for f in orgs if all(p in f for p in pieces)]
-    return hits[:limit]
-
-
 def apply_codes(rows, codes, index=None):
     """parse_orgs 결과를 코드 사전으로 다시 해석해 제자리에서 고친다.
 
@@ -406,3 +396,52 @@ def registering_offices(codes: dict) -> list:
         if full.endswith('교육지원청') or full.endswith('교육청'):
             out.append((full, code))
     return out
+
+
+# ── 분류 (찾아보기 필터용) ────────────────────
+
+CATEGORIES = ('초등학교', '중학교', '고등학교', '유치원', '특수학교',
+              '교육지원청', '부서·기관')
+
+_SCHOOL_SUFFIXES = {
+    '초등학교': ('초등학교', '초등학교분교장'),
+    '중학교': ('중학교',),
+    '고등학교': ('고등학교',),
+    '유치원': ('유치원',),
+    '특수학교': ('특수학교',),
+}
+
+
+def categorise(full_name: str) -> str:
+    """전체경로 → 찾아보기에서 쓰는 분류."""
+    tail = (full_name or '').strip().split(' ')[-1]
+    if tail.endswith('분교장'):
+        return '초등학교'          # 분교장은 대부분 초등이고 본교와 같이 다룬다
+    for name, suffixes in _SCHOOL_SUFFIXES.items():
+        if tail.endswith(suffixes):
+            return name
+    if tail.endswith('교육지원청'):
+        return '교육지원청'
+    return '부서·기관'
+
+
+def search_orgs(codes: dict, query: str, limit: int = 3000,
+                category: str = None) -> list:
+    """찾아보기용 — 공백으로 나눈 조각이 모두 들어 있는 전체경로를 모은다.
+
+    category 를 주면 그 분류만 남긴다.
+    """
+    orgs = sorted((codes or {}).get('기관', {}))
+    if category:
+        orgs = [f for f in orgs if categorise(f) == category]
+    pieces = [p for p in _tokens(query) if p]
+    if pieces:
+        orgs = [f for f in orgs if all(p in f for p in pieces)]
+    return orgs[:limit]
+
+
+def category_counts(codes: dict) -> dict:
+    counts = {name: 0 for name in CATEGORIES}
+    for full in (codes or {}).get('기관', {}):
+        counts[categorise(full)] = counts.get(categorise(full), 0) + 1
+    return counts

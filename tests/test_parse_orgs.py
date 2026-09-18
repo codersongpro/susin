@@ -142,3 +142,69 @@ class EdufineOrgNamesTest(unittest.TestCase):
         from sotong_parser import _ORG_LOOKUP
         for generic in ('행정과', '교육과', '학교지원센터', '병설유치원'):
             self.assertNotIn(generic, _ORG_LOOKUP, generic)
+
+
+class TitleColumnTest(unittest.TestCase):
+    """소속 / 직위 / 성명 세 칸짜리 표.
+
+    '교사' 가 이름 자리를 차지하고 정작 '송동석' 이 버려지던 문제의 회귀 방지선.
+    """
+
+    TABLE = ('소속 학교(기관)\t직위\t성명\n'
+             '학성초등학교\t교사\t송동석\n'
+             '새터초등학교\t교사\t박동훈\n'
+             '음성교육지원청\t교육장\t안병권\n'
+             '미래교육추진단\t단장\t이혜원\n'
+             '자연과학교육원\t부장\t이강영\n'
+             '창의특수교육과\t장학사\t김영국\n'
+             '오송솔미초등학교\t연구사\t김은정\n'
+             '충북여자고등학교\t교사\t김진설')
+
+    def test_titles_are_not_people(self):
+        from sotong_parser import is_person_name
+        for title in ('교사', '교감', '교육장', '장학사', '연구사', '단장',
+                      '부장', '주무관', '행정실장', '영양사'):
+            self.assertFalse(is_person_name(title), title)
+
+    def test_headers_are_not_people(self):
+        from sotong_parser import is_person_name
+        for header in ('성명', '이름', '직위', '소속', '번호', '비고'):
+            self.assertFalse(is_person_name(header), header)
+
+    def test_real_names_still_pass(self):
+        from sotong_parser import is_person_name
+        for name in ('송동석', '박동훈', '안병권', '이혜원', '김영국', '김은정'):
+            self.assertTrue(is_person_name(name), name)
+
+    def test_messenger_takes_the_name_not_the_title(self):
+        from sotong_parser import parse_input
+        rows = parse_input(self.TABLE)
+        self.assertEqual(
+            [(r['org'], r['name']) for r in rows],
+            [('학성초등학교', '송동석'),
+             ('새터초등학교', '박동훈'),
+             ('충청북도음성교육지원청', '안병권'),
+             ('미래교육추진단', '이혜원'),
+             ('충청북도자연과학교육원', '이강영'),
+             ('창의특수교육과', '김영국'),
+             ('오송솔미초등학교', '김은정'),
+             ('충북여자고등학교', '김진설')])
+
+    def test_edufine_takes_only_the_org(self):
+        names = [r['name'] for r in parse_orgs(self.TABLE)]
+        self.assertEqual(names,
+                         ['학성초등학교', '새터초등학교', '충청북도음성교육지원청',
+                          '미래교육추진단', '충청북도자연과학교육원', '창의특수교육과',
+                          '오송솔미초등학교', '충북여자고등학교'])
+        self.assertNotIn(None, names, '머리글 줄이 기관으로 남았습니다')
+
+    def test_space_separated_table_with_numbering(self):
+        from sotong_parser import parse_input
+        text = ('번호 소속 직위 성명\n'
+                '1 학성초등학교 교사 송동석\n'
+                '2 충북외고 교감 김철수')
+        self.assertEqual([(r['org'], r['name']) for r in parse_input(text)],
+                         [('학성초등학교', '송동석'),
+                          ('충북외국어고등학교', '김철수')])
+        self.assertEqual([r['name'] for r in parse_orgs(text)],
+                         ['학성초등학교', '충북외국어고등학교'])

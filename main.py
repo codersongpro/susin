@@ -8,7 +8,7 @@
 """
 
 APP_NAME    = '신통픽'
-APP_VERSION = '2.1.1'
+APP_VERSION = '2.1.2'
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
@@ -991,19 +991,19 @@ class App:
         self.edufine_msg.grid(row=4, column=0, sticky='ew', padx=14, pady=(2, 10))
 
     def _open_org_picker(self):
-        """기관 찾아보기 — 부서까지 목록에서 골라 명단에 넣는다.
+        """기관 찾아보기 — 770곳에서 골라 명단에 넣는다.
 
         '충청북도청주교육지원청 행정과' 같은 전체경로를 외울 수는 없다.
         """
         if not self.codes.get('기관'):
             messagebox.showwarning(
                 '기관코드가 없습니다',
-                '[4. 수신그룹 엑셀] 탭에서 기관코드를 먼저 가져오세요.')
+                '[수신그룹 엑셀] 탭에서 기관코드를 먼저 가져오세요.')
             return
 
         dlg = tk.Toplevel(self.root)
         dlg.title('기관 찾아보기')
-        dlg.geometry('620x520')
+        dlg.geometry('680x600')
         dlg.grab_set()
         dlg.transient(self.root)
         dlg.configure(bg='#F5F7FA')
@@ -1018,9 +1018,35 @@ class App:
         entry.pack(fill='x', padx=16)
         entry.focus_set()
 
+        # 분류 버튼 — 초등학교만, 교육지원청만 처럼 한 번에 좁힌다
+        self.picker_category = None
+        cat_row = tk.Frame(dlg, bg='#F5F7FA')
+        cat_row.pack(fill='x', padx=16, pady=(8, 2))
+        counts = edufine.category_counts(self.codes)
+        cat_buttons = {}
+
+        def choose_category(name):
+            self.picker_category = None if self.picker_category == name else name
+            for key, btn in cat_buttons.items():
+                on = key == self.picker_category
+                btn.config(bg='#1565C0' if on else '#CFD8DC',
+                           fg='white' if on else '#37474F')
+            refresh()
+
+        for name in edufine.CATEGORIES:
+            if not counts.get(name):
+                continue
+            btn = tk.Button(
+                cat_row, text=f'{name} {counts[name]}',
+                command=lambda n=name: choose_category(n),
+                bg='#CFD8DC', fg='#37474F', activebackground='#B0BEC5',
+                relief='flat', font=('맑은 고딕', 8), padx=8, pady=3, cursor='hand2')
+            btn.pack(side='left', padx=2)
+            cat_buttons[name] = btn
+
         count_label = tk.Label(dlg, text='', bg='#F5F7FA', fg='#555',
-                               font=('맑은 고딕', 8), anchor='w')
-        count_label.pack(fill='x', padx=16, pady=(4, 2))
+                               font=('맑은 고딕', 9), anchor='w')
+        count_label.pack(fill='x', padx=16, pady=(6, 2))
 
         list_wrap = tk.Frame(dlg)
         list_wrap.pack(fill='both', expand=True, padx=16)
@@ -1036,21 +1062,20 @@ class App:
 
         def refresh(*_):
             nonlocal shown
-            shown = edufine.search_orgs(self.codes, query.get())
+            shown = edufine.search_orgs(self.codes, query.get(),
+                                        category=self.picker_category)
             box.delete(0, 'end')
             for full in shown:
                 box.insert('end', full)
             total = len(self.codes.get('기관', {}))
-            count_label.config(text=f'{len(shown)}곳 표시  /  전체 {total}곳')
+            count_label.config(text=f'{len(shown)}곳 표시  /  전체 {total}곳'
+                                    f'      (Ctrl 클릭·Shift 클릭으로 여러 개 선택)')
 
-        def add_selected():
-            picked = [shown[i] for i in box.curselection()]
-            if not picked:
-                return
+        def add(full_names):
             existing = {i.get('org') for i in self.names_list}
             index = edufine.index_by_short_name(self.codes)
             added = 0
-            for full in picked:
+            for full in full_names:
                 if full in existing:
                     continue
                 self.names_list.append({
@@ -1064,12 +1089,24 @@ class App:
                 existing.add(full)
                 added += 1
             self._rebuild_parsed_list()
-            self._refresh_ready_status()
-            self._refresh_edufine_status()
-            self.parse_status.config(
-                text=f'찾아보기에서 {added}곳 추가  (명단 {len(self.names_list)}곳)',
-                fg='green')
-            count_label.config(text=f'{added}곳을 명단에 넣었습니다.')
+            self._after_list_edit()
+            count_label.config(
+                text=f'{added}곳을 명단에 넣었습니다.  (명단 {len(self.names_list)}곳)')
+            return added
+
+        def add_selected():
+            picked = [shown[i] for i in box.curselection()]
+            if picked:
+                add(picked)
+
+        def add_all_shown():
+            if not shown:
+                return
+            if len(shown) > 50 and not messagebox.askyesno(
+                    '한꺼번에 넣을까요?',
+                    f'지금 보이는 {len(shown)}곳을 모두 명단에 넣습니다. 계속할까요?'):
+                return
+            add(shown)
 
         query.trace_add('write', refresh)
         box.bind('<Double-Button-1>', lambda e: add_selected())
@@ -1077,10 +1114,14 @@ class App:
 
         btns = tk.Frame(dlg, bg='#F5F7FA')
         btns.pack(pady=12)
-        tk.Button(btns, text='명단에 추가', command=add_selected,
+        tk.Button(btns, text='선택한 것 넣기', command=add_selected,
                   bg='#1565C0', fg='white', activebackground='#0D47A1',
                   relief='flat', font=('맑은 고딕', 9, 'bold'),
-                  padx=18, pady=6, cursor='hand2').pack(side='left', padx=4)
+                  padx=16, pady=6, cursor='hand2').pack(side='left', padx=4)
+        tk.Button(btns, text='보이는 것 전부 넣기', command=add_all_shown,
+                  bg='#00695C', fg='white', activebackground='#004D40',
+                  relief='flat', font=('맑은 고딕', 9, 'bold'),
+                  padx=16, pady=6, cursor='hand2').pack(side='left', padx=4)
         tk.Button(btns, text='닫기', command=dlg.destroy,
                   bg='#B0BEC5', fg='white', activebackground='#90A4AE',
                   relief='flat', font=('맑은 고딕', 9),
