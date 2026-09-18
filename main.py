@@ -17,6 +17,8 @@ import time
 import json
 import logging
 import os
+import re
+import sys
 import shutil
 import webbrowser
 import urllib.request
@@ -38,6 +40,7 @@ from automation import (
     FAIL_NO_USER,
     FAIL_NOT_ADDED,
     FAIL_SEARCH_STALE,
+    FAIL_UNCHECKED,
     POPUP_WAIT_ADD,
     POPUP_WAIT_VERIFY,
     RESULT_SCAN_HEIGHT,
@@ -94,6 +97,9 @@ try:
 except ImportError:
     win32api = None
 
+# 소통메신저가 결과 목록 위에 적어 두는 '검색 결과(2명)' 같은 글.
+SEARCH_COUNT_RE = re.compile(r'검색\s*결과\s*\(?\s*(\d+)\s*명')
+
 VK_LBUTTON = 0x01
 VK_RETURN = 0x0D
 VK_ESCAPE = 0x1B
@@ -113,8 +119,59 @@ def key_is_down(vk_code):
 #  CaptureDialog
 # ─────────────────────────────────────────────
 
+# 소통메신저에서 수신자를 담기까지 누르는 차례. 3·4·5 번이 신통픽이 기억해야 할
+# 자리다. 사용자가 화면에서 바로 찾을 수 있게 같은 번호로 부른다.
+MESSENGER_STEPS = (
+    ('1', '[쪽지작성] 버튼', '소통메신저 화면 위쪽의 파란 버튼입니다.'),
+    ('2', '[받는사람 추가] 버튼', '누르면 [사용자 선택] 창이 열립니다.'),
+    ('3', '검색 입력칸', "'소속+이름 또는 이름 검색' 이라고 적힌 칸입니다."),
+    ('4', '검색 결과 첫 줄', "'검색 결과(1명)' 아래 첫 번째 사람입니다."),
+    ('5', '오른쪽 화살표 버튼', '결과 목록과 [선택된 사용자] 사이에 있는 버튼입니다.'),
+)
+
+CAPTURE_HINTS = {
+    'search_field': "3번  검색 입력칸  ('소속+이름 또는 이름 검색' 칸)",
+    'result_first': "4번  검색 결과 첫 줄  ('검색 결과(1명)' 아래 첫 사람)",
+    'add_button': '5번  오른쪽 화살표 버튼  (결과를 [선택된 사용자] 로 옮기는 버튼)',
+}
+
+# 안내 그림 파일 이름. assets/guide/ 에 넣어 두면 화면에 함께 나오고,
+# 없으면 글 안내만 나온다. tk 가 읽을 수 있게 PNG 로 둔다.
+GUIDE_IMAGES = {
+    '1': 'step1_write.png',
+    '2': 'step2_add.png',
+    '3': 'step3_search.png',
+    '4': 'step4_result.png',
+    '5': 'step5_arrow.png',
+}
+CAPTURE_STEP_KEYS = {
+    'search_field': '3',
+    'result_first': '4',
+    'add_button': '5',
+}
+_guide_image_cache = {}
+
+
+def guide_image(step: str):
+    """단계별 안내 그림. 파일이 없거나 못 읽으면 None."""
+    if step in _guide_image_cache:
+        return _guide_image_cache[step]
+    name = GUIDE_IMAGES.get(step)
+    image = None
+    if name:
+        base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(base, 'assets', 'guide', name)
+        if os.path.exists(path):
+            try:
+                image = tk.PhotoImage(file=path)
+            except Exception as exc:
+                logging.info('안내 그림을 읽지 못했습니다 (%s): %s', name, exc)
+    _guide_image_cache[step] = image
+    return image
+
+
 class CaptureDialog(tk.Toplevel):
-    def __init__(self, parent, on_captured, label='위치'):
+    def __init__(self, parent, on_captured, label='위치', hint='', step=''):
         super().__init__(parent)
         self.on_captured = on_captured
         self._finished = False
@@ -129,12 +186,26 @@ class CaptureDialog(tk.Toplevel):
             bg='#1565C0', fg='white', font=('맑은 고딕', 12, 'bold'), pady=12
         ).pack(fill='x')
 
+        if hint:
+            tk.Label(
+                self, text=f'여기를 클릭하세요\n{hint}',
+                bg='#E3F2FD', fg='#0D47A1', font=('맑은 고딕', 11, 'bold'),
+                justify='center', pady=10
+            ).pack(fill='x')
+
+        # 그림이 있으면 무엇을 누르는지 눈으로 바로 보여 준다.
+        self.hint_image = guide_image(step) if step else None
+        if self.hint_image is not None:
+            tk.Label(self, image=self.hint_image, bg='#E3F2FD').pack(
+                fill='x', pady=(0, 6))
+
         tk.Label(
             self,
-            text='[캡처 시작] 을 누른 뒤 소통메신저에서 잡을 자리를 클릭하세요.\n'
-                 '클릭한 자리가 그대로 저장됩니다. 소통메신저를 눌러 앞으로 꺼내도 됩니다.\n'
+            text='소통메신저에서 [쪽지작성] 과 [받는사람 추가] 를 눌러\n'
+                 '[사용자 선택] 창을 먼저 열어 두세요.\n'
+                 '[캡처 시작] 을 누른 뒤 위에 적힌 자리를 클릭하면 그 자리가 저장됩니다.\n'
                  '마우스를 옮긴 뒤 Enter 로 확정해도 되고, Esc 로 취소합니다.',
-            font=('맑은 고딕', 10), justify='center', pady=12
+            font=('맑은 고딕', 10), justify='center', pady=10
         ).pack()
 
         tk.Label(
@@ -334,23 +405,32 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   소통메신저의 클릭 위치 3곳을 {APP_NAME}에 알려주는 과정입니다.
   한 번만 설정하면 이후에는 자동으로 기억합니다.
 
+  소통메신저에서 누르는 차례:
+    1번  [쪽지작성] 버튼        화면 위쪽의 파란 버튼입니다.
+    2번  [받는사람 추가] 버튼   누르면 [사용자 선택] 창이 열립니다.
+    3번  검색 입력칸            '소속+이름 또는 이름 검색' 칸입니다.
+    4번  검색 결과 첫 줄        '검색 결과(1명)' 아래 첫 사람입니다.
+    5번  오른쪽 화살표 버튼     결과를 [선택된 사용자] 로 옮기는 버튼입니다.
+
+  이 가운데 3·4·5 번 자리를 신통픽에 알려 주면 됩니다.
+
   공통 캡처 방법:
     [📍 위치 설정] 을 누르고 [캡처 시작] 을 누른 뒤,
     소통메신저에서 잡을 자리를 그대로 클릭하면 됩니다.
     마우스를 옮긴 뒤 Enter 를 눌러도 확정되고, Esc 로 취소합니다.
-    클릭은 소통메신저에도 전달되니, STEP 3 을 잡을 때는
+    클릭은 소통메신저에도 전달되니, 5번을 잡을 때는
     그 사람이 실제로 추가됩니다. 캡처를 마친 뒤 받는 사람 목록을 확인하세요.
 
-  [ STEP 1 ]  검색 입력창 위치
-    소통메신저 '이름 검색' 입력칸을 클릭합니다.
+  [ 3번 ]  검색 입력칸
+    '소속+이름 또는 이름 검색' 칸을 클릭합니다.
 
-  [ STEP 2 ]  결과 첫 번째 항목 위치
+  [ 4번 ]  검색 결과 첫 줄
     아무 이름(예: 홍길동)이나 검색한 뒤
-    결과 목록의 첫 번째 줄을 클릭합니다.
+    '검색 결과(1명)' 아래 첫 사람을 클릭합니다.
 
-  [ STEP 3 ]  사용자 선택 버튼 위치
+  [ 5번 ]  오른쪽 화살표 버튼
     결과가 보이는 상태에서
-    [사용자 선택] 또는 [추가] 버튼을 클릭합니다.
+    결과 목록과 [선택된 사용자] 사이의 화살표 버튼을 클릭합니다.
 
   [ 검색 설정 ]
     · 검색 후 대기 시간: 기본 0.5초.
@@ -612,6 +692,103 @@ def _is_newer_version(latest: str, current: str) -> bool:
     latest_parts += (0,) * (size - len(latest_parts))
     current_parts += (0,) * (size - len(current_parts))
     return latest_parts > current_parts
+
+class FailureReport(tk.Toplevel):
+    """받는 사람에 들어가지 못한 사람을 사유별로 모아 보여 주는 창."""
+
+    def __init__(self, parent, items, on_retry=None):
+        super().__init__(parent)
+        self.items = list(items)
+        self.on_retry = on_retry
+        self.title('받는 사람에 들어가지 않은 명단')
+        self.geometry('520x460')
+        self.configure(bg='#FFF5F5')
+
+        tk.Label(
+            self, text=f'⚠  {len(self.items)}명이 받는 사람에 들어가지 않았습니다',
+            bg='#B71C1C', fg='white', font=('맑은 고딕', 12, 'bold'), pady=10
+        ).pack(fill='x')
+
+        tk.Label(
+            self,
+            text='아래 사람은 다시 담아야 합니다. 사유를 보고 고친 뒤\n'
+                 '[실패 항목만 다시 실행] 을 누르거나 직접 담으세요.',
+            bg='#FFF5F5', fg='#B71C1C', font=('맑은 고딕', 9), justify='left'
+        ).pack(anchor='w', padx=12, pady=(8, 4))
+
+        box = tk.Frame(self, bg='#FFF5F5')
+        box.pack(fill='both', expand=True, padx=12, pady=4)
+        self.text = scrolledtext.ScrolledText(
+            box, font=('맑은 고딕', 10), wrap='word', height=14)
+        self.text.pack(fill='both', expand=True)
+        self.text.insert('1.0', self.as_text())
+        self.text.config(state='disabled', fg='#B71C1C')
+
+        row = tk.Frame(self, bg='#FFF5F5')
+        row.pack(fill='x', padx=12, pady=10)
+        tk.Button(
+            row, text='📋  명단 복사', command=self._copy,
+            bg='#607D8B', fg='white', relief='flat',
+            font=('맑은 고딕', 10), padx=12, pady=6, cursor='hand2'
+        ).pack(side='left', padx=4)
+        if on_retry:
+            tk.Button(
+                row, text='↻  실패 항목만 다시 실행', command=self._retry,
+                bg='#795548', fg='white', relief='flat',
+                font=('맑은 고딕', 10, 'bold'), padx=12, pady=6, cursor='hand2'
+            ).pack(side='left', padx=4)
+        tk.Button(
+            row, text='닫기', command=self.destroy,
+            bg='#9E9E9E', fg='white', relief='flat',
+            font=('맑은 고딕', 10), padx=12, pady=6
+        ).pack(side='right', padx=4)
+
+        self.status = tk.Label(self, text='', bg='#FFF5F5', fg='green',
+                               font=('맑은 고딕', 9))
+        self.status.pack(pady=(0, 8))
+
+    def grouped(self) -> list:
+        """사유별로 묶는다. 사유가 같은 사람끼리 모여야 원인을 보기 쉽다."""
+        buckets = {}
+        for item in self.items:
+            reason = item.get('failure_reason') or '알 수 없음'
+            buckets.setdefault(reason, []).append(item)
+        return sorted(buckets.items(), key=lambda pair: -len(pair[1]))
+
+    def as_text(self) -> str:
+        lines = []
+        for reason, rows in self.grouped():
+            lines.append(f'[{reason}]  {len(rows)}명')
+            for item in rows:
+                org = item.get('org', '')
+                name = item.get('name', '')
+                shown = item.get('search') or (f'{org} {name}'.strip() or org or name)
+                lines.append(f'  {shown}')
+            lines.append('')
+        return '\n'.join(lines).strip()
+
+    def _copy(self):
+        text = self.as_text()
+        try:
+            if pyperclip is not None:
+                pyperclip.copy(text)
+            else:
+                raise RuntimeError('pyperclip 없음')
+        except Exception as exc:
+            logging.info('실패 명단 복사에 tk 클립보드를 씁니다: %s', exc)
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(text)
+            except tk.TclError as tcl_exc:
+                logging.warning('실패 명단 복사 실패: %s', tcl_exc)
+                return
+        self.status.config(text='✓ 복사했습니다')
+
+    def _retry(self):
+        self.destroy()
+        if self.on_retry:
+            self.on_retry()
+
 
 class ClipboardWalker(tk.Toplevel):
     """기관명을 한 건씩 클립보드에 넣어 주는 창.
@@ -1181,16 +1358,41 @@ class App:
             frame, text='', fg='#555', font=('맑은 고딕', 9), justify='center')
         self.calib_intro.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 6))
 
+        # 소통메신저에서 누르는 차례. 3·4·5 번이 아래에서 잡을 자리다.
+        order = ttk.LabelFrame(frame, text='소통메신저에서 누르는 차례')
+        order.grid(row=1, column=0, sticky='ew', padx=10, pady=(0, 6))
+        order.columnconfigure(2, weight=1)
+        self.step_images = []
+        for row_i, (number, title, desc) in enumerate(MESSENGER_STEPS):
+            mine = number in GUIDE_IMAGES and number in ('3', '4', '5')
+            tk.Label(
+                order, text=number,
+                bg='#1565C0' if mine else '#90A4AE', fg='white',
+                font=('맑은 고딕', 10, 'bold'), width=3
+            ).grid(row=row_i, column=0, padx=(8, 6), pady=3, sticky='w')
+
+            picture = guide_image(number)
+            if picture is not None:
+                self.step_images.append(picture)
+                tk.Label(order, image=picture).grid(
+                    row=row_i, column=1, padx=4, pady=3, sticky='w')
+
+            tail = '  ← 아래에서 이 자리를 잡습니다' if mine else ''
+            tk.Label(
+                order, text=f'{title}   {desc}{tail}',
+                font=('맑은 고딕', 9), fg='#37474F', justify='left', anchor='w'
+            ).grid(row=row_i, column=2, padx=4, pady=3, sticky='w')
+
         # STEP 1·2·3: 위치 설정
-        pos_frame = ttk.LabelFrame(frame, text='STEP 1 · 2 · 3 — 위치 설정 (순서대로)')
-        pos_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=4)
+        pos_frame = ttk.LabelFrame(frame, text='잡아 둘 자리 세 곳 (위의 3·4·5 번)')
+        pos_frame.grid(row=2, column=0, sticky='ew', padx=10, pady=4)
         pos_frame.columnconfigure(1, weight=1)
         self.calibration_panel = pos_frame
 
         for row_i, (label_text, key) in enumerate([
-            ('STEP 1  검색 입력창:', 'search_field'),
-            ('STEP 2  결과 첫 번째:', 'result_first'),
-            ('STEP 3  사용자 선택 버튼:', 'add_button'),
+            ('3번  검색 입력칸:', 'search_field'),
+            ('4번  검색 결과 첫 줄:', 'result_first'),
+            ('5번  오른쪽 화살표 버튼:', 'add_button'),
         ]):
             tk.Label(pos_frame, text=label_text,
                      font=('맑은 고딕', 9, 'bold')).grid(
@@ -1712,6 +1914,14 @@ class App:
         )
         self.retry_failed_btn.pack(side='left', padx=4)
 
+        self.failed_list_btn = tk.Button(
+            btn_frame, text='📋  실패 명단 보기',
+            bg='#B71C1C', fg='white', activebackground='#8E0000',
+            relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
+            cursor='hand2', state='disabled', command=self._show_failure_report
+        )
+        self.failed_list_btn.pack(side='left', padx=4)
+
         tk.Button(
             btn_frame, text='로그 지우기',
             bg='#607D8B', fg='white', activebackground='#455A64',
@@ -1797,11 +2007,12 @@ class App:
             )
 
     def _refresh_failed_retry_state(self):
-        btn = getattr(self, 'retry_failed_btn', None)
-        if not btn:
-            return
         has_failed = any(item.get('failure_reason') for item in self.names_list)
-        btn.config(state='normal' if has_failed else 'disabled')
+        state = 'normal' if has_failed else 'disabled'
+        for name in ('retry_failed_btn', 'failed_list_btn'):
+            btn = getattr(self, name, None)
+            if btn:
+                btn.config(state=state)
 
     @staticmethod
     def _org_needs_review(item: dict) -> bool:
@@ -2427,8 +2638,8 @@ class App:
         intro = getattr(self, 'calib_intro', None)
         if intro:
             intro.config(text=(
-                '소통메신저 [사용자 선택] 창을 열어 둔 상태에서 아래 3곳을 순서대로 설정하세요.\n'
-                'STEP 1: 검색 입력창  ·  STEP 2: 결과 첫 번째 항목  ·  STEP 3: 사용자 선택 버튼\n'
+                '소통메신저에서 [쪽지작성] 과 [받는사람 추가] 를 눌러 [사용자 선택] 창을 열어 두세요.\n'
+                '아래 차례에서 3번 검색 입력칸, 4번 검색 결과 첫 줄, 5번 화살표 버튼을 잡습니다.\n'
                 '[캡처 시작] 을 누른 뒤 잡을 자리를 클릭하면 그 자리가 저장됩니다. '
                 'Enter 로도 확정되고 Esc 는 취소입니다.'
             ))
@@ -2648,7 +2859,9 @@ class App:
             'result_first': '결과 첫 번째 행',
             'add_button':   '사용자 선택 버튼',
         }
-        CaptureDialog(self.root, on_captured, label=labels.get(key, key))
+        CaptureDialog(self.root, on_captured, label=labels.get(key, key),
+                      hint=CAPTURE_HINTS.get(key, ''),
+                      step=CAPTURE_STEP_KEYS.get(key, ''))
 
     def _save_calib(self):
         self.config.data['search_delay'] = round(self.delay_var.get(), 1)
@@ -2812,12 +3025,18 @@ class App:
         self.continue_event.set()
         self.continue_btn.config(state='disabled')
 
+    def _failed_items(self) -> list:
+        """받는 사람에 들어가지 못했거나 확인하지 못한 항목."""
+        return [item for item in self.names_list if item.get('failure_reason')]
+
     def _retry_failed(self):
-        failed = [
-            {'org': item.get('org', ''), 'name': item.get('name', '')}
-            for item in self.names_list
-            if item.get('failure_reason')
-        ]
+        # 항목을 통째로 가져온다. 예전에는 기관명과 이름만 옮겨서, 따로 만들어 둔
+        # 검색어(search)가 사라진 채 엉뚱하게 검색됐다.
+        failed = []
+        for item in self._failed_items():
+            copied = dict(item)
+            copied.pop('failure_reason', None)
+            failed.append(copied)
         if not failed:
             messagebox.showinfo('알림', '다시 실행할 실패 항목이 없습니다.')
             return
@@ -2826,9 +3045,17 @@ class App:
         self.parse_status.config(text=f'실패 항목 재실행 준비: {len(failed)}명', fg='green')
         self._start()
 
+    def _show_failure_report(self):
+        """실패한 사람만 사유별로 모아 보여 준다."""
+        failed = self._failed_items()
+        if not failed:
+            messagebox.showinfo('알림', '실패한 항목이 없습니다.')
+            return
+        FailureReport(self.root, failed, self._retry_failed)
+
     # ── 자동화 워커 ────────────────────────────
     def _worker(self, run_items):
-        ok = fail = 0
+        ok = fail = unchecked = 0
         manual = self.config.data.get('manual_confirm', False)
         total = len(run_items)
         no_result_streak = 0
@@ -2911,6 +3138,13 @@ class App:
                         self._update_progress(idx + 1, total)
                         continue
                     unverified_streak = 0
+                    if result == 'unchecked':
+                        # 확인하지 않은 것을 성공이라고 하지 않는다.
+                        unchecked += 1
+                        self._log('?  (추가됐는지 확인 못 함)\n')
+                        self._mark_failed(idx, FAIL_UNCHECKED)
+                        self._update_progress(idx + 1, total)
+                        continue
                     ok += 1
                     self._log('✓\n')
             except pyautogui.FailSafeException:
@@ -2927,7 +3161,7 @@ class App:
             time.sleep(0.1)
 
         stopped = self.stop_flag.is_set()
-        self.root.after(0, lambda: self._done(ok, fail, stopped))
+        self.root.after(0, lambda: self._done(ok, fail, stopped, unchecked))
 
     def _do_search(self, search_str: str):
         x = self.config.data['search_field_x']
@@ -2983,11 +3217,11 @@ class App:
         if self._click_add_once(POPUP_WAIT_ADD):
             return 'duplicate'      # 명단을 돌리기 전부터 받는 사람에 있던 사람
         if not self.config.data.get('verify_add', True):
-            return 'ok'
+            return 'unchecked'
         if self._win32gui() is None:
             # 창을 들여다볼 수 없으면 확인할 방법이 없다. 멀쩡히 추가된 사람을
-            # 실패로 몰아세우지 않는다.
-            return 'ok'
+            # 실패로 몰아세우지도, 확인하지 않은 것을 성공이라 하지도 않는다.
+            return 'unchecked'
         for _ in range(VERIFY_ADD_TRIES):
             if self.stop_flag.is_set():
                 return 'stopped'
@@ -3174,6 +3408,54 @@ class App:
         except Exception as exc:
             raise RuntimeError(f'좌표 오류: 결과 위치 확인 실패 ({exc})') from exc
 
+    def _search_result_count(self):
+        """소통메신저가 적어 둔 '검색 결과(N명)' 을 읽는다. 못 읽으면 None.
+
+        화면 픽셀보다 확실하다. 0명이면 그 이름으로 찾은 사람이 없다는 뜻이고,
+        숫자가 있으면 검색이 실제로 돌았다는 뜻이다. 라벨을 찾으면 핸들을
+        기억해 두고 다음부터는 그 창의 글만 읽는다.
+        """
+        gui = self._win32gui()
+        if gui is None:
+            return None
+        hwnd = getattr(self, '_count_hwnd', None)
+        if hwnd:
+            try:
+                found = SEARCH_COUNT_RE.search(gui.GetWindowText(hwnd) or '')
+                if found:
+                    return int(found.group(1))
+            except Exception as exc:
+                logging.debug('검색 결과 수를 읽지 못했습니다: %s', exc)
+            self._count_hwnd = None
+        for window in self._snapshot_dialogs():
+            for text in self._window_texts(window):
+                found = SEARCH_COUNT_RE.search(text or '')
+                if found:
+                    self._count_hwnd = self._find_text_hwnd(window, SEARCH_COUNT_RE)
+                    return int(found.group(1))
+        return None
+
+    def _find_text_hwnd(self, parent, pattern):
+        """그 글이 적힌 자식 창의 핸들. 못 찾으면 None."""
+        gui = self._win32gui()
+        if gui is None:
+            return None
+        hit = []
+
+        def collect(child, _):
+            try:
+                if pattern.search(gui.GetWindowText(child) or ''):
+                    hit.append(child)
+            except Exception:
+                pass
+            return True
+
+        try:
+            gui.EnumChildWindows(parent, collect, None)
+        except Exception as exc:
+            logging.debug('자식 창 확인 실패: %s', exc)
+        return hit[0] if hit else None
+
     def _wait_for_result(self, previous=None) -> str:
         """검색 결과가 새로 그려질 때까지 기다린다.
 
@@ -3193,6 +3475,11 @@ class App:
         while True:
             if self.stop_flag.is_set():
                 return 'stopped'
+            # 소통메신저가 건수를 적어 두면 그걸 먼저 믿는다. 0명이면 더 기다릴
+            # 것도 없이 그 이름으로 찾은 사람이 없다는 뜻이다.
+            counted = self._search_result_count()
+            if counted == 0:
+                return 'empty'
             current = self._result_pixels()
             if current is None:
                 # 화면 영역을 못 읽는 환경에서는 예전처럼 한 점만 본다.
@@ -3217,7 +3504,7 @@ class App:
         )
         self.continue_btn.config(state='normal')
 
-    def _done(self, ok: int, fail: int, stopped: bool = False):
+    def _done(self, ok: int, fail: int, stopped: bool = False, unchecked: int = 0):
         self.worker_thread = None
         self.start_btn.config(state='normal')
         self.stop_btn.config(state='disabled')
@@ -3225,20 +3512,19 @@ class App:
         self._refresh_failed_retry_state()
         sep = '─' * 44
         result_word = '중지' if stopped else '완료'
-        self._log(f'\n{sep}\n{result_word}  ✓ {ok}명   ✗ {fail}명\n')
+        tail = f'   ?  확인 못 함 {unchecked}명' if unchecked else ''
+        self._log(f'\n{sep}\n{result_word}  ✓ {ok}명   ✗ {fail}명{tail}\n')
+        summary = f'성공: {ok}명, 실패: {fail}명'
+        if unchecked:
+            summary += f', 확인 못 함: {unchecked}명'
         if stopped:
-            self.status_var.set(f'중지됨  ·  성공: {ok}명, 실패: {fail}명')
+            self.status_var.set(f'중지됨  ·  {summary}')
             return
-        if fail:
-            self.status_var.set(f'완료 — 성공: {ok}명, 실패: {fail}명  ← 빨간색 항목 확인')
-            messagebox.showwarning(
-                '추가 실패 알림',
-                f'받는 사람에 추가되지 않은 인원이 있습니다.\n\n'
-                f'  ✓ 성공: {ok}명\n'
-                f'  ✗ 실패: {fail}명\n\n'
-                f'[1. 명단 입력] 탭에서 빨간색 항목을 확인하세요.\n'
-                f'(검색 결과 없음, 이미 선택된 사용자, 추가 안 됨)'
-            )
+        if fail or unchecked:
+            self.status_var.set(f'완료 — {summary}  ← 빨간색 항목 확인')
+            # 빠진 사람은 목록으로 보여 준다. 몇 명인지만 알려 주면 누가 빠졌는지
+            # 로그를 거슬러 올라가며 찾아야 한다.
+            self._show_failure_report()
         else:
             self.status_var.set(f'완료 — 성공: {ok}명')
 
@@ -3260,7 +3546,10 @@ class App:
             self.names_list[idx]['failure_reason'] = reason
             self.parsed_list.delete(idx)
             self.parsed_list.insert(idx, self._format_item_label(self.names_list[idx]))
-            self.parsed_list.itemconfig(idx, {'bg': '#FFCDD2', 'fg': '#B71C1C'})
+            # 확인하지 못한 것은 실패와 구분해 노란색으로 둔다.
+            colors = ({'bg': '#FFF3CD', 'fg': '#7A5B00'} if reason == FAIL_UNCHECKED
+                      else {'bg': '#FFCDD2', 'fg': '#B71C1C'})
+            self.parsed_list.itemconfig(idx, colors)
             self._refresh_failed_retry_state()
         self.root.after(0, apply)
 

@@ -4,6 +4,8 @@ FAIL_NO_USER = '사용자 없음'
 FAIL_DUPLICATE = '중복'
 FAIL_NOT_ADDED = '추가 안 됨'
 FAIL_SEARCH_STALE = '검색 결과 안 바뀜'
+# 추가는 했는데 들어갔는지 확인하지 못한 경우. 성공도 실패도 아니므로 따로 센다.
+FAIL_UNCHECKED = '확인 못 함'
 FAIL_COORDINATE = '좌표 오류'
 FAIL_MANUAL_STOP = '수동 중지'
 FAIL_AUTOMATION = '자동화 오류'

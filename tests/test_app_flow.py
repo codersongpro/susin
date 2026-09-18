@@ -840,12 +840,80 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual(clicked.call_count, 1)
 
     def test_verification_can_be_turned_off(self):
+        """확인을 끄면 클릭은 한 번이고, 결과는 확인 못 함으로 남는다."""
         self._use_verify(False)
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_click_add_once',
                              return_value=False) as clicked:
-            self.assertEqual(self.app._do_select(), 'ok')
+            self.assertEqual(self.app._do_select(), 'unchecked')
         self.assertEqual(clicked.call_count, 1)
+
+    # ── 실패 명단 ──────────────────────────────
+    def test_retry_keeps_the_whole_item(self):
+        """다시 실행할 때 검색어를 잃지 않는다.
+
+        예전에는 기관명과 이름만 옮겨서, 따로 만들어 둔 검색어가 사라진 채로
+        엉뚱하게 검색됐다.
+        """
+        self.app.names_list = [
+            {'org': '죽리초등학교', 'name': '김민혁', 'search': '죽리초등학교+김민혁',
+             'grade': 'exact', 'failure_reason': '사용자 없음'},
+            {'org': '백곡초등학교', 'name': '권순범'},
+        ]
+        try:
+            with patch.object(self.app, '_start') as started:
+                self.app._retry_failed()
+            started.assert_called_once()
+            self.assertEqual(len(self.app.names_list), 1)
+            retried = self.app.names_list[0]
+            self.assertEqual(retried['search'], '죽리초등학교+김민혁')
+            self.assertEqual(retried['grade'], 'exact')
+            self.assertNotIn('failure_reason', retried)
+        finally:
+            self.app.names_list = []
+
+    def test_failure_report_groups_by_reason(self):
+        m = self.app_module
+        items = [
+            {'org': '가초등학교', 'name': '갑', 'failure_reason': '사용자 없음'},
+            {'org': '나초등학교', 'name': '을', 'failure_reason': '추가 안 됨'},
+            {'org': '다초등학교', 'name': '병', 'failure_reason': '사용자 없음'},
+        ]
+        report = m.FailureReport(_Widget(), items)
+        groups = dict((reason, len(rows)) for reason, rows in report.grouped())
+        self.assertEqual(groups, {'사용자 없음': 2, '추가 안 됨': 1})
+        text = report.as_text()
+        self.assertIn('[사용자 없음]  2명', text)
+        self.assertIn('가초등학교 갑', text)
+        self.assertIn('나초등학교 을', text)
+
+    def test_failure_report_uses_the_search_text_when_there_is_one(self):
+        m = self.app_module
+        report = m.FailureReport(_Widget(), [
+            {'org': '충청북도교육청', 'search': '충청북도교육청 행정과',
+             'grade': 'exact', 'failure_reason': '기관코드 없음'},
+        ])
+        self.assertIn('충청북도교육청 행정과', report.as_text())
+
+    def test_search_count_zero_means_no_result(self):
+        """소통메신저가 0명이라고 적어 두면 더 기다리지 않는다."""
+        with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                patch.object(self.app, '_search_result_count', return_value=0), \
+                patch.object(self.app, '_result_pixels') as looked:
+            self.assertEqual(self.app._wait_for_result(), 'empty')
+        looked.assert_not_called()
+
+    def test_search_count_is_read_from_the_window(self):
+        gui = types.SimpleNamespace(
+            GetWindowText=lambda hwnd: '검색 결과(2명)',
+            EnumChildWindows=lambda parent, cb, extra: cb(11, None),
+        )
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_window_texts',
+                             return_value=['사용자 선택', '검색 결과(2명)']):
+            self.app._count_hwnd = None
+            self.assertEqual(self.app._search_result_count(), 2)
 
     def test_late_popup_is_still_caught(self):
         """안내창이 늦게 떠도 놓치지 않는다.
@@ -864,13 +932,16 @@ class AppFlowTest(unittest.TestCase):
             self.assertTrue(self.app._click_add_once(1.0))
 
     def test_verification_is_skipped_without_window_access(self):
-        """창을 못 들여다보면 확인을 건너뛴다. 멀쩡한 사람을 실패로 만들지 않는다."""
+        """창을 못 들여다보면 확인 못 함으로 둔다.
+
+        멀쩡한 사람을 실패로 몰지도, 확인하지 않은 것을 성공이라 하지도 않는다.
+        """
         self._use_verify(True, windows=False)
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_win32gui', return_value=None), \
                 patch.object(self.app, '_click_add_once',
                              return_value=False) as clicked:
-            self.assertEqual(self.app._do_select(), 'ok')
+            self.assertEqual(self.app._do_select(), 'unchecked')
         self.assertEqual(clicked.call_count, 1)
 
     def test_verification_clicks_only_once(self):

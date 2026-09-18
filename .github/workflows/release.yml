@@ -78,7 +78,7 @@ jobs:
           --distpath dist-onefile --workpath build-onefile
           --add-data "org_db.json;."
           --add-data "org_codes.json;."
-          --add-data "assets/수신그룹_양식.xlsx;assets"
+          --add-data "assets/수신그룹_양식.xlsx;assets" --add-data "assets/guide;assets/guide"
           --hidden-import pyperclip
           --hidden-import openpyxl
           --hidden-import PIL
@@ -96,7 +96,7 @@ jobs:
           --distpath dist-onedir --workpath build-onedir
           --add-data "org_db.json;."
           --add-data "org_codes.json;."
-          --add-data "assets/수신그룹_양식.xlsx;assets"
+          --add-data "assets/수신그룹_양식.xlsx;assets" --add-data "assets/guide;assets/guide"
           --hidden-import pyperclip
           --hidden-import openpyxl
           --hidden-import PIL
