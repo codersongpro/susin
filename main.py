@@ -3,8 +3,8 @@
 수신 + 소통. 명단을 읽어 충북 기관명으로 정리하는 파이프라인은 하나이고,
 두 도구를 합친 것이다.
 
-  소통픽 — 소통메신저 [사용자 선택] 창에서 수신자를 자동으로 골라 담는다
   수신픽 — 에듀파인 공문 수신그룹 일괄등록 엑셀을 만든다
+  소통픽 — 소통메신저 [사용자 선택] 창에서 수신자를 자동으로 골라 담는다
 """
 
 APP_NAME    = '신통픽'
@@ -407,8 +407,8 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   명단을 붙여넣으면 충북 기관명으로 정리해 주고,
   그 결과를 두 곳 중 한 곳으로 내보냅니다.
 
-    소통메신저 — [사용자 선택] 창에서 자동으로 골라 담기
     에듀파인   — 개인수신그룹 일괄등록 엑셀 만들기
+    소통메신저 — [사용자 선택] 창에서 자동으로 골라 담기
 
   [1. 명단 입력] 탭 맨 위에서 어느 쪽을 쓸지 고릅니다.
   고른 쪽에 필요한 탭만 남습니다.
@@ -1214,7 +1214,8 @@ class App:
 
         self.target_var = tk.StringVar(value=self.config.target)
         self.target_cards = {}
-        for col, target in enumerate((TARGET_MESSENGER, TARGET_EDUFINE)):
+        # 신통픽은 수신픽 + 소통픽이다. 이름 순서대로 수신픽을 왼쪽에 둔다.
+        for col, target in enumerate((TARGET_EDUFINE, TARGET_MESSENGER)):
             card = tk.Frame(picker, cursor='hand2', highlightthickness=3)
             card.grid(row=1, column=col, sticky='nsew',
                       padx=(14, 7) if col == 0 else (7, 14), pady=(0, 12))

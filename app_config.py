@@ -19,7 +19,8 @@ CONFIG_FILE = DEFAULT_CONFIG_FILE
 
 TARGET_MESSENGER = 'messenger'
 TARGET_EDUFINE = 'edufine'
-TARGETS = (TARGET_MESSENGER, TARGET_EDUFINE)
+# 화면에 놓는 차례. 신통픽은 수신픽 + 소통픽이라 수신픽이 앞이다.
+TARGETS = (TARGET_EDUFINE, TARGET_MESSENGER)
 
 # 신통픽은 두 도구를 합친 것이다. 화면에서는 각각의 이름으로 부른다.
 TARGET_LABELS = {

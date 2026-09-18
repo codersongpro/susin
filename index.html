@@ -567,7 +567,7 @@
         <div class="section-label">충청북도교육청</div>
         <h1 class="display-hero">신통픽</h1>
         <p class="hero-sub">
-          <strong>소통픽</strong>은 소통메신저 수신자를, <strong>수신픽</strong>은 에듀파인 공문 수신그룹을 맡습니다.<br>
+          <strong>수신픽</strong>은 에듀파인 공문 수신그룹을, <strong>소통픽</strong>은 소통메신저 수신자를 맡습니다.<br>
           둘을 합친 것이 신통픽입니다. 명단을 붙여넣고 결과를 확인한 뒤 필요한 파일을 만들거나 수신자를 선택할 수 있습니다.
         </p>
         <div class="hero-ctas">
@@ -636,7 +636,7 @@
       </div>
       <div class="feature-card">
         <span class="f-icon">🏛️</span>
-        <div class="f-name">수신픽 — 에듀파인</div>
+        <div class="f-name">수신픽 (에듀파인)</div>
         <div class="f-desc">기관 명단으로 개인수신그룹 일괄등록 엑셀을 만듭니다.
           한 번 등록해 두면 다음부터는 그룹만 고르면 끝납니다.</div>
       </div>
@@ -663,19 +663,10 @@
     <div class="display-lg">두 가지 도구, 각각 안내합니다</div>
     <p style="color:var(--body);">
       하려는 일에 맞는 안내만 골라 보시면 됩니다. 프로그램 안에서도 창 맨 위에서
-      소통픽과 수신픽을 바꿀 수 있고, 선택한 도구에 필요한 탭만 표시됩니다.
+      수신픽과 소통픽을 바꿀 수 있고, 선택한 도구에 필요한 탭만 표시됩니다.
     </p>
 
     <div class="guide-grid" aria-label="제품별 사용 방법">
-      <article class="guide-card">
-        <div class="guide-name">소통픽 사용법</div>
-        <p class="guide-desc">
-          소통메신저 [사용자 선택] 창에서 명단의 사람을 차례로 검색하고 담습니다.
-          처음에는 검색칸·검색 결과·사용자 선택 버튼의 위치를 한 번 설정합니다.
-        </p>
-        <a class="guide-video" href="https://youtu.be/shZnB5NRN5g"
-           target="_blank" rel="noopener">▶ 소통픽 영상 보기</a>
-      </article>
       <article class="guide-card">
         <div class="guide-name">수신픽 사용법</div>
         <p class="guide-desc">
@@ -685,18 +676,102 @@
         <a class="guide-video" href="https://youtu.be/IcFX3UKdMEw"
            target="_blank" rel="noopener">▶ 수신픽 영상 보기</a>
       </article>
+      <article class="guide-card">
+        <div class="guide-name">소통픽 사용법</div>
+        <p class="guide-desc">
+          소통메신저 [사용자 선택] 창에서 명단의 사람을 차례로 검색하고 담습니다.
+          처음에는 검색칸·검색 결과·사용자 선택 버튼의 위치를 한 번 설정합니다.
+        </p>
+        <a class="guide-video" href="https://youtu.be/shZnB5NRN5g"
+           target="_blank" rel="noopener">▶ 소통픽 영상 보기</a>
+      </article>
     </div>
 
     <div class="how-shell">
       <div class="how-tabs" role="tablist" aria-label="사용 방법 단계">
-        <button class="how-tab active" role="tab" aria-selected="true" aria-controls="tab1" id="tab-btn-1" onclick="switchTab(this,'tab1')">① 소통픽 · 명단 넣기</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab2" id="tab-btn-2" onclick="switchTab(this,'tab2')">② 소통픽 · 위치 설정</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab3" id="tab-btn-3" onclick="switchTab(this,'tab3')">③ 소통픽 · 자동 선택</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab4" id="tab-btn-4" onclick="switchTab(this,'tab4')">④ 수신픽 · 수신그룹 엑셀</button>
+        <button class="how-tab active" role="tab" aria-selected="true" aria-controls="tab4" id="tab-btn-4" onclick="switchTab(this,'tab4')">① 수신픽 · 수신그룹 엑셀</button>
+        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab1" id="tab-btn-1" onclick="switchTab(this,'tab1')">② 소통픽 · 명단 넣기</button>
+        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab2" id="tab-btn-2" onclick="switchTab(this,'tab2')">③ 소통픽 · 위치 설정</button>
+        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab3" id="tab-btn-3" onclick="switchTab(this,'tab3')">④ 소통픽 · 자동 선택</button>
       </div>
 
+      <!-- 탭 4 — 에듀파인 -->
+      <div id="tab4" class="how-panel active" role="tabpanel" aria-labelledby="tab-btn-4">
+        <div class="notice info" style="margin-bottom:20px;">
+          <span class="notice-icon">ℹ</span>
+          <div class="notice-body">
+            수신 기관이 30곳이면 조직도에서 검색하고, 체크하고, [&gt;&gt;] 누르기를 30번 합니다.
+            <strong>클릭 120번</strong>입니다.
+            수신그룹을 한 번 등록해 두면 다음부터는 [수신자 지정 &gt; 개인수신그룹] 에서
+            그룹 하나만 고르면 됩니다. <strong>클릭 2번</strong>이 됩니다.
+          </div>
+        </div>
+        <ul class="step-list">
+          <li class="step-item">
+            <div class="step-num hi">1</div>
+            <div>
+              <div class="step-title">내 정보 넣기 (처음 한 번만)</div>
+              <div class="step-desc">
+                [수신그룹 엑셀] 탭에서 에듀파인 <strong>사용자ID</strong>와 <strong>이름</strong>을 적습니다.
+                등록교육청은 충청북도교육청으로 자동 적용됩니다.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num hi">2</div>
+            <div>
+              <div class="step-title">기관 명단 넣기</div>
+              <div class="step-desc">
+                줄바꿈이든 쉼표든 탭이든 상관없습니다. 문서 제목, 순번, 역할, 직위, 연락처가
+                섞인 표를 통째로 붙여넣어도 기관만 골라냅니다.
+                학교는 약칭으로 적어도 되고, 부서는 [기관 찾아보기]에서 검색해 골라도 됩니다.
+              </div>
+              <div class="paste-demo">
+                <div class="paste-demo-head"><span>붙여넣는 그대로</span><span>인식 결과</span></div>
+                <div class="paste-demo-row"><span class="col-org">학성초</span><span class="col-name">학성초등학교</span></div>
+                <div class="paste-demo-row"><span class="col-org">충북외고</span><span class="col-name">충북외국어고등학교</span></div>
+                <div class="paste-demo-row"><span class="col-org">1  회장  학성초등학교  교사  송동석</span><span class="col-name">학성초등학교</span></div>
+                <div class="paste-demo-row"><span class="col-org">청주교육지원청 행정과</span><span class="col-name">충청북도청주교육지원청 행정과</span></div>
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num hi">3</div>
+            <div>
+              <div class="step-title">확인이 필요한 것만 고르기</div>
+              <div class="step-desc">
+                <strong>행정과</strong>는 11곳에 있습니다. 이런 이름은 한 곳으로 정하지 않고
+                후보를 보여줍니다. 더블클릭해서 고르면 됩니다.
+                <strong>고르지 않은 항목은 엑셀에 들어가지 않습니다.</strong>
+                올린 엑셀은 그대로 등록되니, 애매한 채로 넘어가는 일이 없게 막아 둔 겁니다.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num hi">4</div>
+            <div>
+              <div class="step-title">엑셀 만들어 올리기</div>
+              <div class="step-desc">
+                그룹명은 <strong>2026 진천 초등학교</strong>처럼 나중에 찾기 쉬운 이름으로 적습니다.
+                그룹기호는 선택 사항이라 필요 없으면 비워 둡니다.
+                [수신그룹 엑셀 만들기]를 누른 뒤 나온 파일을 에듀파인
+                [개인설정 &gt; 개인수신그룹관리 &gt; 일괄등록]에 올리면 끝입니다.
+                에듀파인이 내려주는 양식 그대로라 서식이 어긋날 일은 없습니다.
+                코드가 없어서 빠지는 기관이 있으면 목록으로 알려줍니다.
+              </div>
+            </div>
+          </li>
+        </ul>
+        <div class="notice warn" style="margin-top:20px;">
+          <span class="notice-icon">⚠</span>
+          <div class="notice-body">
+            처음에는 <strong>기관 두세 곳으로 시험 그룹</strong>을 하나 만들어 올려 보세요.
+            등록된 곳이 생각한 기관과 맞는지 확인하고 나서 실제 공문에 쓰시면 됩니다.
+          </div>
+        </div>
+      </div>
       <!-- 탭 1 -->
-      <div id="tab1" class="how-panel active" role="tabpanel" aria-labelledby="tab-btn-1">
+      <div id="tab1" class="how-panel" role="tabpanel" aria-labelledby="tab-btn-1">
         <ul class="step-list">
           <li class="step-item">
             <div class="step-num hi">1</div>
@@ -813,81 +888,6 @@
         </div>
       </div>
 
-      <!-- 탭 4 — 에듀파인 -->
-      <div id="tab4" class="how-panel" role="tabpanel" aria-labelledby="tab-btn-4">
-        <div class="notice info" style="margin-bottom:20px;">
-          <span class="notice-icon">ℹ</span>
-          <div class="notice-body">
-            수신 기관이 30곳이면 조직도에서 검색하고, 체크하고, [&gt;&gt;] 누르기를 30번 합니다.
-            <strong>클릭 120번</strong>입니다.
-            수신그룹을 한 번 등록해 두면 다음부터는 [수신자 지정 &gt; 개인수신그룹] 에서
-            그룹 하나만 고르면 됩니다. <strong>클릭 2번</strong>이 됩니다.
-          </div>
-        </div>
-        <ul class="step-list">
-          <li class="step-item">
-            <div class="step-num hi">1</div>
-            <div>
-              <div class="step-title">내 정보 넣기 (처음 한 번만)</div>
-              <div class="step-desc">
-                [수신그룹 엑셀] 탭에서 에듀파인 <strong>사용자ID</strong>와 <strong>이름</strong>을 적습니다.
-                등록교육청은 충청북도교육청으로 자동 적용됩니다.
-              </div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">2</div>
-            <div>
-              <div class="step-title">기관 명단 넣기</div>
-              <div class="step-desc">
-                줄바꿈이든 쉼표든 탭이든 상관없습니다. 문서 제목, 순번, 역할, 직위, 연락처가
-                섞인 표를 통째로 붙여넣어도 기관만 골라냅니다.
-                학교는 약칭으로 적어도 되고, 부서는 [기관 찾아보기]에서 검색해 골라도 됩니다.
-              </div>
-              <div class="paste-demo">
-                <div class="paste-demo-head"><span>붙여넣는 그대로</span><span>인식 결과</span></div>
-                <div class="paste-demo-row"><span class="col-org">학성초</span><span class="col-name">학성초등학교</span></div>
-                <div class="paste-demo-row"><span class="col-org">충북외고</span><span class="col-name">충북외국어고등학교</span></div>
-                <div class="paste-demo-row"><span class="col-org">1  회장  학성초등학교  교사  송동석</span><span class="col-name">학성초등학교</span></div>
-                <div class="paste-demo-row"><span class="col-org">청주교육지원청 행정과</span><span class="col-name">충청북도청주교육지원청 행정과</span></div>
-              </div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">3</div>
-            <div>
-              <div class="step-title">확인이 필요한 것만 고르기</div>
-              <div class="step-desc">
-                <strong>행정과</strong>는 11곳에 있습니다. 이런 이름은 한 곳으로 정하지 않고
-                후보를 보여줍니다. 더블클릭해서 고르면 됩니다.
-                <strong>고르지 않은 항목은 엑셀에 들어가지 않습니다.</strong>
-                올린 엑셀은 그대로 등록되니, 애매한 채로 넘어가는 일이 없게 막아 둔 겁니다.
-              </div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">4</div>
-            <div>
-              <div class="step-title">엑셀 만들어 올리기</div>
-              <div class="step-desc">
-                그룹명은 <strong>2026 진천 초등학교</strong>처럼 나중에 찾기 쉬운 이름으로 적습니다.
-                그룹기호는 선택 사항이라 필요 없으면 비워 둡니다.
-                [수신그룹 엑셀 만들기]를 누른 뒤 나온 파일을 에듀파인
-                [개인설정 &gt; 개인수신그룹관리 &gt; 일괄등록]에 올리면 끝입니다.
-                에듀파인이 내려주는 양식 그대로라 서식이 어긋날 일은 없습니다.
-                코드가 없어서 빠지는 기관이 있으면 목록으로 알려줍니다.
-              </div>
-            </div>
-          </li>
-        </ul>
-        <div class="notice warn" style="margin-top:20px;">
-          <span class="notice-icon">⚠</span>
-          <div class="notice-body">
-            처음에는 <strong>기관 두세 곳으로 시험 그룹</strong>을 하나 만들어 올려 보세요.
-            등록된 곳이 생각한 기관과 맞는지 확인하고 나서 실제 공문에 쓰시면 됩니다.
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </section>
