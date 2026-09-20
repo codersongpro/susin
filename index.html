@@ -277,25 +277,26 @@
     .f-name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
     .f-desc { font-size: 14px; color: var(--body); line-height: 1.55; }
 
-    /* ── Product guide cards ── */
-    .guide-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 28px;
-    }
-    .guide-card {
+    /* ── Product guide blocks ── */
+    .how-group { margin-top: 44px; }
+    .how-group-head {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
       align-items: flex-start;
-      gap: 12px;
-      padding: 24px;
-      background: var(--surface-card);
-      border: 1px solid var(--hairline);
-      border-radius: 12px;
+      justify-content: space-between;
+      gap: 12px 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--hairline);
     }
     .guide-name { font-size: 20px; font-weight: 600; color: var(--ink); }
-    .guide-desc { color: var(--body); font-size: 14px; line-height: 1.65; flex: 1; }
+    .guide-where { font-size: 14px; color: var(--muted); margin-left: 8px; font-weight: 500; }
+    .guide-desc {
+      color: var(--body);
+      font-size: 14px;
+      line-height: 1.65;
+      max-width: 560px;
+      margin-top: 8px;
+    }
     .guide-video {
       display: inline-flex;
       align-items: center;
@@ -332,9 +333,10 @@
       border: 1px solid var(--hairline);
       border-radius: 12px;
       overflow: hidden;
-      margin-top: 40px;
+      margin-top: 20px;
       background: var(--surface-card);
     }
+    .how-shell.single { grid-template-columns: 1fr; }
     .how-tabs {
       border-right: 1px solid var(--hairline);
       background: var(--canvas-soft);
@@ -489,9 +491,28 @@
       margin-bottom: 4px;
     }
     .dev-role { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-    .dev-contact { font-size: 14px; color: var(--body); }
+    .dev-contact { font-size: 14px; color: var(--body); max-width: 560px; }
     .dev-contact a { color: var(--primary); text-decoration: none; }
     .dev-contact a:hover { text-decoration: underline; }
+    .dev-meta {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 8px 16px;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--hairline);
+      font-size: 14px;
+    }
+    .dev-meta dt { color: var(--muted); }
+    .dev-meta dd { color: var(--ink); }
+    .dev-meta a { color: var(--primary); text-decoration: none; }
+    .dev-meta a:hover { text-decoration: underline; }
+    .dev-note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
     .version-pill {
       display: inline-block;
       background: var(--surface-strong);
@@ -542,7 +563,6 @@
       .display-lg { font-size: 28px; }
       .stats-row { gap: 28px; }
       .feature-grid { grid-template-columns: 1fr; }
-      .guide-grid { grid-template-columns: 1fr; }
       .dev-card { flex-direction: column; gap: 16px; }
     }
   </style>
@@ -662,232 +682,240 @@
     <div class="section-label">사용 방법</div>
     <div class="display-lg">두 가지 도구, 각각 안내합니다</div>
     <p style="color:var(--body);">
-      하려는 일에 맞는 안내만 골라 보시면 됩니다. 프로그램 안에서도 창 맨 위에서
-      수신픽과 소통픽을 바꿀 수 있고, 선택한 도구에 필요한 탭만 표시됩니다.
+      수신픽과 소통픽을 따로 적어 두었습니다. 하려는 일에 맞는 쪽만 보시면 됩니다.
+      프로그램 안에서도 창 맨 위에서 도구를 바꿀 수 있고, 고른 쪽에 필요한 탭만 남습니다.
     </p>
 
-    <div class="guide-grid" aria-label="제품별 사용 방법">
-      <article class="guide-card">
-        <div class="guide-name">수신픽 사용법</div>
-        <p class="guide-desc">
-          기관 명단을 확인한 뒤 에듀파인 개인수신그룹 일괄등록용 엑셀을 만듭니다.
-          붉은색 기관은 한 창에서 확정하고, 중복 기관과 추출 기록도 확인할 수 있습니다.
-        </p>
+    <!-- ── 수신픽 ── -->
+    <div class="how-group">
+      <div class="how-group-head">
+        <div>
+          <div class="guide-name">수신픽 사용법<span class="guide-where">에듀파인</span></div>
+          <p class="guide-desc">
+            기관 명단을 확인한 뒤 에듀파인 개인수신그룹 일괄등록용 엑셀을 만듭니다.
+            붉은색 기관은 한 창에서 확정하고, 중복 기관과 추출 기록도 확인할 수 있습니다.
+          </p>
+        </div>
         <a class="guide-video" href="https://youtu.be/IcFX3UKdMEw"
            target="_blank" rel="noopener">▶ 수신픽 영상 보기</a>
-      </article>
-      <article class="guide-card">
-        <div class="guide-name">소통픽 사용법</div>
-        <p class="guide-desc">
-          소통메신저 [사용자 선택] 창에서 명단의 사람을 차례로 검색하고 담습니다.
-          처음에는 검색칸·검색 결과·사용자 선택 버튼의 위치를 한 번 설정합니다.
-        </p>
-        <a class="guide-video" href="https://youtu.be/shZnB5NRN5g"
-           target="_blank" rel="noopener">▶ 소통픽 영상 보기</a>
-      </article>
+      </div>
+
+      <div class="how-shell single">
+        <div id="tab4" class="how-panel active" role="region" aria-label="수신픽 · 수신그룹 엑셀 만들기">
+          <div class="notice info" style="margin-bottom:20px;">
+            <span class="notice-icon">ℹ</span>
+            <div class="notice-body">
+              수신 기관이 30곳이면 조직도에서 검색하고, 체크하고, [&gt;&gt;] 누르기를 30번 합니다.
+              <strong>클릭 120번</strong>입니다.
+              수신그룹을 한 번 등록해 두면 다음부터는 [수신자 지정 &gt; 개인수신그룹] 에서
+              그룹 하나만 고르면 됩니다. <strong>클릭 2번</strong>이 됩니다.
+            </div>
+          </div>
+          <ul class="step-list">
+            <li class="step-item">
+              <div class="step-num hi">1</div>
+              <div>
+                <div class="step-title">내 정보 넣기 (처음 한 번만)</div>
+                <div class="step-desc">
+                  [수신그룹 엑셀] 탭에서 에듀파인 <strong>사용자ID</strong>와 <strong>이름</strong>을 적습니다.
+                  등록교육청은 충청북도교육청으로 자동 적용됩니다.
+                </div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">2</div>
+              <div>
+                <div class="step-title">기관 명단 넣기</div>
+                <div class="step-desc">
+                  줄바꿈이든 쉼표든 탭이든 상관없습니다. 문서 제목, 순번, 역할, 직위, 연락처가
+                  섞인 표를 통째로 붙여넣어도 기관만 골라냅니다.
+                  학교는 약칭으로 적어도 되고, 부서는 [기관 찾아보기]에서 검색해 골라도 됩니다.
+                </div>
+                <div class="paste-demo">
+                  <div class="paste-demo-head"><span>붙여넣는 그대로</span><span>인식 결과</span></div>
+                  <div class="paste-demo-row"><span class="col-org">학성초</span><span class="col-name">학성초등학교</span></div>
+                  <div class="paste-demo-row"><span class="col-org">충북외고</span><span class="col-name">충북외국어고등학교</span></div>
+                  <div class="paste-demo-row"><span class="col-org">1  회장  학성초등학교  교사  송동석</span><span class="col-name">학성초등학교</span></div>
+                  <div class="paste-demo-row"><span class="col-org">청주교육지원청 행정과</span><span class="col-name">충청북도청주교육지원청 행정과</span></div>
+                </div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">3</div>
+              <div>
+                <div class="step-title">확인이 필요한 것만 고르기</div>
+                <div class="step-desc">
+                  <strong>행정과</strong>는 11곳에 있습니다. 이런 이름은 한 곳으로 정하지 않고
+                  후보를 보여줍니다. 더블클릭해서 고르면 됩니다.
+                  <strong>고르지 않은 항목은 엑셀에 들어가지 않습니다.</strong>
+                  올린 엑셀은 그대로 등록되니, 애매한 채로 넘어가는 일이 없게 막아 둔 겁니다.
+                </div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">4</div>
+              <div>
+                <div class="step-title">엑셀 만들어 올리기</div>
+                <div class="step-desc">
+                  그룹명은 <strong>2026 진천 초등학교</strong>처럼 나중에 찾기 쉬운 이름으로 적습니다.
+                  그룹기호는 선택 사항이라 필요 없으면 비워 둡니다.
+                  [수신그룹 엑셀 만들기]를 누른 뒤 나온 파일을 에듀파인
+                  [개인설정 &gt; 개인수신그룹관리 &gt; 일괄등록]에 올리면 끝입니다.
+                  에듀파인이 내려주는 양식 그대로라 서식이 어긋날 일은 없습니다.
+                  코드가 없어서 빠지는 기관이 있으면 목록으로 알려줍니다.
+                </div>
+              </div>
+            </li>
+          </ul>
+          <div class="notice warn" style="margin-top:20px;">
+            <span class="notice-icon">⚠</span>
+            <div class="notice-body">
+              처음에는 <strong>기관 두세 곳으로 시험 그룹</strong>을 하나 만들어 올려 보세요.
+              등록된 곳이 생각한 기관과 맞는지 확인하고 나서 실제 공문에 쓰시면 됩니다.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="how-shell">
-      <div class="how-tabs" role="tablist" aria-label="사용 방법 단계">
-        <button class="how-tab active" role="tab" aria-selected="true" aria-controls="tab4" id="tab-btn-4" onclick="switchTab(this,'tab4')">① 수신픽 · 수신그룹 엑셀</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab1" id="tab-btn-1" onclick="switchTab(this,'tab1')">② 소통픽 · 명단 넣기</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab2" id="tab-btn-2" onclick="switchTab(this,'tab2')">③ 소통픽 · 위치 설정</button>
-        <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab3" id="tab-btn-3" onclick="switchTab(this,'tab3')">④ 소통픽 · 자동 선택</button>
+    <!-- ── 소통픽 ── -->
+    <div class="how-group">
+      <div class="how-group-head">
+        <div>
+          <div class="guide-name">소통픽 사용법<span class="guide-where">소통메신저</span></div>
+          <p class="guide-desc">
+            소통메신저 [사용자 선택] 창에서 명단의 사람을 차례로 검색하고 담습니다.
+            처음에는 검색칸과 검색 결과, 사용자 선택 버튼의 위치를 한 번 설정합니다.
+          </p>
+        </div>
+        <a class="guide-video" href="https://youtu.be/shZnB5NRN5g"
+           target="_blank" rel="noopener">▶ 소통픽 영상 보기</a>
       </div>
 
-      <!-- 탭 4 — 에듀파인 -->
-      <div id="tab4" class="how-panel active" role="tabpanel" aria-labelledby="tab-btn-4">
-        <div class="notice info" style="margin-bottom:20px;">
-          <span class="notice-icon">ℹ</span>
-          <div class="notice-body">
-            수신 기관이 30곳이면 조직도에서 검색하고, 체크하고, [&gt;&gt;] 누르기를 30번 합니다.
-            <strong>클릭 120번</strong>입니다.
-            수신그룹을 한 번 등록해 두면 다음부터는 [수신자 지정 &gt; 개인수신그룹] 에서
-            그룹 하나만 고르면 됩니다. <strong>클릭 2번</strong>이 됩니다.
+      <div class="how-shell">
+        <div class="how-tabs" role="tablist" aria-label="소통픽 사용 단계">
+          <button class="how-tab active" role="tab" aria-selected="true" aria-controls="tab1" id="tab-btn-1" onclick="switchTab(this,'tab1')">① 명단 넣기</button>
+          <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab2" id="tab-btn-2" onclick="switchTab(this,'tab2')">② 위치 설정</button>
+          <button class="how-tab" role="tab" aria-selected="false" aria-controls="tab3" id="tab-btn-3" onclick="switchTab(this,'tab3')">③ 자동 선택</button>
+        </div>
+
+        <div id="tab1" class="how-panel active" role="tabpanel" aria-labelledby="tab-btn-1">
+          <ul class="step-list">
+            <li class="step-item">
+              <div class="step-num hi">1</div>
+              <div>
+                <div class="step-title">소통메신저 발송 창 열기</div>
+                <div class="step-desc">오른쪽 위 편지 아이콘(✉)에 마우스를 올려 <strong>쪽지 작성</strong> 이나
+                  <strong>대화하기</strong> 를 고르고, [사용자 선택] 을 누른 뒤 <strong>전체조직</strong> 탭을 엽니다.</div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">2</div>
+              <div>
+                <div class="step-title">명단 넣기 (둘 중 편한 쪽으로)</div>
+                <div class="step-desc">
+                  <strong>붙여넣기</strong> &nbsp;엑셀이나 한글에서 표를 복사해 입력창에 붙여넣습니다.
+                  직위나 연락처 열이 끼어 있어도 소속기관과 이름만 찾아냅니다.<br>
+                  <strong>파일 열기</strong> &nbsp;[엑셀 파일 열기] 나 [HWP 파일 열기] 를 눌러 바로 여셔도 됩니다.
+                </div>
+                <div class="paste-demo">
+                  <div class="paste-demo-head"><span>소속기관</span><span>이름</span></div>
+                  <div class="paste-demo-row"><span class="col-org">충주중학교</span><span class="col-name">홍길동</span></div>
+                  <div class="paste-demo-row"><span class="col-org">청주고등학교</span><span class="col-name">김철수</span></div>
+                  <div class="paste-demo-row"><span class="col-org">충청북도교육청</span><span class="col-name">이영희</span></div>
+                </div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">3</div>
+              <div>
+                <div class="step-title">[명단 추출 →] 클릭</div>
+                <div class="step-desc">소속기관과 이름을 알아서 나눠 목록에 넣습니다. 잘못 잡힌 것은 더블클릭해서 고치면 됩니다.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 위치 설정 -->
+        <div id="tab2" class="how-panel" role="tabpanel" aria-labelledby="tab-btn-2">
+          <div class="notice info" style="margin-bottom:20px;">
+            <span class="notice-icon">ℹ</span>
+            <div class="notice-body"><strong>처음 한 번만 하면 됩니다.</strong> 소통메신저 창 위치를 옮기지 않는 한 다시 잡을 일은 없습니다. 검색 입력칸, 검색 결과 첫 줄, 화살표 버튼 이 세 곳이 어디인지 알려주는 과정입니다. [캡처 시작] 을 누른 뒤 그 자리를 클릭하면 됩니다. 마우스를 옮긴 뒤 Enter 를 눌러도 확정됩니다. 잡은 위치는 그 자리에서 저장됩니다. 클릭은 소통메신저에도 전달되니, 선택 버튼 자리를 잡을 때는 그 사람이 실제로 추가됩니다.</div>
+          </div>
+          <div class="notice info" style="margin-bottom:20px;">
+            <span class="notice-icon">①</span>
+            <div class="notice-body"><strong>소통메신저에서 누르는 차례입니다.</strong>
+              1번 편지 버튼(오른쪽 위. 누르지 말고 마우스만 올리면 메뉴가 펼쳐집니다),
+              2번 [쪽지작성],
+              3번 [받는사람 추가] 버튼,
+              4번 검색 입력칸('소속+이름 또는 이름 검색' 칸),
+              5번 검색 결과 첫 줄('검색 결과(1명)' 아래 첫 사람),
+              6번 오른쪽 화살표 버튼(결과를 [선택된 사용자] 로 옮기는 버튼).
+              이 가운데 <strong>4번, 5번, 6번</strong> 자리를 신통픽에 알려 주면 됩니다.</div>
+          </div>
+          <ul class="step-list">
+            <li class="step-item">
+              <div class="step-num hi">4</div>
+              <div>
+                <div class="step-title">검색 입력칸</div>
+                <div class="step-desc">[캡처 시작] 을 누르고 '소속+이름 또는 이름 검색' 칸을 클릭합니다.</div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">5</div>
+              <div>
+                <div class="step-title">검색 결과 첫 줄</div>
+                <div class="step-desc">아무 이름이나 검색해 결과가 뜬 상태에서, [캡처 시작] 을 누르고 '검색 결과(1명)' 아래 첫 사람을 클릭합니다.</div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">6</div>
+              <div>
+                <div class="step-title">오른쪽 화살표 버튼</div>
+                <div class="step-desc">같은 화면에서 [캡처 시작] 을 누르고 결과 목록과 [선택된 사용자] 사이의 화살표 버튼을 클릭합니다. 이 클릭으로 그 사람이 실제로 추가되니, 끝난 뒤 받는 사람 목록을 확인하세요.</div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">7</div>
+              <div>
+                <div class="step-title">[✅ 설정 저장] 클릭</div>
+                <div class="step-desc">저장해야 다음에 켤 때도 남아 있습니다.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 자동 선택 -->
+        <div id="tab3" class="how-panel" role="tabpanel" aria-labelledby="tab-btn-3">
+          <ul class="step-list">
+            <li class="step-item">
+              <div class="step-num hi">1</div>
+              <div>
+                <div class="step-title">[▶ 자동 선택 시작] 클릭</div>
+                <div class="step-desc">소통메신저 사용자 선택 창을 열어 둔 채로 누르세요.</div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">2</div>
+              <div>
+                <div class="step-title">자동 진행 중에는 마우스를 건드리지 마세요</div>
+                <div class="step-desc">이름마다 검색하고, 첫 결과를 누르고, 선택 버튼을 누릅니다. 진행 상황은 아래 로그에 한 줄씩 올라옵니다.</div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">3</div>
+              <div>
+                <div class="step-title">결과 확인</div>
+                <div class="step-desc">성공과 실패 건수를 알려줍니다. 빨간 항목은 검색해도 나오지 않은 사람이니 따로 확인하시면 됩니다. 끝난 뒤 소통메신저의 [선택된 사용자] 수가 맞는지 한 번 보시면 좋습니다.</div>
+              </div>
+            </li>
+          </ul>
+          <div class="notice warn" style="margin-top:20px;">
+            <span class="notice-icon">⚠</span>
+            <div class="notice-body"><strong>급히 멈추려면</strong> 마우스를 화면 왼쪽 맨 위 구석으로 빠르게 옮기거나 [중지] 버튼을 누르세요.</div>
           </div>
         </div>
-        <ul class="step-list">
-          <li class="step-item">
-            <div class="step-num hi">1</div>
-            <div>
-              <div class="step-title">내 정보 넣기 (처음 한 번만)</div>
-              <div class="step-desc">
-                [수신그룹 엑셀] 탭에서 에듀파인 <strong>사용자ID</strong>와 <strong>이름</strong>을 적습니다.
-                등록교육청은 충청북도교육청으로 자동 적용됩니다.
-              </div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">2</div>
-            <div>
-              <div class="step-title">기관 명단 넣기</div>
-              <div class="step-desc">
-                줄바꿈이든 쉼표든 탭이든 상관없습니다. 문서 제목, 순번, 역할, 직위, 연락처가
-                섞인 표를 통째로 붙여넣어도 기관만 골라냅니다.
-                학교는 약칭으로 적어도 되고, 부서는 [기관 찾아보기]에서 검색해 골라도 됩니다.
-              </div>
-              <div class="paste-demo">
-                <div class="paste-demo-head"><span>붙여넣는 그대로</span><span>인식 결과</span></div>
-                <div class="paste-demo-row"><span class="col-org">학성초</span><span class="col-name">학성초등학교</span></div>
-                <div class="paste-demo-row"><span class="col-org">충북외고</span><span class="col-name">충북외국어고등학교</span></div>
-                <div class="paste-demo-row"><span class="col-org">1  회장  학성초등학교  교사  송동석</span><span class="col-name">학성초등학교</span></div>
-                <div class="paste-demo-row"><span class="col-org">청주교육지원청 행정과</span><span class="col-name">충청북도청주교육지원청 행정과</span></div>
-              </div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">3</div>
-            <div>
-              <div class="step-title">확인이 필요한 것만 고르기</div>
-              <div class="step-desc">
-                <strong>행정과</strong>는 11곳에 있습니다. 이런 이름은 한 곳으로 정하지 않고
-                후보를 보여줍니다. 더블클릭해서 고르면 됩니다.
-                <strong>고르지 않은 항목은 엑셀에 들어가지 않습니다.</strong>
-                올린 엑셀은 그대로 등록되니, 애매한 채로 넘어가는 일이 없게 막아 둔 겁니다.
-              </div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">4</div>
-            <div>
-              <div class="step-title">엑셀 만들어 올리기</div>
-              <div class="step-desc">
-                그룹명은 <strong>2026 진천 초등학교</strong>처럼 나중에 찾기 쉬운 이름으로 적습니다.
-                그룹기호는 선택 사항이라 필요 없으면 비워 둡니다.
-                [수신그룹 엑셀 만들기]를 누른 뒤 나온 파일을 에듀파인
-                [개인설정 &gt; 개인수신그룹관리 &gt; 일괄등록]에 올리면 끝입니다.
-                에듀파인이 내려주는 양식 그대로라 서식이 어긋날 일은 없습니다.
-                코드가 없어서 빠지는 기관이 있으면 목록으로 알려줍니다.
-              </div>
-            </div>
-          </li>
-        </ul>
-        <div class="notice warn" style="margin-top:20px;">
-          <span class="notice-icon">⚠</span>
-          <div class="notice-body">
-            처음에는 <strong>기관 두세 곳으로 시험 그룹</strong>을 하나 만들어 올려 보세요.
-            등록된 곳이 생각한 기관과 맞는지 확인하고 나서 실제 공문에 쓰시면 됩니다.
-          </div>
-        </div>
       </div>
-      <!-- 탭 1 -->
-      <div id="tab1" class="how-panel" role="tabpanel" aria-labelledby="tab-btn-1">
-        <ul class="step-list">
-          <li class="step-item">
-            <div class="step-num hi">1</div>
-            <div>
-              <div class="step-title">소통메신저 발송 창 열기</div>
-              <div class="step-desc">오른쪽 위 편지 아이콘(✉) → <strong>쪽지 작성</strong> 또는 <strong>대화하기</strong> →
-                [사용자 선택] → <strong>전체조직</strong> 탭 클릭</div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">2</div>
-            <div>
-              <div class="step-title">명단 넣기 (둘 중 편한 쪽으로)</div>
-              <div class="step-desc">
-                <strong>붙여넣기</strong> &nbsp;엑셀이나 한글에서 표를 복사해 입력창에 붙여넣습니다.
-                직위나 연락처 열이 끼어 있어도 소속기관과 이름만 찾아냅니다.<br>
-                <strong>파일 열기</strong> &nbsp;[엑셀 파일 열기] 나 [HWP 파일 열기] 를 눌러 바로 여셔도 됩니다.
-              </div>
-              <div class="paste-demo">
-                <div class="paste-demo-head"><span>소속기관</span><span>이름</span></div>
-                <div class="paste-demo-row"><span class="col-org">충주중학교</span><span class="col-name">홍길동</span></div>
-                <div class="paste-demo-row"><span class="col-org">청주고등학교</span><span class="col-name">김철수</span></div>
-                <div class="paste-demo-row"><span class="col-org">충청북도교육청</span><span class="col-name">이영희</span></div>
-              </div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">3</div>
-            <div>
-              <div class="step-title">[명단 추출 →] 클릭</div>
-              <div class="step-desc">소속기관과 이름을 알아서 나눠 목록에 넣습니다. 잘못 잡힌 것은 더블클릭해서 고치면 됩니다.</div>
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 탭 2 -->
-      <div id="tab2" class="how-panel" role="tabpanel" aria-labelledby="tab-btn-2">
-        <div class="notice info" style="margin-bottom:20px;">
-          <span class="notice-icon">ℹ</span>
-          <div class="notice-body"><strong>처음 한 번만 하면 됩니다.</strong> 소통메신저 창 위치를 옮기지 않는 한 다시 잡을 일은 없습니다. 검색 입력칸, 검색 결과 첫 줄, 화살표 버튼 이 세 곳이 어디인지 알려주는 과정입니다. [캡처 시작] 을 누른 뒤 그 자리를 클릭하면 됩니다. 마우스를 옮긴 뒤 Enter 를 눌러도 확정됩니다. 잡은 위치는 그 자리에서 저장됩니다. 클릭은 소통메신저에도 전달되니, 선택 버튼 자리를 잡을 때는 그 사람이 실제로 추가됩니다.</div>
-        </div>
-        <div class="notice info" style="margin-bottom:20px;">
-          <span class="notice-icon">①</span>
-          <div class="notice-body"><strong>소통메신저에서 누르는 차례입니다.</strong>
-            1번 편지 버튼(오른쪽 위. 누르지 말고 마우스만 올리면 메뉴가 펼쳐집니다),
-            2번 [쪽지작성],
-            3번 [받는사람 추가] 버튼,
-            4번 검색 입력칸('소속+이름 또는 이름 검색' 칸),
-            5번 검색 결과 첫 줄('검색 결과(1명)' 아래 첫 사람),
-            6번 오른쪽 화살표 버튼(결과를 [선택된 사용자] 로 옮기는 버튼).
-            이 가운데 <strong>4번, 5번, 6번</strong> 자리를 신통픽에 알려 주면 됩니다.</div>
-        </div>
-        <ul class="step-list">
-          <li class="step-item">
-            <div class="step-num hi">4</div>
-            <div>
-              <div class="step-title">검색 입력칸</div>
-              <div class="step-desc">[캡처 시작] 을 누르고 '소속+이름 또는 이름 검색' 칸을 클릭합니다.</div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">5</div>
-            <div>
-              <div class="step-title">검색 결과 첫 줄</div>
-              <div class="step-desc">아무 이름이나 검색해 결과가 뜬 상태에서, [캡처 시작] 을 누르고 '검색 결과(1명)' 아래 첫 사람을 클릭합니다.</div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">6</div>
-            <div>
-              <div class="step-title">오른쪽 화살표 버튼</div>
-              <div class="step-desc">같은 화면에서 [캡처 시작] 을 누르고 결과 목록과 [선택된 사용자] 사이의 화살표 버튼을 클릭합니다. 이 클릭으로 그 사람이 실제로 추가되니, 끝난 뒤 받는 사람 목록을 확인하세요.</div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">7</div>
-            <div>
-              <div class="step-title">[✅ 설정 저장] 클릭</div>
-              <div class="step-desc">저장해야 다음에 켤 때도 남아 있습니다.</div>
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 탭 3 -->
-      <div id="tab3" class="how-panel" role="tabpanel" aria-labelledby="tab-btn-3">
-        <ul class="step-list">
-          <li class="step-item">
-            <div class="step-num hi">1</div>
-            <div>
-              <div class="step-title">[▶ 자동 선택 시작] 클릭</div>
-              <div class="step-desc">소통메신저 사용자 선택 창을 열어 둔 채로 누르세요.</div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">2</div>
-            <div>
-              <div class="step-title">자동 진행 중에는 마우스를 건드리지 마세요</div>
-              <div class="step-desc">이름마다 검색하고, 첫 결과를 누르고, 선택 버튼을 누릅니다. 진행 상황은 아래 로그에 한 줄씩 올라옵니다.</div>
-            </div>
-          </li>
-          <li class="step-item">
-            <div class="step-num hi">3</div>
-            <div>
-              <div class="step-title">결과 확인</div>
-              <div class="step-desc">성공과 실패 건수를 알려줍니다. 빨간 항목은 검색해도 나오지 않은 사람이니 따로 확인하시면 됩니다. 끝난 뒤 소통메신저의 [선택된 사용자] 수가 맞는지 한 번 보시면 좋습니다.</div>
-            </div>
-          </li>
-        </ul>
-        <div class="notice warn" style="margin-top:20px;">
-          <span class="notice-icon">⚠</span>
-          <div class="notice-body"><strong>급히 멈추려면</strong> 마우스를 화면 왼쪽 맨 위 구석으로 빠르게 옮기거나 [중지] 버튼을 누르세요.</div>
-        </div>
-      </div>
-
     </div>
   </div>
 </section>
@@ -1039,12 +1067,25 @@
       <div class="dev-avatar">👤</div>
       <div>
         <div class="dev-name">송동석</div>
-        <div class="dev-role">초등교사 · 데이터 분석 · 앱 개발</div>
+        <div class="dev-role">충북 초등교사 · 데이터 분석 · 앱 개발</div>
         <div class="dev-contact">
-          고쳤으면 하는 점이나 안 되는 게 있으면
-          <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a> 으로 알려주세요.
+          공문 수신 기관을 서른 곳 지정하다가 클릭을 백스무 번 한 날 만들기 시작했습니다.
+          같은 일을 하시는 충북 선생님들 쓰시라고 무료로 내놓습니다.
+          고쳤으면 하는 점이나 안 되는 게 있으면 메일로 알려주세요. 그게 다음 버전이 됩니다.
         </div>
-        <div class="version-pill">v2.2.9</div>
+        <dl class="dev-meta">
+          <dt>문의</dt>
+          <dd><a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a></dd>
+          <dt>이용</dt>
+          <dd>무료 · 윈도우 전용 · 설치 없이 실행</dd>
+          <dt>현재 버전</dt>
+          <dd><span class="version-pill">v2.2.9</span></dd>
+        </dl>
+        <div class="dev-note">
+          개인이 만들어 나누는 프로그램입니다. 충청북도교육청이 공식으로 배포하는 프로그램은 아닙니다.
+          명단과 기관 정보는 내 PC 안에서만 다루고 어디로도 보내지 않습니다.
+          인터넷은 새 버전이 나왔는지 확인할 때만 씁니다.
+        </div>
       </div>
     </div>
   </div>
@@ -1062,9 +1103,12 @@
 
 <script>
   function switchTab(btn, id) {
-    document.querySelectorAll('.how-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.how-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.how-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+    const shell = btn.closest('.how-shell');
+    shell.querySelectorAll('.how-tab').forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    shell.querySelectorAll('.how-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     btn.setAttribute('aria-selected', 'true');
     document.getElementById(id).classList.add('active');
