@@ -337,6 +337,43 @@
       background: var(--surface-card);
     }
     .how-shell.single { grid-template-columns: 1fr; }
+
+    /* ── 누르는 자리 캡처 ── */
+    .shot-steps {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 16px;
+      background: var(--canvas-soft);
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+    }
+    .shot-step {
+      display: grid;
+      grid-template-columns: 24px auto minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+    }
+    .shot-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--on-primary);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .guide-shot {
+      display: block;
+      max-width: 100%;
+      border: 1px solid var(--hairline);
+      border-radius: 4px;
+      background: #fff;
+    }
+    .shot-desc { font-size: 14px; color: var(--body); line-height: 1.5; }
+    .shot-desc strong { color: var(--ink); }
     .how-tabs {
       border-right: 1px solid var(--hairline);
       background: var(--canvas-soft);
@@ -564,6 +601,9 @@
       .stats-row { gap: 28px; }
       .feature-grid { grid-template-columns: 1fr; }
       .dev-card { flex-direction: column; gap: 16px; }
+      .shot-step { grid-template-columns: 24px minmax(0, 1fr); row-gap: 8px; }
+      .shot-step .guide-shot { grid-column: 2; }
+      .shot-step .shot-desc { grid-column: 2; }
     }
   </style>
 </head>
@@ -755,14 +795,48 @@
             <li class="step-item">
               <div class="step-num hi">4</div>
               <div>
-                <div class="step-title">엑셀 만들어 올리기</div>
+                <div class="step-title">엑셀 만들기</div>
                 <div class="step-desc">
                   그룹명은 <strong>2026 진천 초등학교</strong>처럼 나중에 찾기 쉬운 이름으로 적습니다.
                   그룹기호는 선택 사항이라 필요 없으면 비워 둡니다.
-                  [수신그룹 엑셀 만들기]를 누른 뒤 나온 파일을 에듀파인
-                  [개인설정 &gt; 개인수신그룹관리 &gt; 일괄등록]에 올리면 끝입니다.
+                  [수신그룹 엑셀 만들기]를 누르면 파일이 나옵니다.
                   에듀파인이 내려주는 양식 그대로라 서식이 어긋날 일은 없습니다.
                   코드가 없어서 빠지는 기관이 있으면 목록으로 알려줍니다.
+                </div>
+              </div>
+            </li>
+            <li class="step-item">
+              <div class="step-num hi">5</div>
+              <div>
+                <div class="step-title">에듀파인에 올리기</div>
+                <div class="step-desc">
+                  에듀파인에서 아래 차례대로 누르고, 마지막에 신통픽이 만든 엑셀을 고르면 끝입니다.
+                </div>
+                <div class="shot-steps">
+                  <div class="shot-step">
+                    <span class="shot-num">1</span>
+                    <img class="guide-shot" data-guide="edufine_settings.png"
+                         alt="에듀파인 개인설정 버튼" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAdCAYAAAC0T3x2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAI9SURBVEhL7ZQxaBNRGMd/d5drSWtSm2COkpbU0qFqbVFwUFsUB0XcBKcu4lKL4OYijurmIkjt1sXJxc26Kak6CBUaiQq19npVmitNMAlNbS53DkpKX+7JUYiD9Adv+d/3vd+7dx+neJ7n8Q9QxaBZ7Il2zf8nUoKO90zW5vGsyXKhQioW5vpIiguHEmKZlECimazNrWdZMebB5SOcHzggxr4Eurqp16YYATCZXhIjKYFEZr4iRgBYBf/cj0CiVCwsRgD0dPrnfgQSjZ9OiREAE6O9YiQl0DAAvPhoM5nenrqJ0d7Ag4BM5AFvFvNMzZosrm/gU1JHURT64m2Mj6Q41RdDEQv+4Ct6tbDOzacfcBsfNVAwTfAgfrCXh1cGOdMfF0tAJhqbnmP+e1GM6xTMZfA8VD1EOWcDsM9IEGtVuTRocO/aObHFfxg+22Ux2kG4cz+lXI5yziZiJIgYCco5m69fLC6e6BfLQSaquQ0vWcdzXX6WSmi6TtfwENFkkmgySdfwEKEWnbfZFSpbjtjmL1IU2SeFb3Pv+WGtoGoaqqbVc1XTCLW2cvdJmoGrj3b0IBP9jeTxY3T0dOM6Dq6zfXK3WsXZ3OTO2Cifpm/s6EEm0jUFXVN9V4seoq0jSs1xWJ2fp2RZlCyL1UwGp+pw8nA34ZaQuKW/aGOrRrXmSld5PU/EMGg3DIr2GkV7jXbDIGIYPH+3IG4HsvE+ev+lGEkpLJmgQGfq928qc/usWAIyUTPwvbpmsCfaNb8AM+3hjYNP3e4AAAAASUVORK5CYII=">
+                    <span class="shot-desc"><strong>[개인설정]</strong> 에듀파인 오른쪽 위에 있습니다.</span>
+                  </div>
+                  <div class="shot-step">
+                    <span class="shot-num">2</span>
+                    <img class="guide-shot" data-guide="edufine_group_menu.png"
+                         alt="개인수신그룹관리 메뉴" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAAAeCAYAAADO4udXAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAQHSURBVHhe7Zq/bxpJFMe/OeUvOE4n7pAbrCguUjjNncBKQ5QCJy6IXFBw2canWNtxJo1loQuKaLyJO2QrNCg+yYVldMpdUIqjORnr3NglLnCDSMgPIqVLlyvCrHbfDuwunomc6H2kkczbGYYdvvN9bwdfePP+w0cwjGK+oQGGUQELi9ECC4vRAguL0QILi9ECC4vRAguL0QILi9GCdmG1O13EEwZWSlvY3msinjCwvdek3caSNcuIJwwa1sbnnm8SnOsalqxZxrXMbzSslIs0MCnW5i4qtaeuWCwawWMr74rJaO4fY6mwYb+ORSP4t/7I1ScIYrGCjg3bX3aPlKqVR2pu1hWj9yeDjhs3xjQWcOvGzzQMANjea6K4XqNhAMDpgTyuA2WOVVhexOlBzW4AEPvhO9rNg1jATDrpGjuJY/T6A/T6AxpWBr1HZzONBdrdJjU36+nvN042phpgk+ZupzzjMukk7aYdZcJy0tw/BobO48ff//wHAHhYvGvH7v5yCxjuvqBkzbL9d9D0oFOETpr7x4gnDGnzc8AvFS3CEmK5eV1u1yoRtcbh0QmqVh5VK496o+XreEK0vf4A7U6XXtaCaSx43EQ0mj4F1uYu4gnD3qwAEP3+W1ef84hyYbU7XdQbLcSikZGL5USIz+kyW0/+Aoa2Pgqx4PO5NVStvP3liBRStfK2K1ibu66x7U4XxfVPKcI0FvD7wyeu67qo1J56HGvUZ5Tx4tU7GrI3kVg/8YDkbPVGiw7TjrLiXfDrsOC8X7jjitcbLekNpuZmUbXyWCps2Ndj0QhOfQrNwvIiCsuLNGwjBEYRBXgsGrHTb9YsI2uWsVNZpd1D86Mk/Y/6LGHJ3U7Zm024bCaddJURgtI9Y+zG1I1Sx1opbaHXHyCTTnrcKpNOonRPnp5ooRr0KW0S/nz+yU2dcwhB+aXPcbx87a3XRJoO09qdrst1RA22VNhw9Xv8xzM63bnigqp/9MuaZRweneCnq5ddO7/d6WI+t4ZMOomrVy6huF4LvZvEe4tdL94zDM+2H2BmeoqGpdD5grBS2kK90Qo0JuwxhwznujodSxw3jFvjrFlG7+XbM83vhxLHErZMRRUGUTMFKaRnpqc8xe/pQQ2xaMROo7RRUcmK4rPQ6w9GPgWPOxged008Tcqu+VFcr3ncMH4GRw6LEmHNTE9hp7I6saj82KmsBnICVdD5gqS0w6MT9PoD+7Vsg4gvW5y3xRPGyMNMP8TmovWV7BzL2T4XSoT1tTPKIcc16pAYFtS036i680vn3AlrPrfmcQPRVKUtJ7Qo1jmfLD0FcSzZONF0/+Y3KcqKd4Zxcu4ci/k6YGExWmBhMVpgYTFaYGExWmBhMVpgYTFa+B/1pG0NBbWrnAAAAABJRU5ErkJggg==">
+                    <span class="shot-desc"><strong>[개인수신그룹관리]</strong> 개인설정 화면의 왼쪽 메뉴입니다.</span>
+                  </div>
+                  <div class="shot-step">
+                    <span class="shot-num">3</span>
+                    <img class="guide-shot" data-guide="edufine_bulk_upload.png"
+                         alt="일괄등록 버튼" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAAdCAYAAAD2DA/hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAPcSURBVFhH7ZltaFtVGMd/Kftg/bAtu5Fu7SCtzKLMZGRNJ1qlgva9szLaMpBaRZm4WWsHkypDBrrZqawrKgxR7IuCJoLEtWnTUcZY51zfzLoVhMEa0dlAe7ntB9tvPX5I7yX35DZx6Kfb/eAh9/6f55wn/3vuuUmIQwgh2EBkyYLduWfY7jhUVRXRaBRVVeWcrVAUBa/Xi2NkZEQUFhaSl5cn19iKeDzOzMwMWaqqkpubixDC1pGTk4OmaYk9LCftGugPLTlh1zAMbyQcgUBA1NXVybpB07mLhK//YZy/UvowHx3cB8Db343x1aXfGDpWRfGDD9A5dIMPQr8mjU6wfUs2Mx0NlJ0O85f2NzMdDUZOn2M9kvsB6/bQOV7no63SI8sAhEIhNsliMrpZ2dCOrdmWk7ZVelL0pnMXmYotmDQr9B6ZsOoB8P212xzuHpXlFNLu4fjSCnvzXfgLXAgheKviUQCmYgumfSHPUXY6zO72YEreqjadbhVnBqdRXu9NCd2sXC/32aQXWZGz+T4Gp/9k/PY8/gIXZyM3AfC5FdOY5An1c/11bnGZHVvvN2riSyu4DvdR5d1J72tPG2MqPx40jpOR63Q+by6hcV+BLEMaP2Qy3HOolOYvLlH1yZChvbt/D63lu00mZcM6QggixyqNY9b28/TJA4bW0eino9FvGidjdTGP9FzhSM+VpKoEVd6d9BwqlWUDRyAQELW1tbJ+1wTGZnmj92dZNvC5FQDmFpeZPnkgY73MZy8+kbKiZyM3OXX+umXOiv7+/oThmpoaOWdiz/EfiS+tyLLBwNFy/AUuWf5fCY7H7voCNRTnm7SBgYGE4erqalPi39IemKB79Bb9bWWG4YnZBWo7L8ilBtu3ZBN9/3mTFhyP0dJ31aQBfNr0eMqb/i+Ew+H0e1jH914o7QqTNEdRvsJc10E5DUD1mQvMLS6b+gXHY7z5zS+89ORDfNhQZOjvBCdp6buKEMJk+uUvLzN0445xLiPPI5P2czgZn1shfLRMllOYjKkZVziZqVjiZ2m9tJL1xfl0j95iKqaaDH/96lOmOp1MfXWyAFZXV9MGayso6+sFQHPJLu50NqbE5In9plqfexsAwbFZkx4cmwXA596WMv96kel9oj+lKyoqEvbXoejE+bS3dHuNh5ZnH4G1K/1c14hcYuKn1mcoyk88tQF+mPid1m+vmWoAul54jHq/W5Yt0fs2l+ziVP1eOQ1AJBJJGC4vL5dztmR4eDj9V0u7BUCWoihompaStFtomobT6cQxPz8votEomqbJd4CtcDqdeDweHPf+ebA5G87wP1PW1z+VmEUaAAAAAElFTkSuQmCC">
+                    <span class="shot-desc"><strong>[일괄등록]</strong> 수신그룹 목록 위에 있습니다.</span>
+                  </div>
+                  <div class="shot-step">
+                    <span class="shot-num">4</span>
+                    <img class="guide-shot" data-guide="edufine_browse.png"
+                         alt="찾아보기 버튼" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAF0AAAAdCAYAAADIKWCvAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAASOSURBVGhD7ZpvTBt1HMafYoyyOQoUAmQ4cNlGYMKsEJfoWk0EBoFhTHRm8ieDYSBzHUImw2kWZyTwQgfODbds4d8Q+SMxQ9pSULeALrBiaWG8mA52lDFhHIzKkFfkfMF69u5+ZWztgS/ukzxJ7/k+v1+Tp7/2uATZvQWKgcSq4sE3JMRHKn0NkBk6dYzt3n2+L+EG5D7PYFvEs/D23cDxZRR1k9m0aTPHlHAP43esGBoawk71do4vW1xclG6kItLS0oK4PS9xPA+GYSBJPJGQShdZJKS/XtYAt5301Iqf4ZNTzfEaeobhk1ONL3UWQZ6kR80/jsILG/F6SZvAF0skXCr9pH4Avrk18M2tgc4yBgDsddo3v3De1HFdbKmWzcWWajkzUj7iaJMgxzAMPvyuF765Nbg2fJe4t6Maeoad7i+mSLhU+ge7nwddkQ66Ih0vhvoBAHtdm/Ma+yaOa9LPXoaJotmciaKRfvYymGUKceaTZh2FiezedEU6stRhAIDN/huIebFFwqXS7SprH4SJogEAhQ3XODMAKG41w+/gRdT++id0ljFkqcPYeZY6DDrLGIwjU2wevFIAwETR8Dt4kaPKrhuCLF86ixWBck9EhyrYvfgZMUXC5RtpxrkrKG41I0sdBv2RBFR23cDRRiMn83HKC5g6k4annnwCABDk7cnO7K9HpuZYj4QyRIGpM2kc2U+xM8oN1zFhW8CBV5fPrTYunfSMc1egH7iN0xkvo3RvDKJDFbh7OhU6ixWRx1rYT9pxDf+a7+HBN8P//To09o6wHmkdf62jjCNTKG41QxmiQF78dk7e2RoxREI2Pz9PnohA3y0aSSc7kKnahtK9MQCAoqY+VHX/AW1BPG7R93Go9iqO7dmBvPj/Hp13fPIDJmwLDjtx0RbEI+a5pXsKADQbKRyqvQoAmPz6XYfk0l5B3uvQfmQ3xxcLrVYreCJ1S+kBmnq+xcGx5P3nu6AfuM2WEaCpR2JUMKrfU7Nl8Ut3JOELA/6a/QeWz9/kj4AH8/7RaYBQOP4npbv082LXxKl9rOzs37WV9UrejmazVdkqKEMUCNDUI0BTD2WIAlXZKnaOh3z17fB9hmFQbriO/tFpJEYFY+LUPsH8YevFEAnZ3NwcefIYZF7ohtk6g0zVVpS0DaAtPw7RoQp+zCnNRgqH63rwUXIUDsdFIPNCN9oHx/kxIoFyT/R/9gbfFqA8fglB3uugK4jj+L9T00gu61w6EF5Po31wHGmvbEHdbzeRELkRVdkqTn6l6PV6cU46wzBQHr8Es3UGphMp0MSGoygpEsllnWg2UoKsM9mxX1ce2IU75e+sSKYTKYL9SHLcny/7jAQ/u1KRkNlsNvJkhSSV/QSzdQZFSZHQxIbzx9iY3wQA+Cp1J96KCeGPOXzfN4q8b3ud7uUOoj/9EYFyT2jzY/kjUTAYDIKTLpudnXWpdInl6ejoEJTu8sORxKPjtt90SWSR8KBnJgVBSe4RPTMJL/l6fueQtRu0zN+2eb4v4Qa85OuxJTwYCn85x5dJ/+G1+kg30jVAKn0N+BerW+SC6Ozb+wAAAABJRU5ErkJggg==">
+                    <span class="shot-desc"><strong>[찾아보기 ...]</strong> 신통픽이 만든 엑셀을 골라 올립니다.</span>
+                  </div>
                 </div>
               </div>
             </li>
@@ -845,13 +919,40 @@
           <div class="notice info" style="margin-bottom:20px;">
             <span class="notice-icon">①</span>
             <div class="notice-body"><strong>소통메신저에서 누르는 차례입니다.</strong>
-              1번 편지 버튼(오른쪽 위. 누르지 말고 마우스만 올리면 메뉴가 펼쳐집니다),
-              2번 [쪽지작성],
-              3번 [받는사람 추가] 버튼,
-              4번 검색 입력칸('소속+이름 또는 이름 검색' 칸),
-              5번 검색 결과 첫 줄('검색 결과(1명)' 아래 첫 사람),
-              6번 오른쪽 화살표 버튼(결과를 [선택된 사용자] 로 옮기는 버튼).
               이 가운데 <strong>4번, 5번, 6번</strong> 자리를 신통픽에 알려 주면 됩니다.</div>
+          </div>
+          <div class="shot-steps" style="margin-bottom:20px;">
+            <div class="shot-step">
+              <span class="shot-num">1</span>
+              <img class="guide-shot" data-guide="mail_button.png" alt="편지 버튼" src="data:image/png;base64,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">
+              <span class="shot-desc"><strong>편지 버튼</strong> 오른쪽 위에 있습니다.
+                누르지 말고 마우스만 올리면 메뉴가 펼쳐집니다.</span>
+            </div>
+            <div class="shot-step">
+              <span class="shot-num">2</span>
+              <img class="guide-shot" data-guide="write_note.png" alt="쪽지작성 메뉴" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFQAAAAaCAYAAAApOXvdAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEeSURBVGhD7ZZRDoMwDEOBw5D7HyeHQd1Xpsyk7QqGaVuexEeclIFxYfO2bWVZlinhMJdSCorJcTKaZNJQMmkomTSUTBpKJg0lk4aSSUPJ0P/YiwhKO1QVpRAReZltnVtVd/PGqH4GuqEGXizWptVoGTQ1zofaEf0Ml2x5u1AzDGtDVZ9HVB9BRHa/47F+a+YUhcy6rkO1EemRVpyOfay91uoxoSe0l65ev4ffplHqPSOzLKiG+u3kt1Wk4bp3btgbZNTWjcxSwch+gtq2xPoboH/lewnA1GCSfI0901rg/NRYE82eBh2+Ekwc1kYtsT2i+UgzWr2jUN+ho9QSUtO/gY8aegf2IYqOKx4c/R367/x8Qu8mDSWThpJJQ8k8AKNFVP01oHSbAAAAAElFTkSuQmCC">
+              <span class="shot-desc"><strong>[쪽지작성]</strong> 펼쳐진 메뉴에서 누릅니다.</span>
+            </div>
+            <div class="shot-step">
+              <span class="shot-num">3</span>
+              <img class="guide-shot" data-guide="add_recipient.png" alt="받는사람 추가 버튼" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFwAAAAcCAYAAADst9g0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFpSURBVGhD7ZjLccMwDETlNOECUlAKUAsuICWkALXgAlJQCtBZBdgneJg1AC70QTwTvBkehB/BJYeyfFqW5TYUabyhoTiWEjyZEjyZk9zh75/f6Ct25OfrYxjqhOdTgidTgidTgidDCT5PY+jZsq0Fa83T+DTQz+LVYYnkUYJnwjR/vlx/jS0wtXBTmB4taMF7k3m+vWEW7/kErGPlMJvCQgvem1Dz4UK8RUXpiWDZWzAGn4+AFjwKCoLjCNZs5jyNj56iuWugvjS1RlrRpOmtSB2s187vCSM5mK8hNTDOsgtabexPQ740KcGjWIIg2JwnOMb+FVovmg0JC94TsTdhD2y6fUaf2DwwvqWXK2ANrQ/P3rJK8F7Rlki8FWud+Nan4fksvBzZIM9v+YSX+vPKatayZ3Pe8UUfOuEe2FA03kM7QXvWH4w5WJjc8JVSbOOlrpT/RAmeTAmeTAmeTAmezONXSpFDnfBk7jcaPm/3Je1tAAAAAElFTkSuQmCC">
+              <span class="shot-desc"><strong>[받는사람 추가]</strong> 누르면 [사용자 선택] 창이 열립니다.</span>
+            </div>
+            <div class="shot-step">
+              <span class="shot-num">4</span>
+              <img class="guide-shot" data-guide="search_box.png" alt="검색 입력칸" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAAmCAYAAABtY7F6AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAPbSURBVHhe7dyxSyNBFAbwL8dZKRaWYiM2ghbpYiGC2Ela0cJ6EdxCrSKCYmMXEbHZLSzUIoV/xQrBUlCEYCdooZ0gCCpzza1s3s2bySazxuy9H6SYNztvnM2XkKSwoJRSECInftGCEL1MAi1yRQItckUCLXJFAi1yRQItckUCLXKlwP0O/fLygqenJ7y9vdEpIbpucnKSlgBToBuNBkZGRtDf30+nhOiqm5sbNtDsR47393cJs+g5bKCF6EUSaJErEmiRK04DvbOzQ0tCfCv2Vw7TN0lOoVAA0y61MAzheR4td4zrG4YhLTXRrXGB+3tc4fp3el7d+uQa075x/fn5GWdnZ1hfX6eXGRmzqRjX19e0ZMW1C4KAloyCIEi9Jiler+uhq9m0uobumxxzPbh6GqY9dDUbF2voOBYEgYqiSE1MTCgACoAqlUrq8vKSXsoyZfM3DXi3JV/B3KvchK6hY47uHacddC86do2ej445rs6b1ErPu7s7rK6uYmVlBcfHxzg/P8f9/T1mZ2dRr9dRLBbpknRowmOmVwFH1y75bmVC32GS60xr6VzacYyrp0F70LFOfD7uYUOvsY1jXL0dul66mlJKDQ8PK9/3v8bxdeVyWc3Pzyeu5Jmy6fRLIZV8t/A8z/gK9jxP+87C1bMQhiH7yEp8Pu6RJXrGds6bfI5tqtUqHh8fMTAwQKewvLyMKIpoObVMvhTGN0R3UN1cqzfQtsb7+6Kh15nGLun+pqQs9qXnsY1d0T2PSXTfMAyxsLCAoaEhXFxc4Pb2tun5Oj09RaVSwcPDQ1MfHVM2Mwk0RQ/nEu2ddhzXWkHX2ej2SnKxL93DNo5rraDrXCiVShgdHUWtVvuqfX5+YmZmBmNjYzg5OWm6XseUzR8TaNtN5tbT3mnHWfqOvegetrFL7Txnm5ubqFarGB8fx9TUFD4+PtBoNFCv11Gr1bC4uEiX/MOUzR8TaJO065M3mq7jerXz5NhweyW1co1Nt87L9YZl7urqCltbW4iiCIODg5ibm0O5XMbS0hL29/extrZGlzQxZdN5oIMgoGUt7rA6ppuTFteLq8MyF7MFJEb7tNK7E1x/rg7LXJLpOtMc5+DgABsbG9jb20OlUqHTX0zZdB5opl1H2rk5HK6XLZC6NS5kvW+W53XRg4pDfXh4CN/36TRgyWZPBFr8X46OjlAsFjE9PU2nAEs2nf4Ovb29TUtCpOb7PhtmG6eB3t3dpSUhvpXTQAvRbRJokSsSaJErbKD7+vrw+vpKy0L8aOzPdvKPZsRPxv1sxwZaiF7EfuQQohdJoEWuSKBFrvwB1WNsi5mB+voAAAAASUVORK5CYII=">
+              <span class="shot-desc"><strong>검색 입력칸</strong> '소속+이름 또는 이름 검색' 이라고 적힌 칸입니다.</span>
+            </div>
+            <div class="shot-step">
+              <span class="shot-num">5</span>
+              <img class="guide-shot" data-guide="first_result.png" alt="검색 결과 첫 줄" src="data:image/png;base64,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">
+              <span class="shot-desc"><strong>검색 결과 첫 줄</strong> '검색 결과(1명)' 아래 첫 번째 사람입니다.</span>
+            </div>
+            <div class="shot-step">
+              <span class="shot-num">6</span>
+              <img class="guide-shot" data-guide="arrow_button.png" alt="오른쪽 화살표 버튼" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAcCAYAAAAEN20fAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAP5SURBVEhL7Zb7bxRVFMc/987Mzna3UBqDAkEBebUiJGiNCCUhyB9s1DQE4yMB0fCKiS8eWkolMUoo7e7O7szcuef4w2y3u9tOMSFBf+CbnExm7p1zvnPO95w7RlWV/wHs+IP/Cq+IjMNUaSTNcn5+sIgCcS1CRMZ2GFTLZ8aYsTWw1pLlDmsNs4cPMRHXxreMoJLInV/uceDN/UxPNim8xwAMBVRVojAAwLkCY4eSq4oCURjwtN1l6dEyc+/ObKxvgcrStJMezXqdZ60OraRLp5fSTrq0ky5r7YQ0L7hx6w4//XoPp4bVVptWf73TS2klXVbWOjTrNZJeOu5+EyqJNOp18jzHoATGMJo4JYpClh895PLnn/Lg3l2azUl0qHyBtRgDLnc0JupD726NSiJBGOBVEEAAHTMvQhzXqdUivvriMrdv3SSu1/EiFN7jRRBVvApBUJZwO1QSKbxHRXHOkaYpWZaNWJpl5LnDGMvU1BTff3uV69euYftBvfd475E+seehUqw3frzLof17ufrN1zz5+y+CKIL1rQrGGrI0xVqLtRZjDK1Wi0NHjnJ2/jxhEJIXjrgW8dvSYz48NTseYgSVGVFRnBeSJCHPc/I0Jc+y0vKMLE0JggBrLaqKF2Hnzp38sfSQKwsLJN0uUVijKPyIdqpQScRL6SAIQ8ItLcL0RWyMwQAiQqPRYG11hYVPP2Fl5SlRLf5XpakkIqqoKir96yaTAYkBGWMQEer1Or5wXFn4jMfLj7D2BcRaBgM1G0G2MvqTdV1qxhi89zQaDbpJh98f3MeGlWEGqNwhqiha9upzMJwZVSUIAtbW1jh8bIaz5y+QvshAU5GyS0z5lSNZGMrGeHlA6fV6HJs9wZlz5/HeDbK1HSqJoCCiuNzh1rulby4vryoyQkK8x7mCk6fnOPXeHGmaIaIbbb8NKufIl9/d5sjBt1h6uEiWdjFmg7OqEkYRy0uLJK0WcRyXxIxh7sw8e/btK++BiXrM/cUlPv5obsT/OCozon3h7T9wkKMzJzhyfHZgbx+b4fg7J5mYaCIiuDzHhhHnLlzi9T17SdN0cFKrKlqe3duikkjhckDKUjhXDrW+uTwvv1gFl2dMTO5g/uIldkxNkaa9gX58f5CVvrZHJZFWu0MYhIgquSsoRHDeD6zo62HX7jd4/+w8QVSj2+0iqhTek+UOESEMA1rtzrj7TajWyPWbTE9Ps3f3a+SuVL7BgCnTbY2l1+tRi2PCIKDwBdZayo5XwBDXIv588pTV1VUuPkcjlUTSLOParR941moz2WgOzpT1tNP/HRTZmLAMtbOI0Okm7NoxyfwHp5mI4yHvm1FJ5GWjUiMvG6+IjOMfapGJ/bfPt8kAAAAASUVORK5CYII=">
+              <span class="shot-desc"><strong>오른쪽 화살표 버튼</strong> 결과 목록과 [선택된 사용자] 사이에 있습니다.</span>
+            </div>
           </div>
           <ul class="step-list">
             <li class="step-item">

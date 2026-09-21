@@ -408,6 +408,41 @@ class AppFlowTest(unittest.TestCase):
             btn = getattr(self.app, name)
             self.assertTrue(btn.pack_forget.called, f'{name} 이 감춰지지 않았습니다')
 
+    def test_guide_images_exist_for_every_step(self):
+        """안내 그림 파일이 빠지면 앱은 글만 보여 주고 조용히 넘어간다.
+
+        조용히 넘어가므로 여기서 잡는다. 파일 이름을 고치고 폴더를 안 고친
+        경우도 같이 걸린다.
+        """
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        guide_dir = os.path.join(root, 'assets', 'guide')
+
+        for label, table in (
+            ('소통메신저', self.app_module.GUIDE_IMAGES),
+            ('에듀파인', self.app_module.EDUFINE_GUIDE_IMAGES),
+        ):
+            for step, name in table.items():
+                self.assertTrue(
+                    os.path.exists(os.path.join(guide_dir, name)),
+                    f'{label} {step}번 안내 그림 assets/guide/{name} 이 없습니다',
+                )
+
+    def test_edufine_upload_order_is_shown_with_pictures(self):
+        """엑셀만 만들어 주고 어디에 올리는지 안 알려 주면 반쪽이다."""
+        from app_config import TARGET_EDUFINE
+
+        self.app._choose_target(TARGET_EDUFINE)
+        self.assertTrue(
+            hasattr(self.app, 'edufine_upload_panel'),
+            '[2. 수신그룹 엑셀] 탭에 에듀파인 업로드 안내가 없습니다',
+        )
+
+        steps = self.app_module.EDUFINE_UPLOAD_STEPS
+        self.assertEqual([number for number, _, _ in steps], ['1', '2', '3', '4'])
+        for number, title, desc in steps:
+            self.assertTrue(title.strip() and desc.strip())
+            self.assertIn(number, self.app_module.EDUFINE_GUIDE_IMAGES)
+
     def test_edited_list_is_what_reaches_the_excel(self):
         """목록에서 지우고 고친 결과가 그대로 엑셀로 가야 한다."""
         self.parse('학성초\n한천초\n백곡초')

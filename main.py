@@ -133,6 +133,13 @@ CAPTURE_HINTS = {
     'add_button': '6번  오른쪽 화살표 버튼  (결과를 [선택된 사용자] 로 옮기는 버튼)',
 }
 
+EDUFINE_UPLOAD_STEPS = (
+    ('1', '[개인설정]', '에듀파인 오른쪽 위에 있습니다.'),
+    ('2', '[개인수신그룹관리]', '개인설정 화면의 왼쪽 메뉴에서 누릅니다.'),
+    ('3', '[일괄등록]', '수신그룹 목록 위에 있습니다.'),
+    ('4', '[찾아보기 ...]', '신통픽이 만든 엑셀을 골라 올립니다.'),
+)
+
 # 안내 그림 파일 이름. assets/guide/ 에 넣어 두면 화면에 함께 나오고,
 # 없으면 글 안내만 나온다. tk 가 읽을 수 있게 PNG 로 둔다.
 GUIDE_IMAGES = {
@@ -143,6 +150,13 @@ GUIDE_IMAGES = {
     '5': 'first_result.png',
     '6': 'arrow_button.png',
 }
+# 에듀파인에 올리는 차례. 차례 번호가 소통메신저와 겹치므로 따로 둔다.
+EDUFINE_GUIDE_IMAGES = {
+    '1': 'edufine_settings.png',
+    '2': 'edufine_group_menu.png',
+    '3': 'edufine_bulk_upload.png',
+    '4': 'edufine_browse.png',
+}
 CAPTURE_STEP_KEYS = {
     'search_field': '4',
     'result_first': '5',
@@ -151,22 +165,32 @@ CAPTURE_STEP_KEYS = {
 _guide_image_cache = {}
 
 
-def guide_image(step: str):
-    """단계별 안내 그림. 파일이 없거나 못 읽으면 None."""
-    if step in _guide_image_cache:
-        return _guide_image_cache[step]
-    name = GUIDE_IMAGES.get(step)
+def _load_guide_image(name: str):
+    """assets/guide/ 의 PNG 한 장. 파일이 없거나 못 읽으면 None."""
+    if not name:
+        return None
+    if name in _guide_image_cache:
+        return _guide_image_cache[name]
+    base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(base, 'assets', 'guide', name)
     image = None
-    if name:
-        base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(base, 'assets', 'guide', name)
-        if os.path.exists(path):
-            try:
-                image = tk.PhotoImage(file=path)
-            except Exception as exc:
-                logging.info('안내 그림을 읽지 못했습니다 (%s): %s', name, exc)
-    _guide_image_cache[step] = image
+    if os.path.exists(path):
+        try:
+            image = tk.PhotoImage(file=path)
+        except Exception as exc:
+            logging.info('안내 그림을 읽지 못했습니다 (%s): %s', name, exc)
+    _guide_image_cache[name] = image
     return image
+
+
+def guide_image(step: str):
+    """소통메신저에서 누르는 차례의 안내 그림."""
+    return _load_guide_image(GUIDE_IMAGES.get(step))
+
+
+def edufine_guide_image(step: str):
+    """에듀파인에 올리는 차례의 안내 그림."""
+    return _load_guide_image(EDUFINE_GUIDE_IMAGES.get(step))
 
 
 def make_scrollable(parent):
@@ -646,8 +670,15 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     코드가 없는 기관이 있으면 목록으로 알려 줍니다. 조용히 빠지지 않습니다.
     그런 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.
 
-    만들어진 엑셀을 에듀파인
-    [개인설정 > 개인수신그룹관리 > 일괄등록] 에서 올립니다.
+    만들어진 엑셀은 에듀파인에 올립니다. 누르는 차례는 이렇습니다.
+
+      1) [개인설정]            에듀파인 오른쪽 위에 있습니다
+      2) [개인수신그룹관리]    개인설정 화면의 왼쪽 메뉴입니다
+      3) [일괄등록]            수신그룹 목록 위에 있습니다
+      4) [찾아보기 ...]        신통픽이 만든 엑셀을 골라 올립니다
+
+    각 버튼이 어떻게 생겼는지는 [2. 수신그룹 엑셀] 탭의
+    STEP 3 에 그림으로 붙여 두었습니다.
 
     ※ 처음에는 기관 2~3곳짜리 시험 그룹으로 한 번 확인해 보세요.
 
@@ -1628,11 +1659,44 @@ class App:
             fg='#555', font=('맑은 고딕', 8), bg='#F5F7FA'
         ).pack(side='left', padx=(10, 0))
 
+        # ③ 에듀파인에 올리는 차례 — 어디를 누르는지 그림으로 보여 준다
+        upload_frame = ttk.LabelFrame(frame, text='STEP 3 — 에듀파인에 올리기')
+        upload_frame.grid(row=4, column=0, sticky='ew', padx=10, pady=4)
+        upload_frame.columnconfigure(2, weight=1)
+        self.edufine_upload_panel = upload_frame
+        self.edufine_step_images = []
+
+        for row_i, (number, title, desc) in enumerate(EDUFINE_UPLOAD_STEPS):
+            tk.Label(
+                upload_frame, text=number,
+                bg='#1565C0', fg='white',
+                font=('맑은 고딕', 10, 'bold'), width=3
+            ).grid(row=row_i, column=0, padx=(8, 6), pady=3, sticky='w')
+
+            picture = edufine_guide_image(number)
+            if picture is not None:
+                self.edufine_step_images.append(picture)
+                tk.Label(upload_frame, image=picture).grid(
+                    row=row_i, column=1, padx=4, pady=3, sticky='w')
+
+            tk.Label(
+                upload_frame, text=f'{title}   {desc}',
+                font=('맑은 고딕', 9), fg='#37474F', justify='left', anchor='w'
+            ).grid(row=row_i, column=2, padx=4, pady=3, sticky='w')
+
+        tk.Label(
+            upload_frame,
+            text='처음에는 기관 2~3곳짜리 시험 그룹으로 한 번 올려 보세요. '
+                 '등록된 곳이 생각한 기관과 맞는지 확인하고 나서 실제 공문에 쓰시면 됩니다.',
+            fg='#555', font=('맑은 고딕', 8), justify='left', anchor='w', wraplength=760
+        ).grid(row=len(EDUFINE_UPLOAD_STEPS), column=0, columnspan=3,
+               sticky='w', padx=8, pady=(4, 8))
+
         self.edufine_msg = tk.Label(
             frame, text='', fg='#555', font=('맑은 고딕', 9),
             justify='left', anchor='w', wraplength=820
         )
-        self.edufine_msg.grid(row=4, column=0, sticky='ew', padx=14, pady=(2, 10))
+        self.edufine_msg.grid(row=5, column=0, sticky='ew', padx=14, pady=(2, 10))
 
     def _open_org_picker(self):
         """기관 찾아보기 — 770곳에서 골라 명단에 넣는다.

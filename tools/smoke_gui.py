@@ -86,11 +86,23 @@ def main():
         '위치 설정 탭이 스크롤 틀 안에 있지 않습니다', holder.winfo_class())
     print(f'스크롤 틀 ok — 위치 설정 탭이 {holder.winfo_class()} 안에 있습니다')
 
+    # 수신그룹 엑셀 탭도 스크롤 틀 안에 있어야 한다. STEP 3 안내 그림이
+    # 들어가면서 길어졌다.
+    inner = app.edufine_msg.nametowidget(app.edufine_msg.winfo_parent())
+    holder = inner.nametowidget(inner.winfo_parent())
+    assert holder.winfo_class() == 'Canvas', (
+        '수신그룹 엑셀 탭이 스크롤 틀 안에 있지 않습니다', holder.winfo_class())
+    print(f'스크롤 틀 ok — 수신그룹 엑셀 탭이 {holder.winfo_class()} 안에 있습니다')
+
     # 안내 그림이 실제로 읽히는지. 이름이 어긋나면 조용히 글만 나온다.
     for step in app_module.GUIDE_IMAGES:
         assert app_module.guide_image(step) is not None, (
-            f'{step}번 안내 그림을 읽지 못했습니다')
-    print(f'안내 그림 ok — {len(app_module.GUIDE_IMAGES)}장')
+            f'소통메신저 {step}번 안내 그림을 읽지 못했습니다')
+    for step in app_module.EDUFINE_GUIDE_IMAGES:
+        assert app_module.edufine_guide_image(step) is not None, (
+            f'에듀파인 {step}번 안내 그림을 읽지 못했습니다')
+    total = len(app_module.GUIDE_IMAGES) + len(app_module.EDUFINE_GUIDE_IMAGES)
+    print(f'안내 그림 ok — {total}장')
 
     root.destroy()
     print('스모크 테스트 통과')
