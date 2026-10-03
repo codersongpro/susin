@@ -555,13 +555,6 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     결과가 보이는 상태에서
     결과 목록과 [선택된 사용자] 사이의 화살표 버튼을 클릭합니다.
 
-  [ 검색 설정 ]
-    · 검색 후 대기 시간: 기본값은 0.5초입니다. 자동 선택이 느리면 값을 낮추고,
-      소통메신저가 결과를 늦게 띄워 오류가 나면 1.0~2.0초로 늘립니다.
-      너무 낮추면 결과가 뜨기 전에 다음으로 넘어갑니다.
-    · 수동 확인 모드: 동명이인이 걱정될 때 켭니다.
-      사람마다 검색 결과를 직접 확인하고 [계속] 을 눌러야 다음으로 넘어갑니다.
-
   마지막에 [설정 저장] 을 눌러 저장하세요.
   세 곳이 모두 '설정됨' 이 되면 [다음, 자동 선택] 이 켜집니다. 이 단추를 눌러도 설정이 저장되고
   바로 자동 선택으로 넘어갑니다.
@@ -570,6 +563,13 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 자동 선택
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [ 검색 설정 ]  (바꾸면 바로 저장됩니다)
+    · 검색 후 대기 시간: 기본값은 0.5초입니다. 자동 선택이 느리면 값을 낮추고,
+      소통메신저가 결과를 늦게 띄워 오류가 나면 1.0~2.0초로 늘립니다.
+      너무 낮추면 결과가 뜨기 전에 다음으로 넘어갑니다.
+    · 수동 확인 모드: 동명이인이 걱정될 때 켭니다.
+      사람마다 검색 결과를 직접 확인하고 [계속] 을 눌러야 다음으로 넘어갑니다.
 
   1. 소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 열어 둡니다.
   2. {APP_NAME}의 [자동 선택] 탭에서 [자동 선택 시작] 을 누릅니다.
@@ -603,7 +603,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
      그 항목은 로그에 '사용자 없음' 으로 남고 목록에서 빨간색이 됩니다.
 
   Q. 너무 빨라서 오류가 나요.
-  A. [위치 설정] 탭에서 '검색 후 대기 시간'을 늘리세요.
+  A. [자동 선택] 탭의 '검색 후 대기 시간'을 늘리세요.
      소통메신저가 느린 컴퓨터는 1.0~2.0초가 맞습니다.
 
   Q. 동명이인이 있어서 걱정돼요.
@@ -768,10 +768,13 @@ GUIDE_STEPS = {
          '표에 섞인 직위·연락처·번호는 자동으로 걸러냅니다.'),
         ('input', 'parsed_list', '추출 결과를 확인하세요',
          '소속없음이나 이름 오류가 있으면 항목을 더블클릭해 고칩니다.\n'
-         '동명이인이 있으면 수동 확인 모드를 켜 두세요.'),
+         '동명이인이 있으면 [자동 선택] 탭에서 수동 확인 모드를 켜 두세요.'),
         ('calib', 'calibration_panel', '클릭할 위치 세 곳을 캡처하세요',
          '검색 입력창, 결과 첫 번째 행, 사용자 선택 버튼을 차례로 설정합니다.\n'
          '소통메신저 창을 옮겼다면 위치를 다시 캡처해야 합니다.'),
+        ('auto', 'search_setting_panel', '검색 속도를 정하세요',
+         '검색 후 대기 시간은 느리면 낮추고, 오류가 나면 늘립니다.\n'
+         '동명이인이 걱정되면 수동 확인 모드를 켜 두세요. 바꾸면 바로 저장됩니다.'),
         ('auto', 'start_button', '자동 선택을 시작하세요',
          '소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 먼저 열어 두세요.\n'
          '[자동 선택 시작]을 누르면 명단을 한 명씩 검색합니다.\n'
@@ -2038,32 +2041,6 @@ class App:
                                        state='disabled', size='sm')
         self.calib_next_btn.grid(row=4, column=3, sticky='e', pady=(8, 0))
 
-        # 오른쪽 아래: 검색 설정
-        setting = Card(right, tone='inner', pad=(16, 12))
-        setting.grid(row=1, column=0, sticky='ew')
-        self._section_title(setting.body, '검색 설정', setting.fill).grid(
-            row=0, column=0, columnspan=3, sticky='w', pady=(0, 6))
-        tk.Label(setting.body, text='검색 후 대기 시간(초)', bg=setting.fill,
-                 font=ui.font(10), fg=COLORS['on_surface']).grid(
-            row=1, column=0, sticky='w', pady=4)
-        self.delay_var = tk.DoubleVar(value=self.config.data.get('search_delay', 0.5))
-        ttk.Spinbox(setting.body, from_=0.3, to=5.0, increment=0.1,
-                    textvariable=self.delay_var, width=6, font=ui.font(10)
-                    ).grid(row=1, column=1, padx=8, sticky='w')
-        delay_hint = tk.Label(
-            setting.body, text='느리면 값을 낮추세요, 단 소통메신저 최소 검색 시간이 필요합니다.',
-            bg=setting.fill, fg=COLORS['on_surface_variant'], font=ui.font(9), justify='left',
-            anchor='w', wraplength=ui.px(420))
-        delay_hint.grid(row=2, column=0, columnspan=3, sticky='w')
-        ui.autowrap(delay_hint, margin=4)
-        self.manual_var = tk.BooleanVar(value=self.config.data.get('manual_confirm', False))
-        tk.Checkbutton(
-            setting.body, variable=self.manual_var, bg=setting.fill, activebackground=setting.fill,
-            text='수동 확인 모드 (권장)\n검색한 뒤 [계속] 을 눌러야 다음으로 넘어갑니다. 동명이인이나 '
-                 '검색 오탐이\n걱정될 때 켜세요. 한 사람마다 멈추므로 느립니다.',
-            font=ui.font(9), fg=COLORS['on_surface'], justify='left', anchor='w'
-        ).grid(row=3, column=0, columnspan=3, sticky='w', pady=(8, 0))
-
         # 아래: 저장
         bottom = tk.Frame(frame, bg=PANEL_BG)
         bottom.grid(row=2, column=0, columnspan=2, sticky='ew', padx=14, pady=(2, 8))
@@ -2570,7 +2547,7 @@ class App:
     def _tab_auto(self, frame: ttk.Frame):
         """화면 3. 자동 선택 (소통픽만). 위쪽에 진행 판, 가운데 단추, 아래에 진행 기록."""
         frame.columnconfigure(0, weight=1)
-        frame.rowconfigure(3, weight=1)
+        frame.rowconfigure(4, weight=1)
         _title, self.auto_intro = self._screen_header(frame, '자동으로 골라 담습니다')
 
         # 진행 판: 큰 숫자, 담김/빠짐 칩, 진행 막대
@@ -2588,9 +2565,38 @@ class App:
                                         style='Accent.Horizontal.TProgressbar')
         self.progress.grid(row=1, column=0, sticky='ew', pady=(8, 2))
 
+        # 검색 설정: 속도와 수동 확인. 바꾸는 즉시 저장되고, 실행 중에도 다음 사람부터 반영된다.
+        setting = Card(frame, tone='inner', pad=(18, 10))
+        setting.grid(row=2, column=0, sticky='ew', padx=14, pady=(0, 8))
+        self.search_setting_panel = setting
+        setting.body.columnconfigure(2, weight=1)
+        self._section_title(setting.body, '검색 설정', setting.fill).grid(
+            row=0, column=0, columnspan=4, sticky='w', pady=(0, 4))
+        tk.Label(setting.body, text='검색 후 대기 시간(초)', bg=setting.fill,
+                 font=ui.font(10), fg=COLORS['on_surface']).grid(row=1, column=0, sticky='w')
+        self.delay_var = tk.DoubleVar(value=self.config.data.get('search_delay', 0.5))
+        delay_box = ttk.Spinbox(setting.body, from_=0.3, to=5.0, increment=0.1,
+                                textvariable=self.delay_var, width=6, font=ui.font(10),
+                                command=self._save_search_settings)
+        delay_box.grid(row=1, column=1, padx=8, sticky='w')
+        delay_box.bind('<FocusOut>', lambda _e: self._save_search_settings())
+        delay_box.bind('<Return>', lambda _e: self._save_search_settings())
+        tk.Label(
+            setting.body, text='느리면 값을 낮추세요,\n단 소통메신저 최소 검색 시간이 필요합니다.',
+            bg=setting.fill, fg=COLORS['on_surface_variant'], font=ui.font(9), justify='left',
+            anchor='w').grid(row=2, column=0, columnspan=2, sticky='w')
+        self.manual_var = tk.BooleanVar(value=self.config.data.get('manual_confirm', False))
+        tk.Checkbutton(
+            setting.body, variable=self.manual_var, bg=setting.fill, activebackground=setting.fill,
+            command=self._save_search_settings,
+            text='수동 확인 모드 (권장)\n검색한 뒤 [계속] 을 눌러야 다음으로 넘어갑니다.\n'
+                 '동명이인이나 검색 오탐이 걱정될 때 켜세요.\n한 사람마다 멈추므로 느립니다.',
+            font=ui.font(9), fg=COLORS['on_surface'], justify='left', anchor='w'
+        ).grid(row=1, column=3, rowspan=2, sticky='e', padx=(20, 0))
+
         # 단추 줄
         btn_frame = tk.Frame(frame, bg=PANEL_BG)
-        btn_frame.grid(row=2, column=0, sticky='ew', padx=14, pady=(0, 8))
+        btn_frame.grid(row=3, column=0, sticky='ew', padx=14, pady=(0, 8))
         self.start_btn = M3Button(btn_frame, text='자동 선택 시작', icon='play', command=self._start)
         self.start_btn.pack(side='left', padx=(0, 6))
         self.continue_btn = M3Button(
@@ -2638,7 +2644,7 @@ class App:
         self.log.configure(state='disabled')
         self.log.tag_config('ok', foreground=COLORS['ok'])
         self.log.tag_config('fail', foreground=COLORS['error'])
-        log_card.grid(row=3, column=0, sticky='nsew', padx=14, pady=(0, 10))
+        log_card.grid(row=4, column=0, sticky='nsew', padx=14, pady=(0, 10))
 
     def _refresh_auto_chips(self):
         """진행 판의 담김/빠짐 칩."""
@@ -3220,6 +3226,7 @@ class App:
             'parsed_list': self.parsed_list,
             'bulk_fix_button': self.bulk_fix_btn,
             'calibration_panel': self.calibration_panel,
+            'search_setting_panel': self.search_setting_panel,
             'start_button': self.start_btn,
             'edufine_me_panel': self.edufine_me_panel,
             'edufine_group_panel': self.edufine_group_panel,
@@ -3691,9 +3698,18 @@ class App:
                       hint=CAPTURE_HINTS.get(key, ''),
                       step=CAPTURE_STEP_KEYS.get(key, ''))
 
+    def _save_search_settings(self):
+        """검색 속도와 수동 확인을 바꾸는 즉시 저장한다. 칸에 숫자가 아닌 글이 있으면 건너뛴다."""
+        try:
+            delay = round(float(self.delay_var.get()), 1)
+        except (tk.TclError, ValueError):
+            return
+        self.config.data['search_delay'] = min(5.0, max(0.3, delay))
+        self.config.data['manual_confirm'] = bool(self.manual_var.get())
+        self.config.save()
+        self._refresh_ready_status()
+
     def _save_calib(self):
-        self.config.data['search_delay'] = round(self.delay_var.get(), 1)
-        self.config.data['manual_confirm'] = self.manual_var.get()
         self.config.save()
         self.calib_msg.config(text='설정을 저장했습니다')
         self.root.after(2000, lambda: self.calib_msg.config(text=''))

@@ -770,6 +770,28 @@ class AppFlowTest(unittest.TestCase):
             data.update(saved)
             self.app._refresh_calib_labels()
 
+    def test_search_settings_live_on_the_auto_tab_and_save_when_changed(self):
+        """검색 속도와 수동 확인은 [자동 선택] 탭에 있고, 바꾸는 즉시 저장된다."""
+        from app_config import TARGET_MESSENGER
+        self.app._choose_target(TARGET_MESSENGER)
+        data = self.app.config.data
+        saved = (data.get('search_delay'), data.get('manual_confirm'))
+        try:
+            self.app.delay_var.set(1.26)
+            self.app.manual_var.set(True)
+            with patch.object(self.app.config, 'save') as saved_call:
+                self.app._save_search_settings()
+            saved_call.assert_called()
+            self.assertEqual(data['search_delay'], 1.3)
+            self.assertTrue(data['manual_confirm'])
+            # 범위를 벗어난 값은 0.3~5.0 으로 맞춘다
+            self.app.delay_var.set(0.05)
+            with patch.object(self.app.config, 'save'):
+                self.app._save_search_settings()
+            self.assertEqual(data['search_delay'], 0.3)
+        finally:
+            data['search_delay'], data['manual_confirm'] = saved
+
     def test_calibration_next_does_nothing_until_everything_is_set(self):
         from app_config import TARGET_MESSENGER
         self.app._choose_target(TARGET_MESSENGER)
