@@ -29,6 +29,9 @@ TYPE = {
     'label': (FONT_FAMILY, 9, 'bold'),
 }
 
+# 판 위에 놓는 tkinter 위젯의 바탕색. 위젯은 투명할 수 없어서 모든 판이 이 색을 평균으로 쓴다.
+PANEL_BG = '#F6F7FC'
+
 RADIUS = {'window': 32, 'panel': 28, 'inner': 20, 'field': 14, 'button': 20, 'chip': 8}
 
 GLASS = {
@@ -76,3 +79,13 @@ def contrast(a, b):
     la, lb = luminance(a), luminance(b)
     hi, lo = max(la, lb), min(la, lb)
     return (hi + 0.05) / (lo + 0.05)
+
+
+def shell_layout(width, height, pad=16, gap=14, rail=92, top=64, status=40):
+    """창 틀 네 판의 자리 (x0, y0, x1, y1). 설계 문서 '화면 틀' 과 같다."""
+    top_box = (pad, pad, width - pad, pad + top)
+    status_box = (pad, height - pad - status, width - pad, height - pad)
+    y0, y1 = top_box[3] + gap, status_box[1] - gap
+    rail_box = (pad, y0, pad + rail, y1)
+    body_box = (rail_box[2] + gap, y0, width - pad, y1)
+    return {'top': top_box, 'rail': rail_box, 'body': body_box, 'status': status_box}

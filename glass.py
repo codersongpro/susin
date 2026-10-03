@@ -12,7 +12,7 @@ tkinter 는 뒤 화면을 흐리게 비추는 기능(backdrop-filter)이 없다.
 """
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
-from theme import GLASS, hex_to_rgb, rgb_to_hex
+from theme import GLASS, PANEL_BG, hex_to_rgb, rgb_to_hex, shell_layout  # noqa: F401
 
 SS = 3  # 모서리 매끈하게: 3배로 그린 뒤 줄인다
 
@@ -100,7 +100,6 @@ def compose(backdrop, panels):
 # tkinter 위젯은 투명할 수 없다. 판 위에 놓는 위젯은 모두 같은 바탕색(PANEL_BG)을
 # 쓰고, 판은 그 색을 평균으로 하되 가장자리 쪽에 바탕 색이 살짝 비치게 그린다.
 # 그래야 위젯 사각형이 판과 어긋나 보이지 않고, 도구를 바꿔도 위젯 색을 다시 칠하지 않는다.
-PANEL_BG = '#F6F7FC'
 FLAT_KEEP = 0.38   # 판 안의 색 변화를 이만큼만 남긴다 (0=완전 균일, 1=그대로)
 
 
@@ -147,16 +146,6 @@ def panel_shadow(size, radius, blur=9, alpha=12, spread=10):
     out = Image.new('RGBA', (w, h), (70, 74, 150, 0))
     out.putalpha(layer)
     return out
-
-
-def shell_layout(width, height, pad=16, gap=14, rail=92, top=64, status=40):
-    """창 틀의 네 판 자리. 설계 문서 '화면 틀' 과 같다."""
-    top_box = (pad, pad, width - pad, pad + top)
-    status_box = (pad, height - pad - status, width - pad, height - pad)
-    y0, y1 = top_box[3] + gap, status_box[1] - gap
-    rail_box = (pad, y0, pad + rail, y1)
-    body_box = (rail_box[2] + gap, y0, width - pad, y1)
-    return {'top': top_box, 'rail': rail_box, 'body': body_box, 'status': status_box}
 
 
 PANEL_RADIUS = {'top': 32, 'rail': 28, 'body': 28, 'status': 20}
@@ -280,10 +269,13 @@ def paste_center(base, overlay):
     return out
 
 
-def png_base64(image):
-    """PIL 그림을 tk.PhotoImage(data=...) 에 넘길 글로. PIL.ImageTk 는 tkinter 를 불러와서 피한다."""
+def png_base64(image, level=6):
+    """PIL 그림을 tk.PhotoImage(data=...) 에 넘길 글로. PIL.ImageTk 는 tkinter 를 불러와서 피한다.
+
+    창 바탕처럼 큰 그림은 level 을 낮춰 빨리 만든다.
+    """
     import base64
     import io
     buf = io.BytesIO()
-    image.save(buf, 'PNG')
+    image.save(buf, 'PNG', compress_level=level)
     return base64.b64encode(buf.getvalue()).decode('ascii')

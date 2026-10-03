@@ -195,6 +195,8 @@ def install_tk_stubs():
              'tkinter.scrolledtext', 'tkinter.filedialog')
     saved = {n: sys.modules.get(n) for n in names}
     saved['main'] = sys.modules.get('main')
+    # 위젯 부품은 가짜 tkinter 위에 만들어지므로, 불러 둔 것을 비우고 새로 불러온다
+    saved['ui_kit'] = sys.modules.pop('ui_kit', None)
 
     for name in names:
         module = types.ModuleType(name)
@@ -379,13 +381,41 @@ class AppFlowTest(unittest.TestCase):
                                     f'{target} 에서 탭이 사라졌습니다')
 
     def test_picker_lives_above_the_tabs(self):
-        """도구 선택은 탭 안이 아니라 창 맨 위에 있어야 어느 화면에서든 바꾼다."""
+        """도구 선택은 탭 안이 아니라 창 맨 위(상단바)에 있어야 어느 화면에서든 바꾼다."""
         for target, (card, title, desc) in self.app.target_cards.items():
-            picker = card.master
-            self.assertIsNot(picker, self.app.tab_input,
-                             f'{target} 카드가 명단 입력 탭 안에 있습니다')
-            self.assertIs(picker.master, self.app.root,
-                          f'{target} 카드를 담은 틀이 창의 직계 자식이 아닙니다')
+            switch = card.master
+            self.assertIs(switch, self.app.tool_switch)
+            self.assertIs(switch.master, self.app.top_frame,
+                          f'{target} 선택이 상단바 안에 있지 않습니다')
+            self.assertIs(self.app.top_frame.master, self.app.canvas)
+            self.assertIsNot(switch.master, self.app.tab_input)
+
+    def test_rail_follows_the_chosen_tool(self):
+        """레일에는 고른 도구의 단계만 있고, 같은 탭을 고른다."""
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+        try:
+            self.app._choose_target(TARGET_MESSENGER)
+            names = [item._text for item in self.app.rail_items.values()]
+            self.assertEqual(names, ['명단 입력', '위치 설정', '자동 선택', '도움말'])
+            self.app._choose_target(TARGET_EDUFINE)
+            names = [item._text for item in self.app.rail_items.values()]
+            self.assertEqual(names, ['명단 입력', '수신그룹 엑셀', '도움말'])
+        finally:
+            self.app._choose_target(TARGET_EDUFINE)
+            self.app.tool_states.clear()
+
+    def test_theme_accent_follows_the_tool(self):
+        """소통픽은 남보라(primary), 수신픽은 청록(tertiary)."""
+        import ui_kit
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+        try:
+            self.app._choose_target(TARGET_MESSENGER)
+            self.assertEqual(ui_kit.acc()[0], '#4A53C9')
+            self.app._choose_target(TARGET_EDUFINE)
+            self.assertEqual(ui_kit.acc()[0], '#00695C')
+        finally:
+            self.app._choose_target(TARGET_EDUFINE)
+            self.app.tool_states.clear()
 
     def test_edufine_buttons_are_shown_and_hidden(self):
         """pack 을 빠뜨려 버튼이 아예 안 보이던 적이 있다."""
@@ -521,7 +551,7 @@ class AppFlowTest(unittest.TestCase):
         self.assertTrue(self.app._org_needs_review(row))
         self.app.parsed_list.itemconfig.assert_called_with(
             'end', {'bg': '#FFEBEE', 'fg': '#B71C1C'})
-        self.app.bulk_fix_btn.config.assert_called_with(state='normal')
+        self.assertEqual(self.app.bulk_fix_btn.state_value, 'normal')
 
     def test_bulk_confirmation_updates_the_original_row(self):
         row = self.parse('행정과')[0]
@@ -694,7 +724,7 @@ class AppFlowTest(unittest.TestCase):
         self.app.worker_thread = worker
         try:
             self.app._stop()
-            self.app.start_btn.config.assert_called_with(state='disabled')
+            self.assertEqual(self.app.start_btn.state_value, 'disabled')
             self.assertTrue(self.app.stop_flag.is_set())
         finally:
             self.app.worker_thread = None
@@ -1605,7 +1635,7 @@ class AppFlowTest(unittest.TestCase):
                 self.assertEqual(len(tally.placed), 2)
                 self.assertEqual(tally.missing[0][1], reconcile.UNCONFIRMED)
                 self.assertEqual(self.app.last_excel_result['rows'], 2)
-                self.app.excel_result_btn.config.assert_called_with(state='normal')
+                self.assertEqual(self.app.excel_result_btn.state_value, 'normal')
             finally:
                 self.app.last_excel_result = None
                 self.app.names_list.clear()

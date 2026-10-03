@@ -40,8 +40,10 @@ def main():
     import main as app_module
 
     root = tkinter.Tk()
-    root.withdraw()
     app = app_module.App(root)
+    # 창 틀은 크기가 있어야 자리를 잡는다. 실제로 띄워서 배치를 확인한다.
+    root.deiconify()
+    root.update()
     print(f'App 생성 ok — {app_module.APP_NAME} v{app_module.APP_VERSION}')
 
     # 두 출구를 오가며 탭이 제대로 남는지 본다.
@@ -66,17 +68,33 @@ def main():
     assert grades.count('exact') == 2, grades
     assert 'ambiguous' in grades, grades
 
-    # 도구 선택은 탭 밖(창 맨 위)에 있어야 한다.
-    # 위젯 경로 문자열을 부분 비교하면 늘 참이 되어 아무것도 못 잡는다.
-    # 카드를 담은 틀이 창의 직계 자식인지, 탭보다 위 행에 있는지로 본다.
+    # 도구 선택은 탭 밖(창 맨 위 상단바)에 있어야 하고, 본문보다 위에 보여야 한다.
+    root.update()
     card = app.target_cards['edufine'][0]
-    picker = card.nametowidget(card.winfo_parent())
-    assert picker.winfo_parent() == str(root), (
-        '선택 카드가 창 바로 아래에 있지 않습니다', picker.winfo_parent())
-    picker_row = int(picker.grid_info()['row'])
-    tabs_row = int(app.nb.grid_info()['row'])
-    assert picker_row < tabs_row, ('선택 카드가 탭보다 아래에 있습니다', picker_row, tabs_row)
-    print(f'도구 선택 위치 ok — 선택 {picker_row}행, 탭 {tabs_row}행')
+    switch = card.nametowidget(card.winfo_parent())
+    assert switch is app.tool_switch, '도구 선택이 ToolSwitch 안에 있지 않습니다'
+    assert str(switch.winfo_parent()) == str(app.top_frame), '도구 선택이 상단바 안에 있지 않습니다'
+    assert str(app.top_frame.winfo_parent()) == str(app.canvas), '상단바가 창 틀 위에 있지 않습니다'
+    assert app.top_frame.winfo_rooty() < app.nb.winfo_rooty(), '도구 선택이 본문보다 아래에 있습니다'
+    print(f'도구 선택 위치 ok - 상단바 y={app.top_frame.winfo_rooty()}, 본문 y={app.nb.winfo_rooty()}')
+
+    # 레일: 고른 도구의 단계만 있고, 눌러서 같은 탭을 고른다
+    for target, names in ((TARGET_MESSENGER, ['명단 입력', '위치 설정', '자동 선택', '도움말']),
+                          (TARGET_EDUFINE, ['명단 입력', '수신그룹 엑셀', '도움말'])):
+        app._choose_target(target)
+        shown = [item._text for item in app.rail_items.values()]
+        assert shown == names, (target, shown)
+    first = next(iter(app.rail_items.values()))
+    first._pill.event_generate('<Button-1>')
+    root.update()
+    print(f'레일 ok - {shown}')
+
+    # 창 바탕이 실제로 그려졌는지 (Pillow 가 있을 때)
+    if app_module.glass is not None:
+        root.update()
+        app._render_backdrop()
+        assert app._shell['drawn'] is not None, '창 바탕이 그려지지 않았습니다'
+        print(f"창 바탕 ok - {app._shell['drawn']}")
 
     # 탭 내용이 스크롤 틀 안에 있어야 한다. 안내 그림이 들어가면서 [설정 저장]
     # 버튼이 창 밖으로 밀려난 적이 있다.
