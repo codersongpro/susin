@@ -104,6 +104,22 @@ def main():
     total = len(app_module.GUIDE_IMAGES) + len(app_module.EDUFINE_GUIDE_IMAGES)
     print(f'안내 그림 ok — {total}장')
 
+    # 결과 대조 창이 진짜 tkinter 에서 그려지고, 적은 수를 대조하는지.
+    import reconcile
+    tally = reconcile.messenger_tally([
+        {'org': '가초', 'name': '갑', 'added': True},
+        {'org': '나초', 'name': '을', 'failure_reason': '사용자 없음'},
+    ])
+    report = app_module.ResultReport(
+        root, tally, unit='명', who='사람', where='소통메신저 [선택된 사용자]',
+        into='받는 사람에', count_label='소통메신저 [선택된 사용자] 수:',
+        shown_count=1, on_retry=lambda: None)
+    assert report.check_count() == 'match', report.verdict.cget('text')
+    report.count_var.set('0')
+    assert report.check_count() == 'short', report.verdict.cget('text')
+    report.destroy()
+    print('결과 대조 창 ok')
+
     root.destroy()
     print('스모크 테스트 통과')
     return 0

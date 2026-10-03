@@ -986,6 +986,121 @@ class AppFlowTest(unittest.TestCase):
         finally:
             self.app.names_list = []
 
+    # ── 결과 대조 ──────────────────────────────
+    def test_stop_marks_untried_people_and_shows_the_comparison(self):
+        """중지하면 뒤쪽 사람은 시도도 안 했다. 담긴 것처럼 남으면 안 된다."""
+        import reconcile
+        from automation import FAIL_DUPLICATE, FAIL_NO_USER
+        items = [
+            {'org': '가초', 'name': '갑', 'added': True},
+            {'org': '나초', 'name': '을', 'failure_reason': FAIL_NO_USER},
+            {'org': '다초', 'name': '병', 'failure_reason': FAIL_DUPLICATE},
+            {'org': '라초', 'name': '정'},
+            {'org': '마초', 'name': '무'},
+        ]
+        self.app.names_list = items
+        try:
+            with patch.object(self.app_module, 'ResultReport') as report, \
+                    patch.object(self.app, '_selected_count', return_value=None):
+                self.app._done(1, 2, stopped=True, run_items=tuple(items))
+            self.assertEqual(items[3]['failure_reason'], reconcile.NOT_TRIED)
+            self.assertEqual(items[4]['failure_reason'], reconcile.NOT_TRIED)
+            report.assert_called_once()
+            tally = report.call_args.args[1]
+            self.assertEqual(tally.total, 5)
+            self.assertEqual(tally.reflected, 2)        # 갑 + 원래 있던 병
+            self.assertEqual(tally.short, 3)
+            self.assertIn('빠짐 3명', self.app.status_var.get())
+        finally:
+            self.app.names_list = []
+            self.app.last_run = None
+
+    def test_full_success_still_offers_the_count_check(self):
+        """다 담겼다고 봐도 소통메신저 수와 맞춰 볼 수 있어야 한다."""
+        items = [{'org': '가초', 'name': '갑', 'added': True},
+                 {'org': '나초', 'name': '을', 'added': True}]
+        self.app.names_list = items
+        try:
+            with patch.object(self.app_module, 'ResultReport') as report, \
+                    patch.object(self.app, '_selected_count', return_value=2):
+                self.app.run_selected_before = 0
+                self.app._done(2, 0, stopped=False, run_items=tuple(items))
+            kwargs = report.call_args.kwargs
+            self.assertEqual(kwargs['shown_count'], 2, '읽어 온 수를 채워 둔다')
+            self.assertEqual(kwargs['base_count'], 0)
+            self.app.failed_list_btn.config.assert_called_with(state='normal')
+        finally:
+            self.app.names_list = []
+            self.app.last_run = None
+            self.app.run_selected_before = None
+
+    def test_retry_skips_people_who_were_already_selected(self):
+        from automation import FAIL_DUPLICATE, FAIL_NO_USER
+        self.app.names_list = [
+            {'org': '가초', 'name': '갑', 'failure_reason': FAIL_NO_USER},
+            {'org': '나초', 'name': '을', 'failure_reason': FAIL_DUPLICATE},
+        ]
+        try:
+            with patch.object(self.app, '_start'):
+                self.app._retry_failed()
+            self.assertEqual([i['name'] for i in self.app.names_list], ['갑'])
+        finally:
+            self.app.names_list = []
+
+    def test_result_report_compares_the_typed_count(self):
+        import reconcile
+        m = self.app_module
+        tally = reconcile.messenger_tally([
+            {'org': '가초', 'name': '갑', 'added': True},
+            {'org': '나초', 'name': '을', 'added': True},
+            {'org': '다초', 'name': '병', 'added': True},
+        ])
+        report = m.ResultReport(
+            _Widget(), tally, unit='명', who='사람',
+            where='소통메신저 [선택된 사용자]', into='받는 사람에',
+            count_label='수:', base_count=1)
+        self.assertEqual(report.expected_count(), 4, '시작 전 1명 + 새로 3명')
+        report.count_var.set('4')
+        self.assertEqual(report.check_count(), 'match')
+        report.count_var.set('2')
+        self.assertEqual(report.check_count(), 'short')
+        report.count_var.set('네 명')
+        self.assertIsNone(report.check_count())
+
+    def test_selected_count_is_read_from_the_window(self):
+        with patch.object(self.app, '_win32gui', return_value=object()), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_window_texts',
+                             return_value=['사용자 선택', '검색 결과(2명)',
+                                           '선택된 사용자(17명)']):
+            self.assertEqual(self.app._selected_count(), 17)
+
+    def test_excel_is_read_back_and_compared(self):
+        """만든 엑셀을 다시 열어, 추출한 기관이 실제로 몇 줄 들어갔는지 대조한다."""
+        import reconcile
+        m = self.app_module
+        self.parse('학성초\n백곡초\n행정과')
+        for key, value in (('사용자ID', 'test'), ('사용자명', '홍길동'),
+                           ('그룹명', '시험 그룹')):
+            self.app.edufine_vars[key].set(value)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'out.xlsx')
+            try:
+                with patch.object(m.filedialog, 'asksaveasfilename', return_value=path), \
+                        patch.object(m.messagebox, 'askyesno', return_value=True), \
+                        patch.object(m, 'ResultReport') as report:
+                    self.app._build_group_excel()
+                report.assert_called_once()
+                tally = report.call_args.args[1]
+                self.assertEqual(tally.total, 3)
+                self.assertEqual(len(tally.placed), 2)
+                self.assertEqual(tally.missing[0][1], reconcile.UNCONFIRMED)
+                self.assertEqual(self.app.last_excel_result['rows'], 2)
+                self.app.excel_result_btn.config.assert_called_with(state='normal')
+            finally:
+                self.app.last_excel_result = None
+                self.app.names_list.clear()
+
     def test_failure_report_groups_by_reason(self):
         m = self.app_module
         items = [

@@ -48,6 +48,7 @@ from automation import (
     looks_like_result,
 )
 from hwp_extract import extract_hwp_text
+import reconcile
 from sotong_parser import (
     AUTO_GRADES,
     GRADE_AMBIGUOUS,
@@ -95,6 +96,9 @@ except ImportError:
 
 # 소통메신저가 결과 목록 위에 적어 두는 '검색 결과(2명)' 같은 글.
 SEARCH_COUNT_RE = re.compile(r'검색\s*결과\s*\(?\s*(\d+)\s*명')
+# 소통메신저 [선택된 사용자] 옆에 적힌 수. 읽히면 다 끝난 뒤 직접 세어 보지 않아도
+# 몇 명이 실제로 들어갔는지 대조할 수 있다. 못 읽으면 사용자가 보고 적는다.
+SELECTED_COUNT_RE = re.compile(r'선택된\s*사용자\s*[\(\[]?\s*(\d+)\s*명')
 
 VK_LBUTTON = 0x01
 VK_RETURN = 0x0D
@@ -441,8 +445,10 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     3단계: [사용자 선택] 버튼을 눌러 받는 사람에 추가합니다
 
   검색해서 나오지 않은 사람은 빨간 항목으로 남습니다.
-  다 끝난 뒤 소통메신저의 [선택된 사용자] 수가 맞는지
-  한 번 보시면 좋습니다.
+  다 끝나면 결과 대조 창이 뜹니다. 추출한 사람 수와 들어간 수를
+  나란히 보여 주고, 빠진 사람은 누구인지 사유별로 모아 줍니다.
+  소통메신저 [선택된 사용자] 수를 읽어 와 맞는지도 알려 줍니다.
+  못 읽으면 화면에 보이는 수를 적고 [대조] 를 누르세요.
 
   수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
@@ -670,6 +676,11 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     코드가 없는 기관이 있으면 목록으로 알려 줍니다. 조용히 빠지지 않습니다.
     그런 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.
 
+    엑셀을 만들면 파일을 다시 열어서, 추출한 기관 수와 실제로 써진
+    줄 수를 대조해 보여 줍니다. 빠진 기관은 사유와 함께 나옵니다.
+    에듀파인에 올린 뒤 수신그룹에 보이는 기관 수를 적으면 모자란지도
+    알려 줍니다. 창을 닫았다면 [결과 대조] 로 다시 엽니다.
+
     만들어진 엑셀은 에듀파인에 올립니다. 누르는 차례는 이렇습니다.
 
       1) [개인설정]            에듀파인 오른쪽 위에 있습니다
@@ -864,21 +875,157 @@ class FailureReport(tk.Toplevel):
         return '\n'.join(lines).strip()
 
     def _copy(self):
-        text = self.as_text()
+        if copy_text(self, self.as_text()):
+            self.status.config(text='✓ 복사했습니다')
+
+    def _retry(self):
+        self.destroy()
+        if self.on_retry:
+            self.on_retry()
+
+
+def copy_text(widget, text: str) -> bool:
+    """클립보드에 넣는다. pyperclip 이 안 되면 tk 클립보드로 넘어간다."""
+    try:
+        if pyperclip is not None:
+            pyperclip.copy(text)
+        else:
+            raise RuntimeError('pyperclip 없음')
+    except Exception as exc:
+        logging.info('명단 복사에 tk 클립보드를 씁니다: %s', exc)
         try:
-            if pyperclip is not None:
-                pyperclip.copy(text)
-            else:
-                raise RuntimeError('pyperclip 없음')
-        except Exception as exc:
-            logging.info('실패 명단 복사에 tk 클립보드를 씁니다: %s', exc)
-            try:
-                self.clipboard_clear()
-                self.clipboard_append(text)
-            except tk.TclError as tcl_exc:
-                logging.warning('실패 명단 복사 실패: %s', tcl_exc)
-                return
-        self.status.config(text='✓ 복사했습니다')
+            widget.clipboard_clear()
+            widget.clipboard_append(text)
+        except tk.TclError as tcl_exc:
+            logging.warning('명단 복사 실패: %s', tcl_exc)
+            return False
+    return True
+
+
+class ResultReport(tk.Toplevel):
+    """추출한 수와 실제로 들어간 수를 나란히 보여 주고, 빠진 것을 알려 주는 창.
+
+    소통픽은 소통메신저 [선택된 사용자] 수와, 수신픽은 에듀파인 수신그룹에 보이는
+    기관 수와 한 번 더 맞춰 볼 수 있다. 그 수를 앱이 읽었으면 미리 채워 둔다.
+    """
+
+    def __init__(self, parent, tally, *, unit, who, where, count_label, into,
+                 shown_count=None, base_count=0, note='', on_retry=None,
+                 title='결과 대조'):
+        super().__init__(parent)
+        self.tally = tally
+        self.unit = unit
+        self.who = who
+        self.where = where
+        self.base_count = base_count or 0
+        self.on_retry = on_retry
+        self.title(title)
+        self.geometry('560x560')
+        ok = tally.short == 0
+        bg = '#F1F8E9' if ok else '#FFF5F5'
+        self.configure(bg=bg)
+
+        head = (f'✓  {tally.total}{unit}이 {into} 모두 들어갔습니다' if ok else
+                f'⚠  {tally.total}{unit} 중 {tally.short}{unit}이 {into} 들어가지 않았습니다')
+        tk.Label(
+            self, text=head, bg='#2E7D32' if ok else '#B71C1C', fg='white',
+            font=('맑은 고딕', 12, 'bold'), pady=10
+        ).pack(fill='x')
+
+        tk.Label(
+            self, text=reconcile.summary_line(tally, unit), bg=bg, fg='#263238',
+            font=('맑은 고딕', 10, 'bold'), justify='left'
+        ).pack(anchor='w', padx=12, pady=(10, 2))
+        if note:
+            tk.Label(self, text=note, bg=bg, fg='#555', font=('맑은 고딕', 9),
+                     justify='left', wraplength=520).pack(anchor='w', padx=12)
+
+        # 받는 쪽 화면의 수와 대조
+        check = tk.Frame(self, bg=bg)
+        check.pack(fill='x', padx=12, pady=(10, 2))
+        tk.Label(check, text=count_label, bg=bg, font=('맑은 고딕', 9)).pack(side='left')
+        self.count_var = tk.StringVar(
+            value='' if shown_count is None else str(shown_count))
+        entry = tk.Entry(check, textvariable=self.count_var, width=6,
+                         font=('맑은 고딕', 10), justify='center')
+        entry.pack(side='left', padx=6)
+        entry.bind('<Return>', lambda _e: self.check_count())
+        tk.Button(check, text='대조', command=self.check_count,
+                  bg='#1565C0', fg='white', relief='flat',
+                  font=('맑은 고딕', 9, 'bold'), padx=10, cursor='hand2'
+                  ).pack(side='left')
+        self.verdict = tk.Label(self, text='', bg=bg, fg='#555',
+                                font=('맑은 고딕', 9), justify='left',
+                                wraplength=520)
+        self.verdict.pack(anchor='w', padx=12, pady=(2, 6))
+
+        box = tk.Frame(self, bg=bg)
+        box.pack(fill='both', expand=True, padx=12, pady=4)
+        self.text = scrolledtext.ScrolledText(
+            box, font=('맑은 고딕', 10), wrap='word', height=12)
+        self.text.pack(fill='both', expand=True)
+        self.text.insert('1.0', self.missing_text() or f'빠진 {who}이 없습니다.')
+        self.text.config(state='disabled', fg='#B71C1C' if not ok else '#1B5E20')
+
+        row = tk.Frame(self, bg=bg)
+        row.pack(fill='x', padx=12, pady=10)
+        if not ok:
+            tk.Button(
+                row, text='📋  빠진 명단 복사', command=self._copy_missing,
+                bg='#B71C1C', fg='white', relief='flat',
+                font=('맑은 고딕', 10), padx=10, pady=6, cursor='hand2'
+            ).pack(side='left', padx=4)
+        tk.Button(
+            row, text='📋  들어간 명단 복사', command=self._copy_placed,
+            bg='#607D8B', fg='white', relief='flat',
+            font=('맑은 고딕', 10), padx=10, pady=6, cursor='hand2'
+        ).pack(side='left', padx=4)
+        if on_retry and not ok:
+            tk.Button(
+                row, text='↻  빠진 것만 다시 실행', command=self._retry,
+                bg='#795548', fg='white', relief='flat',
+                font=('맑은 고딕', 10, 'bold'), padx=10, pady=6, cursor='hand2'
+            ).pack(side='left', padx=4)
+        tk.Button(
+            row, text='닫기', command=self.destroy,
+            bg='#9E9E9E', fg='white', relief='flat',
+            font=('맑은 고딕', 10), padx=12, pady=6
+        ).pack(side='right', padx=4)
+
+        self.status = tk.Label(self, text='', bg=bg, fg='green', font=('맑은 고딕', 9))
+        self.status.pack(pady=(0, 8))
+
+        if shown_count is not None:
+            self.check_count()
+
+    def expected_count(self) -> int:
+        """받는 쪽 화면에 보여야 할 수. 시작 전부터 있던 수에 새로 넣은 수를 더한다."""
+        return self.base_count + len(self.tally.placed)
+
+    def check_count(self):
+        """적힌 수를 대조한다. 돌려주는 값은 match / short / over, 못 읽으면 None."""
+        raw = (self.count_var.get() or '').strip()
+        try:
+            shown = int(raw)
+        except ValueError:
+            self.verdict.config(text='숫자만 적어 주세요.', fg='#E65100')
+            return None
+        kind, message = reconcile.compare_count(
+            self.expected_count(), shown, self.where, self.unit, self.who)
+        color = {'match': '#2E7D32', 'short': '#B71C1C', 'over': '#E65100'}[kind]
+        self.verdict.config(text=message, fg=color)
+        return kind
+
+    def missing_text(self) -> str:
+        return reconcile.missing_text(self.tally, self.unit)
+
+    def _copy_missing(self):
+        if copy_text(self, self.missing_text()):
+            self.status.config(text='✓ 빠진 명단을 복사했습니다')
+
+    def _copy_placed(self):
+        if copy_text(self, reconcile.placed_text(self.tally)):
+            self.status.config(text='✓ 들어간 명단을 복사했습니다')
 
     def _retry(self):
         self.destroy()
@@ -1183,6 +1330,10 @@ class App:
         self.continue_event.set()
         self.worker_thread = None
         self.guide_dialog = None
+        # 지난 실행 결과. 결과 대조 창을 닫았다가 다시 열 수 있게 둔다.
+        self.last_run = None
+        self.run_selected_before = None
+        self.last_excel_result = None
 
         self._apply_theme()
         self._build_ui()
@@ -1633,6 +1784,14 @@ class App:
         )
         self.edufine_make_button.pack(side='left')
 
+        self.excel_result_btn = tk.Button(
+            btn_row, text='결과 대조', command=self._show_excel_result,
+            bg='#2E7D32', fg='white', disabledforeground='#ECEFF1', activebackground='#1B5E20',
+            relief='flat', font=('맑은 고딕', 9, 'bold'), padx=14, pady=6, cursor='hand2',
+            state='disabled'
+        )
+        self.excel_result_btn.pack(side='left', padx=(8, 0))
+
         tk.Button(
             btn_row, text='코드 없는 기관 순차 복사', command=self._open_clipboard_walker,
             bg='#6A1B9A', fg='white', disabledforeground='#ECEFF1', activebackground='#4A148C',
@@ -1971,11 +2130,50 @@ class App:
             messagebox.showerror('저장 실패', f'엑셀을 만들지 못했습니다.\n\n{exc}')
             return
 
-        self.status_var.set(f'수신그룹 엑셀 저장 완료: {len(ready)}곳')
-        messagebox.showinfo(
-            '저장했습니다',
-            f'{len(ready)}곳이 담긴 엑셀을 만들었습니다.\n\n{path}\n\n'
-            '에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록] 에서 이 파일을 올리세요.')
+        # 만들려던 목록이 아니라 파일에 실제로 써진 줄과 맞춰 본다.
+        try:
+            written = edufine.read_written_codes(path)
+        except Exception as exc:
+            logging.exception('수신그룹 엑셀 다시 읽기 실패')
+            self.status_var.set(f'수신그룹 엑셀 저장 완료: {len(ready)}곳')
+            messagebox.showwarning(
+                '저장은 했지만 확인하지 못했습니다',
+                f'{len(ready)}곳을 넣어 엑셀을 만들었지만, 다시 열어 확인하지 못했습니다.\n\n'
+                f'{path}\n\n{exc}\n\n'
+                '올리기 전에 엑셀을 열어 줄 수가 맞는지 한 번 보세요.')
+            return
+
+        tally = reconcile.edufine_tally(self.names_list, self.codes, written)
+        self.last_excel_result = {'tally': tally, 'path': path, 'rows': len(written)}
+        self._refresh_excel_result_state()
+        logging.info('수신그룹 엑셀 결과: 추출 %s, 들어감 %s, 빠짐 %s, 줄 %s',
+                     tally.total, len(tally.placed), tally.short, len(written))
+        self.status_var.set(
+            f'수신그룹 엑셀 저장 완료  ·  {reconcile.summary_line(tally, "곳")}')
+        self._show_excel_result()
+
+    def _show_excel_result(self):
+        """추출한 기관 수와 엑셀에 실제로 써진 수를 대조하는 창."""
+        result = self.last_excel_result
+        if not result:
+            messagebox.showinfo('알림', '아직 만든 수신그룹 엑셀이 없습니다.')
+            return
+        tally = result['tally']
+        note = (f'엑셀을 다시 열어 {result["rows"]}줄을 확인했습니다.\n{result["path"]}\n\n'
+                '에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록] 에서 이 파일을 올리세요. '
+                '올린 뒤 수신그룹에 보이는 기관 수를 아래에 적으면 빠진 곳이 있는지 알려 드립니다.')
+        if any(reason == reconcile.NO_CODE for _item, reason in tally.missing):
+            note += '\n코드가 없는 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.'
+        ResultReport(
+            self.root, tally, unit='곳', who='기관',
+            where='에듀파인 수신그룹', into='엑셀에',
+            count_label='에듀파인 수신그룹에 보이는 기관 수:',
+            note=note, title='수신픽 결과 대조')
+
+    def _refresh_excel_result_state(self):
+        btn = getattr(self, 'excel_result_btn', None)
+        if btn:
+            btn.config(state='normal' if self.last_excel_result else 'disabled')
 
     # ── 클립보드 순차 복사 ─────────────────────
     def _open_clipboard_walker(self):
@@ -2034,7 +2232,7 @@ class App:
         self.retry_failed_btn.pack(side='left', padx=4)
 
         self.failed_list_btn = tk.Button(
-            btn_frame, text='📋  실패 명단 보기',
+            btn_frame, text='📋  결과 대조 · 빠진 명단',
             bg='#B71C1C', fg='white', disabledforeground='#ECEFF1', activebackground='#8E0000',
             relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
             cursor='hand2', state='disabled', command=self._show_failure_report
@@ -2126,11 +2324,18 @@ class App:
 
     def _refresh_failed_retry_state(self):
         has_failed = any(item.get('failure_reason') for item in self.names_list)
-        state = 'normal' if has_failed else 'disabled'
-        for name in ('retry_failed_btn', 'failed_list_btn'):
+        retryable = any(item.get('failure_reason')
+                        and item.get('failure_reason') != FAIL_DUPLICATE
+                        for item in self.names_list)
+        states = {
+            'retry_failed_btn': retryable,
+            # 결과 대조는 다 담겼어도 열 수 있어야 한다. 소통메신저 수와 맞춰 보는 창이다.
+            'failed_list_btn': has_failed or bool(getattr(self, 'last_run', None)),
+        }
+        for name, on in states.items():
             btn = getattr(self, name, None)
             if btn:
-                btn.config(state=state)
+                btn.config(state='normal' if on else 'disabled')
 
     @staticmethod
     def _org_needs_review(item: dict) -> bool:
@@ -3102,6 +3307,10 @@ class App:
         self.continue_event.set()
         for item in self.names_list:
             item.pop('failure_reason', None)
+            item.pop('added', None)
+        # 시작 전부터 [선택된 사용자] 에 있던 수. 끝난 뒤 늘어난 만큼이 이번에
+        # 들어간 수다. 못 읽으면 None 이고, 그때는 사용자가 보고 적는다.
+        self.run_selected_before = self._selected_count()
         self._rebuild_parsed_list()
         self.start_btn.config(state='disabled')
         self.stop_btn.config(state='normal')
@@ -3166,8 +3375,12 @@ class App:
         # 검색어(search)가 사라진 채 엉뚱하게 검색됐다.
         failed = []
         for item in self._failed_items():
+            # 이미 선택된 사용자는 받는 사람에 들어 있다. 다시 돌릴 이유가 없다.
+            if item.get('failure_reason') == FAIL_DUPLICATE:
+                continue
             copied = dict(item)
             copied.pop('failure_reason', None)
+            copied.pop('added', None)
             failed.append(copied)
         if not failed:
             messagebox.showinfo('알림', '다시 실행할 실패 항목이 없습니다.')
@@ -3178,12 +3391,50 @@ class App:
         self._start()
 
     def _show_failure_report(self):
-        """실패한 사람만 사유별로 모아 보여 준다."""
+        """지난 실행 결과를 다시 연다. 실행한 적이 없으면 실패 명단만 보여 준다."""
+        if getattr(self, 'last_run', None):
+            self._show_run_result()
+            return
         failed = self._failed_items()
         if not failed:
             messagebox.showinfo('알림', '실패한 항목이 없습니다.')
             return
         FailureReport(self.root, failed, self._retry_failed)
+
+    def _show_run_result(self):
+        """추출한 수와 소통메신저에 들어간 수를 대조하는 창."""
+        run = getattr(self, 'last_run', None)
+        if not run:
+            return
+        before, after = run['before'], run['after']
+        if after is not None:
+            note = ('소통메신저 [선택된 사용자] 수를 읽어 와 아래에 채웠습니다. '
+                    '화면의 수와 다르면 고쳐 적고 [대조] 를 누르세요.')
+        else:
+            note = ('소통메신저 [선택된 사용자] 수를 읽지 못했습니다. 화면에 보이는 수를 '
+                    '아래에 적고 [대조] 를 누르면 모자란지 알려 드립니다.')
+        if before:
+            note += f'\n시작 전부터 {before}명이 들어 있었으므로 그만큼 더해서 비교합니다.'
+        ResultReport(
+            self.root, run['tally'], unit='명', who='사람',
+            where='소통메신저 [선택된 사용자]', into='받는 사람에',
+            count_label='소통메신저 [선택된 사용자] 수:',
+            shown_count=after, base_count=before or 0, note=note,
+            on_retry=self._retry_failed, title='소통픽 결과 대조')
+
+    def _selected_count(self):
+        """소통메신저 [선택된 사용자] 옆의 수를 읽는다. 못 읽으면 None."""
+        if self._win32gui() is None:
+            return None
+        try:
+            for window in self._snapshot_dialogs():
+                for text in self._window_texts(window):
+                    found = SELECTED_COUNT_RE.search(text or '')
+                    if found:
+                        return int(found.group(1))
+        except Exception as exc:
+            logging.debug('선택된 사용자 수를 읽지 못했습니다: %s', exc)
+        return None
 
     # ── 자동화 워커 ────────────────────────────
     def _worker(self, run_items):
@@ -3241,6 +3492,7 @@ class App:
                         self._mark_failed(idx, FAIL_MANUAL_STOP)
                         break
                     ok += 1
+                    item['added'] = True
                     self._log('✓\n')
                 else:
                     result = self._do_select()
@@ -3255,6 +3507,7 @@ class App:
                         self._update_progress(idx + 1, total)
                         continue
                     ok += 1
+                    item['added'] = True
                     self._log('✓\n')
             except pyautogui.FailSafeException:
                 self._log('\n⚠  긴급 중지 (화면 모서리)\n')
@@ -3270,7 +3523,7 @@ class App:
             time.sleep(0.1)
 
         stopped = self.stop_flag.is_set()
-        self.root.after(0, lambda: self._done(ok, fail, stopped))
+        self.root.after(0, lambda: self._done(ok, fail, stopped, run_items))
 
     def _do_search(self, search_str: str):
         x = self.config.data['search_field_x']
@@ -3600,26 +3853,43 @@ class App:
         )
         self.continue_btn.config(state='normal')
 
-    def _done(self, ok: int, fail: int, stopped: bool = False):
+    def _done(self, ok: int, fail: int, stopped: bool = False, run_items=None):
         self.worker_thread = None
         self.start_btn.config(state='normal')
         self.stop_btn.config(state='disabled')
         self.continue_btn.config(state='disabled')
+        run_items = list(self.names_list if run_items is None else run_items)
+
+        # 결과가 남지 않은 항목은 조용히 넘기지 않는다. 중지하면 그 뒤 사람들은
+        # 시도조차 안 했는데, 예전에는 빨간 표시도 없이 담긴 것처럼 남았다.
+        unmarked = reconcile.NOT_TRIED if stopped else reconcile.NOT_CHECKED
+        run_ids = {id(item) for item in run_items}
+        for idx, item in enumerate(self.names_list):
+            if (id(item) in run_ids
+                    and not item.get('added') and not item.get('failure_reason')):
+                self._paint_failed(idx, unmarked)
+
+        tally = reconcile.messenger_tally(run_items, stopped)
+        before = getattr(self, 'run_selected_before', None)
+        after = self._selected_count()
+        self.last_run = {'tally': tally, 'before': before, 'after': after}
         self._refresh_failed_retry_state()
+
         sep = '─' * 44
         result_word = '중지' if stopped else '완료'
         self._log(f'\n{sep}\n{result_word}  ✓ {ok}명   ✗ {fail}명\n')
-        summary = f'성공: {ok}명, 실패: {fail}명'
-        if stopped:
-            self.status_var.set(f'중지됨  ·  {summary}')
-            return
-        if fail:
-            self.status_var.set(f'완료 — {summary}  ← 빨간색 항목 확인')
-            # 빠진 사람은 목록으로 보여 준다. 몇 명인지만 알려 주면 누가 빠졌는지
-            # 로그를 거슬러 올라가며 찾아야 한다.
-            self._show_failure_report()
-        else:
-            self.status_var.set(f'완료 — 성공: {ok}명')
+        self._log(f'{reconcile.summary_line(tally, "명")}\n')
+        if after is not None:
+            start = f' (시작 전 {before}명)' if before is not None else ''
+            self._log(f'소통메신저 [선택된 사용자] {after}명{start}\n')
+        logging.info('자동 선택 결과: 추출 %s, 들어감 %s, 빠짐 %s',
+                     tally.total, tally.reflected, tally.short)
+
+        head = f'{result_word}  ·  {reconcile.summary_line(tally, "명")}'
+        self.status_var.set(head + ('  ← 빨간색 항목 확인' if tally.short else ''))
+        # 몇 명인지만 알려 주면 누가 빠졌는지 로그를 거슬러 올라가며 찾아야 한다.
+        # 추출한 수와 들어간 수를 나란히 놓고, 빠진 사람을 사유별로 보여 준다.
+        self._show_run_result()
 
     def _update_progress(self, idx: int, total: int):
         self.root.after(
@@ -3634,14 +3904,18 @@ class App:
         # 파일 로그에는 개인정보를 남기지 않고 순번과 사유만 기록한다.
         logging.warning('명단 추가 실패: 순번=%s, 사유=%s', idx + 1, reason)
         def apply():
-            if idx >= len(self.names_list):
-                return
-            self.names_list[idx]['failure_reason'] = reason
-            self.parsed_list.delete(idx)
-            self.parsed_list.insert(idx, self._format_item_label(self.names_list[idx]))
-            self.parsed_list.itemconfig(idx, {'bg': '#FFCDD2', 'fg': '#B71C1C'})
+            self._paint_failed(idx, reason)
             self._refresh_failed_retry_state()
         self.root.after(0, apply)
+
+    def _paint_failed(self, idx: int, reason: str):
+        """목록의 그 항목에 사유를 남기고 빨갛게 칠한다. 화면 스레드에서만 부른다."""
+        if idx >= len(self.names_list):
+            return
+        self.names_list[idx]['failure_reason'] = reason
+        self.parsed_list.delete(idx)
+        self.parsed_list.insert(idx, self._format_item_label(self.names_list[idx]))
+        self.parsed_list.itemconfig(idx, {'bg': '#FFCDD2', 'fg': '#B71C1C'})
 
     def _log(self, msg: str):
         self.root.after(0, lambda: self._log_append(msg))

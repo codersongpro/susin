@@ -145,6 +145,25 @@ def read_group_workbook(path: str) -> dict:
     return out
 
 
+def read_written_codes(path: str) -> list:
+    """만든 수신그룹 엑셀을 다시 열어 기관코드를 줄마다 읽는다.
+
+    read_group_workbook 은 기관명으로 묶어 같은 기관이 두 줄이면 한 번만 센다.
+    여기서는 실제로 몇 줄이 써졌는지 맞춰 봐야 하므로 줄마다 그대로 돌려준다.
+    """
+    _require_openpyxl()
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb[SHEET_NAME] if SHEET_NAME in wb.sheetnames else wb.worksheets[0]
+    codes = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if row is None or len(row) <= COL_ORG_CODE:
+            continue
+        code = str(row[COL_ORG_CODE] or '').strip()
+        if CODE_RE.match(code):
+            codes.append(code)
+    return codes
+
+
 def merge_codes(codes: dict, harvested: dict) -> tuple:
     """수확 결과를 사전에 합친다. (갱신된 사전, 새로 추가된 수, 코드가 바뀐 기관 목록)"""
     codes = dict(codes)
