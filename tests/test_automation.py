@@ -102,3 +102,57 @@ class SelectedListTest(unittest.TestCase):
     def test_nothing_to_the_right(self):
         from automation import pick_selected_list
         self.assertIsNone(pick_selected_list([(1, 'ListBox', (0, 0, 300, 500))], 325, 250))
+
+
+def web_dialog_nodes(selected=6, offscreen_after=4, with_label=True):
+    """CEF 로 그린 [사용자 선택] 창을 흉내 낸 요소 목록.
+
+    왼쪽 조직도(x 0~300)에 사람 20명, 오른쪽(x 400~600) 에 담긴 사람 selected 명.
+    담긴 사람 한 줄에는 사진, 이름, 소속, 빼기 단추가 있다.
+    """
+    nodes = []
+
+    def add(parent, kind, rect, name='', off=False):
+        nodes.append({'id': len(nodes), 'parent': parent, 'type': kind,
+                      'rect': rect, 'name': name, 'offscreen': off})
+        return len(nodes) - 1
+
+    doc = add(-1, 50030, (0, 0, 600, 600))
+    if with_label:
+        add(doc, 50020, (400, 10, 500, 30), '선택된 사용자')
+    tree = add(doc, 50023, (0, 40, 300, 600))
+    for k in range(20):
+        add(tree, 50024, (0, 40 + k * 20, 300, 60 + k * 20), f'조직도사람{k}')
+    box = add(doc, 50026, (400, 40, 600, 400))
+    for k in range(selected):
+        top = 40 + k * 60
+        row = add(box, 50026, (400, top, 600, top + 60), off=k > offscreen_after)
+        add(row, 50006, (400, top, 440, top + 60))
+        add(row, 50020, (440, top, 560, top + 30), f'담긴사람{k}')
+        add(row, 50020, (440, top + 30, 560, top + 60), '소속')
+        add(row, 50000, (560, top, 600, top + 60), '빼기')
+    return nodes
+
+
+class WebDialogGuessTest(unittest.TestCase):
+    """웹 화면 속 [선택된 사용자] 목록 고르기."""
+
+    def test_counts_rows_on_the_right_including_offscreen(self):
+        from automation import guess_selected_list
+        node, kid_type, count, offscreen = guess_selected_list(web_dialog_nodes(), 350)
+        self.assertEqual((kid_type, count, offscreen), (50026, 6, 1))
+
+    def test_left_tree_is_never_picked(self):
+        from automation import guess_selected_list
+        guess = guess_selected_list(web_dialog_nodes(selected=0), 350)
+        self.assertTrue(guess is None or guess[2] < 20, '조직도를 셌습니다')
+
+    def test_works_without_the_label(self):
+        from automation import guess_selected_list
+        guess = guess_selected_list(web_dialog_nodes(with_label=False), 350)
+        self.assertEqual(guess[2], 6)
+
+    def test_type_names(self):
+        from automation import uia_type_name
+        self.assertEqual(uia_type_name(50007), 'ListItem')
+        self.assertEqual(uia_type_name(12345), '12345')

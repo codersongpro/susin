@@ -37,7 +37,12 @@ import edufine
 from automation import (
     FAIL_DUPLICATE,
     count_message_for,
+    guess_selected_list,
     pick_selected_list,
+    repeated_containers,
+    find_label,
+    uia_type_name,
+    SELECTED_LABEL,
     FAIL_MANUAL_STOP,
     FAIL_NO_USER,
     FAIL_SEARCH_STALE,
@@ -3553,6 +3558,102 @@ class App:
                 return picked
         return None
 
+    def _uia(self):
+        """윈도우 화면 읽어 주기(UI 자동화). (객체, 못 쓰는 이유) 로 돌려준다."""
+        try:
+            import comtypes.client
+            comtypes.client.GetModule('UIAutomationCore.dll')
+            from comtypes.gen import UIAutomationClient as client
+            uia = comtypes.client.CreateObject(
+                client.CUIAutomation, interface=client.IUIAutomation)
+            return uia, ''
+        except Exception as exc:
+            logging.info('UI 자동화를 쓸 수 없습니다: %s', exc)
+            return None, str(exc)
+
+    def _uia_nodes(self, uia, hwnd, limit: int = 3000) -> list:
+        """창 안의 요소를 모두 모은다. 이름은 화면에 내보내지 않고 판단에만 쓴다."""
+        try:
+            root = uia.ElementFromHandle(hwnd)
+            walker = uia.RawViewWalker
+        except Exception as exc:
+            logging.info('UI 자동화로 창을 열지 못했습니다: %s', exc)
+            return []
+        nodes = []
+        stack = [(root, -1)]
+        while stack and len(nodes) < limit:
+            element, parent = stack.pop()
+            try:
+                rect = element.CurrentBoundingRectangle
+                node = {
+                    'id': len(nodes), 'parent': parent,
+                    'type': element.CurrentControlType,
+                    'name': element.CurrentName or '',
+                    'rect': (rect.left, rect.top, rect.right, rect.bottom),
+                    'offscreen': bool(element.CurrentIsOffscreen),
+                }
+            except Exception:
+                continue
+            nodes.append(node)
+            kids = []
+            try:
+                child = walker.GetFirstChildElement(element)
+                while child:
+                    kids.append(child)
+                    child = walker.GetNextSiblingElement(child)
+            except Exception as exc:
+                logging.debug('UI 자동화 자식 읽기 실패: %s', exc)
+            for kid in reversed(kids):
+                stack.append((kid, node['id']))
+        return nodes
+
+    def _probe_uia(self, window, point):
+        """웹 화면 속 [선택된 사용자] 목록을 화면 읽어 주기로 찾는다.
+
+        돌려주는 값은 (추정, 보여 줄 줄들). 추정은 guess_selected_list 의 결과다.
+        크롬 화면은 누가 읽으려 할 때 비로소 내용을 내주므로 몇 번 다시 읽는다.
+        """
+        lines = ['', '[화면 읽어 주기]']
+        uia, why = self._uia()
+        if uia is None:
+            lines.append(f'  쓸 수 없습니다: {why}')
+            lines.append('  개발용 실행.bat 을 다시 누르면 필요한 것(comtypes)을 깝니다.')
+            return None, lines
+        gui = self._win32gui()
+        try:
+            base_left, base_top, _r, _b = gui.GetWindowRect(window)
+        except Exception:
+            base_left = base_top = 0
+        nodes, tries = [], 0
+        for tries in range(1, 5):
+            nodes = self._uia_nodes(uia, window)
+            if len(nodes) >= 30:
+                break
+            time.sleep(0.8)
+        guess = guess_selected_list(nodes, point[0])
+        offscreen = sum(1 for node in nodes if node['offscreen'])
+        lines.append(f'  읽은 요소: {len(nodes)}개 (화면 밖 {offscreen}개), {tries}번 읽음')
+        label = find_label(nodes, SELECTED_LABEL)
+        lines.append(f"  '{SELECTED_LABEL}' 제목: {'찾음' if label else '못 찾음'}")
+        kinds = {}
+        for node in nodes:
+            name = uia_type_name(node['type'])
+            kinds[name] = kinds.get(name, 0) + 1
+        lines.append('  종류별: ' + ', '.join(
+            f'{k} {v}' for k, v in sorted(kinds.items(), key=lambda kv: -kv[1])))
+        right = [c for c in repeated_containers(nodes) if c[0]['rect'][0] >= point[0]]
+        right.sort(key=lambda c: -c[2])
+        lines.append('  오른쪽에서 같은 줄이 반복되는 요소 (많은 순):')
+        for node, kid_type, count, off in right[:8]:
+            l, t, r, b = node['rect']
+            lines.append(
+                f'    {uia_type_name(node["type"])} 안 {uia_type_name(kid_type)} {count}개'
+                f' (화면 밖 {off})  창 기준 ({l - base_left}, {t - base_top}) 크기 {r - l}x{b - t}')
+        if not right:
+            lines.append('    없음')
+        lines.append(f'  추정: {guess[2]}명' if guess else '  추정: 찾지 못함')
+        return guess, lines
+
     def _window_contains(self, hwnd, point) -> bool:
         gui = self._win32gui()
         try:
@@ -3612,6 +3713,7 @@ class App:
         dialogs = self._messenger_dialogs() if gui is not None else []
         # 결과는 O 아니면 X 다. 한눈에 보이도록 창 맨 위에 크게 쓴다.
         mark, headline, advice = 'X', '', ''
+        extra_lines = []
         if gui is None:
             headline = '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
         elif point is None:
@@ -3632,9 +3734,19 @@ class App:
                 advice = ('창을 옮기셨다면 [2. 위치 설정] 에서 4, 5, 6번을 다시 잡고 다시 눌러 '
                           '주세요. 이대로 자동 선택을 시작하면 엉뚱한 곳을 누릅니다.')
             else:
-                headline = '[선택된 사용자] 목록을 셀 수 없습니다.'
-                advice = ('[내용 복사] 로 아래 내용을 보내 주세요. 목록이 어떤 부품으로 '
-                          '되어 있는지 보고 다른 방법을 찾겠습니다.')
+                # 창 안이 웹 화면이면 윈도우 목록 칸이 없다. 화면 읽어 주기로 다시 본다.
+                guess, uia_lines = self._probe_uia(inside[0], point)
+                extra_lines = uia_lines
+                if guess:
+                    mark = 'O'
+                    headline = (f'[선택된 사용자] 목록을 읽을 수 있을 것 같습니다. '
+                                f'{guess[2]}명으로 셉니다.')
+                    advice = ('소통메신저에 담아 둔 사람 수와 같은지 꼭 확인해 주세요. '
+                              '같으면 이 방법으로 세도록 만들겠습니다.')
+                else:
+                    headline = '[선택된 사용자] 목록을 셀 수 없습니다.'
+                    advice = ('[내용 복사] 를 누른 뒤 대화창에 붙여 넣어 보내 주세요. '
+                              '목록이 어떻게 되어 있는지 보고 다른 방법을 찾겠습니다.')
 
         lines = [f'결과: {mark}', headline]
         if advice:
@@ -3645,6 +3757,7 @@ class App:
             lines.append(f'[사용자 선택] 창: {len(dialogs)}개')
             for window in dialogs:
                 lines.extend(self._describe_dialog(window, point))
+            lines.extend(extra_lines)
             if not dialogs:
                 # 제목으로 못 찾았으면 화살표 자리에 있는 창이라도 적어 둔다
                 for window in self._windows_at(*point):

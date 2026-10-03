@@ -1147,6 +1147,32 @@ class AppFlowTest(unittest.TestCase):
         self.assertIn('칸 종류: Button 1, CustomGrid 2', text)
         self.assertIn('CustomGrid  (420, 100) 크기 360x400', text, '창 기준 위치로 적는다')
 
+    def test_probe_reads_a_web_dialog_with_ui_automation(self):
+        """[사용자 선택] 창 안이 크롬 웹 화면이면 화면 읽어 주기로 센다. 이름은 내보내지 않는다."""
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from test_automation import web_dialog_nodes
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        nodes = web_dialog_nodes()
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', return_value=nodes):
+            text = self.app._probe_messenger_lists()
+        self.assertTrue(text.startswith('결과: O'), text)
+        self.assertIn('6명으로 셉니다', text)
+        self.assertIn("'선택된 사용자' 제목: 찾음", text)
+        self.assertNotIn('담긴사람', text, '사람 이름이 확인 내용에 나왔습니다')
+        self.assertNotIn('조직도사람', text)
+
+    def test_probe_says_when_ui_automation_is_missing(self):
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
+                patch.object(self.app, '_uia', return_value=(None, 'No module named comtypes')):
+            text = self.app._probe_messenger_lists()
+        self.assertTrue(text.startswith('결과: X'), text)
+        self.assertIn('쓸 수 없습니다: No module named comtypes', text)
+
     def test_probe_notices_the_dialog_was_moved(self):
         """위치를 잡은 뒤 [사용자 선택] 창을 옮기면 화살표 자리에 바탕화면이 있다."""
         gui, _sent = self._fake_messenger(dialog_rect=(900, 0, 1700, 600))

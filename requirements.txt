@@ -3,4 +3,5 @@ pyperclip>=1.8.2
 openpyxl>=3.1.0
 pywin32>=306
 olefile>=0.47
+comtypes>=1.2
 pyinstaller>=6.0.0

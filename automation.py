@@ -112,3 +112,75 @@ def pick_selected_list(children, arrow_x: int, arrow_y: int):
     hits.sort(key=lambda hit: hit[0])
     _gap, hwnd, class_name, rect = hits[0]
     return hwnd, class_name, rect
+
+
+# ── 웹 화면으로 된 [사용자 선택] 창 읽기 ─────────
+# 소통메신저의 [사용자 선택] 창 안은 크롬(CEF) 웹 화면이다. 윈도우 목록 칸이
+# 아니라서 항목 수를 물을 수 없다. 대신 화면 읽어 주기(UI 자동화)로 웹 화면 속
+# 요소를 받아 [선택된 사용자] 목록의 줄 수를 센다. 스크롤 밖의 줄도 요소로는
+# 남아 있어서 함께 센다.
+UIA_TYPE_NAMES = {
+    50000: 'Button', 50004: 'Edit', 50005: 'Hyperlink', 50006: 'Image',
+    50007: 'ListItem', 50008: 'List', 50018: 'Tab', 50019: 'TabItem',
+    50020: 'Text', 50023: 'Tree', 50024: 'TreeItem', 50025: 'Custom',
+    50026: 'Group', 50029: 'DataItem', 50030: 'Document', 50032: 'Window',
+    50033: 'Pane', 50036: 'Table',
+}
+SELECTED_LABEL = '선택된 사용자'
+
+
+def uia_type_name(control_type) -> str:
+    return UIA_TYPE_NAMES.get(control_type, str(control_type))
+
+
+def find_label(nodes, text):
+    """이름에 text 가 들어간 첫 요소. nodes 는 _uia_nodes 의 결과."""
+    for node in nodes:
+        if text in (node.get('name') or ''):
+            return node
+    return None
+
+
+def repeated_containers(nodes) -> list:
+    """같은 종류의 자식이 두 개 넘게 있는 요소. 목록일 가능성이 있다.
+
+    돌려주는 값은 (요소, 자식 종류, 개수, 화면 밖 개수) 목록.
+    """
+    children = {}
+    for node in nodes:
+        if node.get('parent') is not None and node['parent'] >= 0:
+            children.setdefault(node['parent'], []).append(node)
+    found = []
+    for parent_id, kids in children.items():
+        counts = {}
+        for kid in kids:
+            counts[kid['type']] = counts.get(kid['type'], 0) + 1
+        kid_type, count = max(counts.items(), key=lambda pair: pair[1])
+        if count < 2:
+            continue
+        offscreen = sum(1 for kid in kids if kid['type'] == kid_type and kid.get('offscreen'))
+        found.append((nodes[parent_id], kid_type, count, offscreen))
+    return found
+
+
+def guess_selected_list(nodes, split_x: int):
+    """[선택된 사용자] 목록으로 보이는 요소를 고른다. 못 고르면 None.
+
+    split_x 는 오른쪽 화살표 버튼의 화면 x 다. 그보다 왼쪽(조직도, 검색 결과)은
+    뺀다. '선택된 사용자' 제목이 읽히면 그 아래, 그 열에 있는 것만 본다.
+    남은 것 가운데 같은 종류의 줄이 가장 많은 요소가 목록이다. 한 줄 안의 글자나
+    단추는 많아야 서너 개라서, 담긴 사람이 그보다 많으면 목록이 이긴다.
+    """
+    label = find_label(nodes, SELECTED_LABEL)
+    best = None
+    for node, kid_type, count, offscreen in repeated_containers(nodes):
+        left, top, right, bottom = node['rect']
+        if left < split_x:
+            continue
+        if label is not None:
+            l_left, l_top, l_right, _l_bottom = label['rect']
+            if top < l_top or right < l_left:
+                continue
+        if best is None or count > best[2]:
+            best = (node, kid_type, count, offscreen)
+    return best
