@@ -1200,15 +1200,15 @@ class AppFlowTest(unittest.TestCase):
     def test_compare_window_adds_only_the_missing(self):
         import reconcile
         m = self.app_module
-        items = [{'org': '학성초등학교', 'name': '이경숙'},
-                 {'org': '학성초등학교', 'name': '나상연'},
+        items = [{'org': '학성초등학교', 'name': '박소통'},
+                 {'org': '학성초등학교', 'name': '최신통'},
                  {'org': '가초', 'name': '김충북'}, {'org': '나초', 'name': '김충북'}]
         result = reconcile.compare_with_messenger(
-            items, ['이경숙 [교사(초등)]', '김충북 [교사(초등)]'])
+            items, ['박소통 [교사(초등)]', '김충북 [교사(초등)]'])
         added = []
         window = m.MessengerCompareReport(_Widget(), result, 4, on_add=added.append)
-        # 빠진 나상연 + 누가 들어갔는지 모르는 김충북 둘
-        self.assertEqual([i['name'] for i in window.addable], ['나상연', '김충북', '김충북'])
+        # 빠진 최신통 + 누가 들어갔는지 모르는 김충북 둘
+        self.assertEqual([i['name'] for i in window.addable], ['최신통', '김충북', '김충북'])
         window._add()
         self.assertEqual(added, [window.addable])
 
@@ -1481,9 +1481,9 @@ class AppFlowTest(unittest.TestCase):
         """버튼을 누르면 소통메신저 [선택된 사용자] 를 읽어 누가 빠졌는지 표시한다."""
         import reconcile
         m = self.app_module
-        items = [{'org': '학성초등학교', 'name': '이경숙', 'failure_reason': '자동화 오류'},
-                 {'org': '학성초등학교', 'name': '문유리', 'added': True},
-                 {'org': '학성초등학교', 'name': '나상연', 'added': True}]
+        items = [{'org': '학성초등학교', 'name': '박소통', 'failure_reason': '자동화 오류'},
+                 {'org': '학성초등학교', 'name': '정수신', 'added': True},
+                 {'org': '학성초등학교', 'name': '최신통', 'added': True}]
         self.app.names_list = items
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         try:
@@ -1491,18 +1491,18 @@ class AppFlowTest(unittest.TestCase):
                     patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
                     patch.object(self.app, '_uia', return_value=(object(), '')), \
                     patch.object(self.app, '_uia_nodes',
-                                 return_value=self._web_messenger_rows(['이경숙', '문유리', '홍길동'])), \
+                                 return_value=self._web_messenger_rows(['박소통', '정수신', '홍길동'])), \
                     patch.object(m, 'MessengerCompareReport') as report:
                 result = self.app._compare_with_messenger()
             report.assert_called_once()
-            self.assertEqual([i['name'] for i in result.inside], ['이경숙', '문유리'])
+            self.assertEqual([i['name'] for i in result.inside], ['박소통', '정수신'])
             # 들어간 사람은 빨간 표시를 지우고, 빠진 사람은 빨갛게 남긴다
             self.assertNotIn('failure_reason', items[0])
             self.assertTrue(items[0].get('added'))
             self.assertEqual(items[2]['failure_reason'], reconcile.NOT_IN_MESSENGER)
             self.assertFalse(items[2].get('added'))
             self.assertEqual(len(result.extra), 1)
-            self.assertEqual([i['name'] for i in report.call_args.args[1].missing], ['나상연'])
+            self.assertEqual([i['name'] for i in report.call_args.args[1].missing], ['최신통'])
         finally:
             self.app.names_list = []
 
@@ -1542,7 +1542,7 @@ class AppFlowTest(unittest.TestCase):
 
     def test_compare_reads_the_top_dialog_when_several_are_open(self):
         """받는사람 추가를 누를 때마다 창이 새로 생겨 셋이 겹쳐 있었다. 맨 위 창을 읽는다."""
-        rows = self._web_messenger_rows(['이경숙', '문유리'])
+        rows = self._web_messenger_rows(['박소통', '정수신'])
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         gui.GetWindowText = lambda h: '사용자 선택'
         gui.GetWindowRect = lambda h: (0, 0, 800, 600)

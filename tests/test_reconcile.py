@@ -155,25 +155,25 @@ class TextTest(unittest.TestCase):
 class MessengerCompareTest(unittest.TestCase):
     """소통메신저 [선택된 사용자] 와 소통픽 명단 맞춰 보기."""
 
-    ROWS = ['이경숙 [교사(초등)] [1학년] 안전/통학버스, 도서',
-            '문유리 [부장교사] [전담] 교무, 생활교육(202,310)',
+    ROWS = ['박소통 [교사(초등)] [1학년] 안전/통학버스, 도서',
+            '정수신 [부장교사] [전담] 교무, 생활교육(202,310)',
             '김충북 [교사(초등)] [3학년] 연구학력 (303)']
 
     def item(self, org, name):
         return {'org': org, 'name': name}
 
     def test_name_is_read_from_a_row(self):
-        self.assertEqual(reconcile.person_name_from_row(self.ROWS[0]), '이경숙')
-        self.assertEqual(reconcile.person_name_from_row('문유리 (부장교사)'), '문유리')
+        self.assertEqual(reconcile.person_name_from_row(self.ROWS[0]), '박소통')
+        self.assertEqual(reconcile.person_name_from_row('정수신 (부장교사)'), '정수신')
         self.assertEqual(reconcile.person_name_from_row('송동석'), '송동석')
         self.assertIsNone(reconcile.person_name_from_row('123 abc'))
 
     def test_who_got_in_and_who_did_not(self):
-        items = [self.item('학성초등학교', '이경숙'), self.item('학성초등학교', '문유리'),
-                 self.item('학성초등학교', '나상연')]
+        items = [self.item('학성초등학교', '박소통'), self.item('학성초등학교', '정수신'),
+                 self.item('학성초등학교', '최신통')]
         result = reconcile.compare_with_messenger(items, self.ROWS)
-        self.assertEqual([i['name'] for i in result.inside], ['이경숙', '문유리'])
-        self.assertEqual([i['name'] for i in result.missing], ['나상연'])
+        self.assertEqual([i['name'] for i in result.inside], ['박소통', '정수신'])
+        self.assertEqual([i['name'] for i in result.missing], ['최신통'])
         self.assertEqual(len(result.extra), 1, '김충북는 소통메신저에만 있다')
         self.assertEqual(result.rows, 3)
 
@@ -189,7 +189,7 @@ class MessengerCompareTest(unittest.TestCase):
     def test_partly_in_same_names_are_marked_next_to_each_name(self):
         """동명이인 둘 중 하나만 들어 있으면 이름마다 'N명 중 X명만 들어감' 을 붙인다."""
         items = [self.item('가초등학교', '김충북'), self.item('나초등학교', '김충북'),
-                 self.item('학성초등학교', '이경숙')]
+                 self.item('학성초등학교', '박소통')]
         result = reconcile.compare_with_messenger(items, self.ROWS)
         text = reconcile.compare_text(result)
         self.assertIn('[동명이인 확인 필요]  2명', text)
@@ -210,7 +210,7 @@ class MessengerCompareTest(unittest.TestCase):
                          '동명이인 2명 중 1명만 들어감, 확인 필요')
 
     def test_same_person_listed_twice_counts_once(self):
-        items = [self.item('학성초등학교', '이경숙'), self.item('학성초등학교', '이경숙')]
+        items = [self.item('학성초등학교', '박소통'), self.item('학성초등학교', '박소통')]
         result = reconcile.compare_with_messenger(items, self.ROWS)
         self.assertEqual(len(result.inside), 2)
         self.assertEqual(result.unsure, [])
@@ -220,10 +220,10 @@ class MessengerCompareTest(unittest.TestCase):
         self.assertEqual(len(result.no_name), 1)
 
     def test_text_lists_missing_first(self):
-        items = [self.item('학성초등학교', '이경숙'), self.item('학성초등학교', '나상연')]
+        items = [self.item('학성초등학교', '박소통'), self.item('학성초등학교', '최신통')]
         text = reconcile.compare_text(reconcile.compare_with_messenger(items, self.ROWS))
         self.assertTrue(text.startswith('[소통메신저에 없음]  1명'), text)
-        self.assertIn('학성초등학교 나상연', text)
+        self.assertIn('학성초등학교 최신통', text)
         self.assertIn('[들어감]  1명', text)
 
 

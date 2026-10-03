@@ -233,7 +233,7 @@ PERSON_ROW = re.compile(r'[가-힣]{2,5}\s*\[')
 
 
 def person_rows(nodes, container_id: int, row_type: int) -> int:
-    """'문유리 [부장교사]' 처럼 이름 뒤에 직위가 붙은 줄의 수."""
+    """'정수신 [부장교사]' 처럼 이름 뒤에 직위가 붙은 줄의 수."""
     return sum(1 for text in row_texts(nodes, container_id, row_type)
                if PERSON_ROW.search(text))
 
