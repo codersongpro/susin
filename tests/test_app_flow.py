@@ -1405,6 +1405,25 @@ class AppFlowTest(unittest.TestCase):
         finally:
             self.app.names_list = []
 
+    def test_compare_marks_partly_in_same_names_in_the_list(self):
+        """명단에도 이름 옆에 '동명이인 N명 중 X명만 들어감, 확인 필요' 가 붙는다."""
+        from ui_helpers import format_item_label
+        m = self.app_module
+        items = [{'org': '가초등학교', 'name': '김다래', 'added': True},
+                 {'org': '나초등학교', 'name': '김다래', 'added': True}]
+        self.app.names_list = items
+        try:
+            with patch.object(self.app, '_read_messenger_selected',
+                              return_value=(['김다래 [교사(초등)] [3학년]'], '')), \
+                    patch.object(m, 'MessengerCompareReport'):
+                self.app._compare_with_messenger()
+            note = '동명이인 2명 중 1명만 들어감, 확인 필요'
+            self.assertEqual([i['failure_reason'] for i in items], [note, note])
+            self.assertFalse(any(i.get('added') for i in items))
+            self.assertEqual(format_item_label(items[0]), f'[가초등학교]  김다래  ({note})')
+        finally:
+            self.app.names_list = []
+
     def test_compare_explains_when_it_cannot_read(self):
         m = self.app_module
         self.app.names_list = [{'org': '가초', 'name': '갑'}]

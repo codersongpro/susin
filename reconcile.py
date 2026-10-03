@@ -266,6 +266,12 @@ def compare_with_messenger(items, rows) -> MessengerCompare:
     return result
 
 
+def same_name_note(people, have: int) -> str:
+    """'동명이인 2명 중 1명만 들어감, 확인 필요'. 같은 학교 같은 이름은 한 사람으로 센다."""
+    count = len({_plain(item.get('org')) for item in people})
+    return f'동명이인 {count}명 중 {have}명만 들어감, 확인 필요'
+
+
 def compare_text(result: MessengerCompare) -> str:
     """빠진 사람, 확인 필요, 소통메신저에만 있는 사람 순으로 글로 푼다."""
     lines = []
@@ -276,9 +282,9 @@ def compare_text(result: MessengerCompare) -> str:
     if result.unsure:
         count = sum(len(people) for _name, people, _have in result.unsure)
         lines.append(f'[{SAME_NAME_UNSURE}]  {count}명')
-        for name, people, have in result.unsure:
-            lines.append(f'  {name}: 명단에 {len(people)}명, 소통메신저에 {have}명')
-            lines.extend(f'    {item_label(item)}' for item in people)
+        for _name, people, have in result.unsure:
+            note = same_name_note(people, have)
+            lines.extend(f'  {item_label(item)}  ({note})' for item in people)
         lines.append('')
     if result.no_name:
         lines.append(f'[이름이 없어 맞춰 보지 못함]  {len(result.no_name)}건')

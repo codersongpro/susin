@@ -186,6 +186,29 @@ class MessengerCompareTest(unittest.TestCase):
         name, people, have = result.unsure[0]
         self.assertEqual((name, len(people), have), ('김다래', 2, 1))
 
+    def test_partly_in_same_names_are_marked_next_to_each_name(self):
+        """동명이인 둘 중 하나만 들어 있으면 이름마다 'N명 중 X명만 들어감' 을 붙인다."""
+        items = [self.item('가초등학교', '김다래'), self.item('나초등학교', '김다래'),
+                 self.item('학성초등학교', '이경숙')]
+        result = reconcile.compare_with_messenger(items, self.ROWS)
+        text = reconcile.compare_text(result)
+        self.assertIn('[동명이인 확인 필요]  2명', text)
+        self.assertIn('가초등학교 김다래  (동명이인 2명 중 1명만 들어감, 확인 필요)', text)
+        self.assertIn('나초등학교 김다래  (동명이인 2명 중 1명만 들어감, 확인 필요)', text)
+
+    def test_all_same_names_in_is_not_a_problem(self):
+        rows = self.ROWS + ['김다래 [교사(초등)] [5학년]']
+        items = [self.item('가초등학교', '김다래'), self.item('나초등학교', '김다래')]
+        result = reconcile.compare_with_messenger(items, rows)
+        self.assertEqual(len(result.inside), 2)
+        self.assertEqual(result.unsure, [])
+        self.assertNotIn('동명이인', reconcile.compare_text(result))
+
+    def test_note_counts_the_same_person_once(self):
+        people = [self.item('가초', '김다래'), self.item('가초', '김다래'), self.item('나초', '김다래')]
+        self.assertEqual(reconcile.same_name_note(people, 1),
+                         '동명이인 2명 중 1명만 들어감, 확인 필요')
+
     def test_same_person_listed_twice_counts_once(self):
         items = [self.item('학성초등학교', '이경숙'), self.item('학성초등학교', '이경숙')]
         result = reconcile.compare_with_messenger(items, self.ROWS)

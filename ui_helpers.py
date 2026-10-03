@@ -34,4 +34,7 @@ def format_item_label(item: dict) -> str:
     else:
         label = f'[{org}]  {name}' if org else f'{name}  (소속없음)'
 
+    if reason.startswith('동명이인'):
+        # 실패가 아니라 누가 들어갔는지 모르는 것이다. 이름 옆에 그대로 붙인다.
+        return f'{label}  ({reason})'
     return f'{label}  — 실패: {reason}' if reason else label

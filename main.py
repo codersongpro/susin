@@ -461,8 +461,10 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   그 사람들만 다시 담고, 다 담은 뒤 다시 맞춰 봅니다.
   [🔍 소통메신저와 비교] 로 언제든 다시 맞춰 볼 수 있습니다.
 
-  소통메신저 목록에는 학교 이름이 나오지 않아서, 같은 이름이 여럿이면
-  누가 들어갔는지 가리지 않고 '동명이인 확인 필요' 로 둡니다.
+  소통메신저 목록에는 학교 이름이 나오지 않아서 이름으로 맞춥니다.
+  같은 이름이 명단에 여럿인데 그중 일부만 들어 있으면, 누가 들어갔는지
+  짐작하지 않고 이름마다 '(동명이인 2명 중 1명만 들어감, 확인 필요)'
+  처럼 붙여 따로 보여 줍니다. 모두 들어 있으면 문제없으니 그냥 넘어갑니다.
   읽을 수 있는지는 [2. 위치 설정] 탭의 [소통메신저 목록 읽기 확인] 으로
   미리 볼 수 있습니다. 읽을 수 있으면 O, 없으면 X 로 알려 줍니다.
 
@@ -3870,10 +3872,11 @@ class App:
         for item in result.missing:
             item.pop('added', None)
             item['failure_reason'] = reconcile.NOT_IN_MESSENGER
-        for _name, people, _have in result.unsure:
+        for _name, people, have in result.unsure:
+            note = reconcile.same_name_note(people, have)
             for item in people:
                 item.pop('added', None)
-                item['failure_reason'] = reconcile.SAME_NAME_UNSURE
+                item['failure_reason'] = note
         self._rebuild_parsed_list()
 
     def _probe_uia(self, window, point):
