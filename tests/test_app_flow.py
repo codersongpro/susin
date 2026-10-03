@@ -987,7 +987,7 @@ class AppFlowTest(unittest.TestCase):
             self.app.names_list = []
 
     # ── 결과 대조 ──────────────────────────────
-    def test_stop_marks_untried_people_and_shows_the_comparison(self):
+    def test_stop_marks_untried_people(self):
         """중지하면 뒤쪽 사람은 시도도 안 했다. 담긴 것처럼 남으면 안 된다."""
         import reconcile
         from automation import FAIL_DUPLICATE, FAIL_NO_USER
@@ -1000,39 +1000,122 @@ class AppFlowTest(unittest.TestCase):
         ]
         self.app.names_list = items
         try:
-            with patch.object(self.app_module, 'ResultReport') as report, \
-                    patch.object(self.app, '_selected_count', return_value=None):
+            with patch.object(self.app, '_compare_with_messenger') as compared:
                 self.app._done(1, 2, stopped=True, run_items=tuple(items))
             self.assertEqual(items[3]['failure_reason'], reconcile.NOT_TRIED)
             self.assertEqual(items[4]['failure_reason'], reconcile.NOT_TRIED)
-            report.assert_called_once()
-            tally = report.call_args.args[1]
-            self.assertEqual(tally.total, 5)
-            self.assertEqual(tally.reflected, 2)        # 갑 + 원래 있던 병
-            self.assertEqual(tally.short, 3)
             self.assertIn('빠짐 3명', self.app.status_var.get())
+            compared.assert_not_called()        # 일부러 멈췄으니 비교 창을 띄우지 않는다
         finally:
             self.app.names_list = []
-            self.app.last_run = None
 
-    def test_full_success_still_offers_the_count_check(self):
-        """다 담겼다고 봐도 소통메신저 수와 맞춰 볼 수 있어야 한다."""
-        items = [{'org': '가초', 'name': '갑', 'added': True},
-                 {'org': '나초', 'name': '을', 'added': True}]
+    def test_finished_run_compares_with_the_messenger(self):
+        """다 끝나면 결과 대조 창 대신 소통메신저와 바로 맞춰 본다."""
+        items = [{'org': '가초', 'name': '갑', 'added': True}]
         self.app.names_list = items
         try:
-            with patch.object(self.app_module, 'ResultReport') as report, \
-                    patch.object(self.app, '_selected_count', return_value=2):
-                self.app.run_selected_before = 0
-                self.app._done(2, 0, stopped=False, run_items=tuple(items))
-            kwargs = report.call_args.kwargs
-            self.assertEqual(kwargs['shown_count'], 2, '읽어 온 수를 채워 둔다')
-            self.assertEqual(kwargs['base_count'], 0)
-            self.app.failed_list_btn.config.assert_called_with(state='normal')
+            with patch.object(self.app, '_compare_with_messenger') as compared:
+                self.app._done(1, 0, stopped=False, run_items=tuple(items))
+            compared.assert_called_once_with(quiet=True)
         finally:
             self.app.names_list = []
-            self.app.last_run = None
-            self.app.run_selected_before = None
+
+    def test_quiet_compare_does_not_pop_up_when_it_cannot_read(self):
+        m = self.app_module
+        self.app.names_list = [{'org': '가초', 'name': '갑'}]
+        self.app.status_var.set('완료')
+        try:
+            with patch.object(self.app, '_read_messenger_selected', return_value=(None, '창 없음')), \
+                    patch.object(m.messagebox, 'showwarning') as warned:
+                self.assertIsNone(self.app._compare_with_messenger(quiet=True))
+            warned.assert_not_called()
+            self.assertIn('소통메신저 명단은 읽지 못했습니다', self.app.status_var.get())
+        finally:
+            self.app.names_list = []
+
+    def test_tab_has_no_result_list_button(self):
+        """[결과 대조 · 빠진 명단] 버튼은 뺐다. 소통메신저와 비교가 그 일을 한다."""
+        self.assertFalse(hasattr(self.app, 'failed_list_btn'))
+        self.assertTrue(hasattr(self.app, 'compare_btn'))
+
+    def test_compare_window_adds_only_the_missing(self):
+        import reconcile
+        m = self.app_module
+        items = [{'org': '학성초등학교', 'name': '이경숙'},
+                 {'org': '학성초등학교', 'name': '나상연'},
+                 {'org': '가초', 'name': '김다래'}, {'org': '나초', 'name': '김다래'}]
+        result = reconcile.compare_with_messenger(
+            items, ['이경숙 [교사(초등)]', '김다래 [교사(초등)]'])
+        added = []
+        window = m.MessengerCompareReport(_Widget(), result, 4, on_add=added.append)
+        # 빠진 나상연 + 누가 들어갔는지 모르는 김다래 둘
+        self.assertEqual([i['name'] for i in window.addable], ['나상연', '김다래', '김다래'])
+        window._add()
+        self.assertEqual(added, [window.addable])
+
+    def test_adding_missing_runs_only_them_and_keeps_the_list(self):
+        """누락된 사람만 돌린다. 처음 명단은 그대로 남아야 다시 비교할 수 있다."""
+        m = self.app_module
+        items = [{'org': '가초', 'name': '갑', 'added': True},
+                 {'org': '나초', 'name': '을', 'failure_reason': '소통메신저에 없음'},
+                 {'org': '다초', 'name': '병', 'failure_reason': '소통메신저에 없음'}]
+        self.app.names_list = items
+        started = []
+
+        class FakeThread:
+            def __init__(self, target, args=(), daemon=True):
+                started.append(args)
+
+            def start(self):
+                pass
+
+            def is_alive(self):
+                return False
+
+        try:
+            with patch.object(m, 'pyautogui', object()), patch.object(m, 'pyperclip', object()), \
+                    patch.object(self.app.config, 'is_calibrated', return_value=True), \
+                    patch.object(self.app, '_confirm_screen_unchanged', return_value=True), \
+                    patch.object(self.app, '_confirm_dialog_not_moved', return_value=True), \
+                    patch.object(m.threading, 'Thread', FakeThread):
+                self.app._add_missing_to_messenger(items[1:])
+            self.assertEqual(started, [(tuple(items[1:]),)])
+            self.assertEqual(len(self.app.names_list), 3, '명단이 줄었습니다')
+            self.assertTrue(items[0].get('added'), '돌리지 않는 사람의 표시가 지워졌습니다')
+            self.assertNotIn('failure_reason', items[1])
+        finally:
+            self.app.names_list = []
+            self.app.worker_thread = None
+
+    def test_worker_marks_the_right_person_when_running_a_few(self):
+        """일부만 돌리면 돌리는 순번과 명단 순번이 다르다. 명단에서 맞는 사람을 칠한다."""
+        m = self.app_module
+        from automation import FAIL_NO_USER
+        items = [{'org': '가초', 'name': '갑'}, {'org': '나초', 'name': '을'},
+                 {'org': '다초', 'name': '병'}]
+        self.app.names_list = items
+        self.app.stop_flag.clear()
+        results = iter(['new', 'empty'])
+        manual = self.app.config.data.get('manual_confirm')
+        self.app.config.data['manual_confirm'] = False   # 켜져 있으면 [계속] 을 기다린다
+        try:
+            with patch.object(self.app.root, 'after', side_effect=lambda _ms, fn: fn()), \
+                    patch.object(m.time, 'sleep', lambda *_: None), \
+                    patch.object(self.app, '_result_pixels', return_value=None), \
+                    patch.object(self.app, '_do_search'), \
+                    patch.object(self.app, '_wait_for_result', side_effect=lambda *_: next(results)), \
+                    patch.object(self.app, '_do_select', return_value='ok'), \
+                    patch.object(self.app, '_log'), \
+                    patch.object(m, 'pyautogui', types.SimpleNamespace(
+                        FailSafeException=type('FailSafeException', (Exception,), {}))), \
+                    patch.object(self.app, '_done'):
+                self.app._worker((items[1], items[2]))
+            self.assertTrue(items[1].get('added'))
+            self.assertEqual(items[2].get('failure_reason'), FAIL_NO_USER)
+            self.assertNotIn('failure_reason', items[0], '엉뚱한 사람을 칠했습니다')
+        finally:
+            self.app.names_list = []
+            self.app.config.data['manual_confirm'] = manual
 
     def test_retry_skips_people_who_were_already_selected(self):
         from automation import FAIL_DUPLICATE, FAIL_NO_USER
@@ -1260,10 +1343,7 @@ class AppFlowTest(unittest.TestCase):
             self.assertEqual(items[2]['failure_reason'], reconcile.NOT_IN_MESSENGER)
             self.assertFalse(items[2].get('added'))
             self.assertEqual(len(result.extra), 1)
-            # 빠진 사람만 다시 담는다
-            with patch.object(self.app, '_start'):
-                self.app._retry_failed()
-            self.assertEqual([i['name'] for i in self.app.names_list], ['나상연'])
+            self.assertEqual([i['name'] for i in report.call_args.args[1].missing], ['나상연'])
         finally:
             self.app.names_list = []
 
@@ -1384,29 +1464,6 @@ class AppFlowTest(unittest.TestCase):
             finally:
                 self.app.last_excel_result = None
                 self.app.names_list.clear()
-
-    def test_failure_report_groups_by_reason(self):
-        m = self.app_module
-        items = [
-            {'org': '가초등학교', 'name': '갑', 'failure_reason': '사용자 없음'},
-            {'org': '나초등학교', 'name': '을', 'failure_reason': '추가 안 됨'},
-            {'org': '다초등학교', 'name': '병', 'failure_reason': '사용자 없음'},
-        ]
-        report = m.FailureReport(_Widget(), items)
-        groups = dict((reason, len(rows)) for reason, rows in report.grouped())
-        self.assertEqual(groups, {'사용자 없음': 2, '추가 안 됨': 1})
-        text = report.as_text()
-        self.assertIn('[사용자 없음]  2명', text)
-        self.assertIn('가초등학교 갑', text)
-        self.assertIn('나초등학교 을', text)
-
-    def test_failure_report_uses_the_search_text_when_there_is_one(self):
-        m = self.app_module
-        report = m.FailureReport(_Widget(), [
-            {'org': '충청북도교육청', 'search': '충청북도교육청 행정과',
-             'grade': 'exact', 'failure_reason': '기관코드 없음'},
-        ])
-        self.assertIn('충청북도교육청 행정과', report.as_text())
 
     def test_search_count_zero_means_no_result(self):
         """소통메신저가 0명이라고 적어 두면 더 기다리지 않는다."""

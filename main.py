@@ -453,20 +453,18 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     3단계: [사용자 선택] 버튼을 눌러 받는 사람에 추가합니다
 
   검색해서 나오지 않은 사람은 빨간 항목으로 남습니다.
-  다 끝나면 결과 대조 창이 뜹니다. 추출한 사람 수와 들어간 수를
-  나란히 보여 주고, 빠진 사람은 누구인지 사유별로 모아 줍니다.
-  소통메신저는 담긴 사람 수를 따로 보여 주지 않습니다. 그래서 신통픽이
-  [선택된 사용자] 목록을 직접 세어 맞는지 알려 줍니다. 스크롤해야 보이는
-  아래쪽 사람까지 셉니다. 셀 수 있는지는 [2. 위치 설정] 탭의
-  [소통메신저 목록 읽기 확인] 으로 미리 볼 수 있습니다.
-  셀 수 있으면 O, 없으면 X 로 알려 줍니다.
 
-  [🔍 소통메신저와 비교] 를 누르면 소통메신저 [선택된 사용자] 를 읽어
-  소통픽 명단과 이름으로 맞춰 봅니다. 들어간 사람, 빠진 사람,
-  소통메신저에만 있는 사람을 나눠 보여 주고, 빠진 사람은 빨갛게 표시해
-  [실패 항목만 다시 실행] 으로 그 사람만 다시 담을 수 있습니다.
+  다 끝나면 소통메신저 [선택된 사용자] 를 읽어 소통픽 명단과 바로
+  맞춰 봅니다. 들어간 사람, 빠진 사람, 소통메신저에만 있는 사람을
+  나눠 보여 줍니다. 스크롤해야 보이는 아래쪽 사람까지 읽습니다.
+  빠진 사람이 있으면 [▶ 누락된 N명 소통메신저에 추가] 를 누르세요.
+  그 사람들만 다시 담고, 다 담은 뒤 다시 맞춰 봅니다.
+  [🔍 소통메신저와 비교] 로 언제든 다시 맞춰 볼 수 있습니다.
+
   소통메신저 목록에는 학교 이름이 나오지 않아서, 같은 이름이 여럿이면
   누가 들어갔는지 가리지 않고 '동명이인 확인 필요' 로 둡니다.
+  읽을 수 있는지는 [2. 위치 설정] 탭의 [소통메신저 목록 읽기 확인] 으로
+  미리 볼 수 있습니다. 읽을 수 있으면 O, 없으면 X 로 알려 줍니다.
 
   수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
@@ -818,90 +816,6 @@ def _is_newer_version(latest: str, current: str) -> bool:
     current_parts += (0,) * (size - len(current_parts))
     return latest_parts > current_parts
 
-class FailureReport(tk.Toplevel):
-    """받는 사람에 들어가지 못한 사람을 사유별로 모아 보여 주는 창."""
-
-    def __init__(self, parent, items, on_retry=None):
-        super().__init__(parent)
-        self.items = list(items)
-        self.on_retry = on_retry
-        self.title('받는 사람에 들어가지 않은 명단')
-        self.geometry('520x460')
-        self.configure(bg='#FFF5F5')
-
-        tk.Label(
-            self, text=f'⚠  {len(self.items)}명이 받는 사람에 들어가지 않았습니다',
-            bg='#B71C1C', fg='white', font=('맑은 고딕', 12, 'bold'), pady=10
-        ).pack(fill='x')
-
-        tk.Label(
-            self,
-            text='아래 사람은 다시 담아야 합니다. 사유를 보고 고친 뒤\n'
-                 '[실패 항목만 다시 실행] 을 누르거나 직접 담으세요.',
-            bg='#FFF5F5', fg='#B71C1C', font=('맑은 고딕', 9), justify='left'
-        ).pack(anchor='w', padx=12, pady=(8, 4))
-
-        box = tk.Frame(self, bg='#FFF5F5')
-        box.pack(fill='both', expand=True, padx=12, pady=4)
-        self.text = scrolledtext.ScrolledText(
-            box, font=('맑은 고딕', 10), wrap='word', height=14)
-        self.text.pack(fill='both', expand=True)
-        self.text.insert('1.0', self.as_text())
-        self.text.config(state='disabled', fg='#B71C1C')
-
-        row = tk.Frame(self, bg='#FFF5F5')
-        row.pack(fill='x', padx=12, pady=10)
-        tk.Button(
-            row, text='📋  명단 복사', command=self._copy,
-            bg='#607D8B', fg='white', relief='flat',
-            font=('맑은 고딕', 10), padx=12, pady=6, cursor='hand2'
-        ).pack(side='left', padx=4)
-        if on_retry:
-            tk.Button(
-                row, text='↻  실패 항목만 다시 실행', command=self._retry,
-                bg='#795548', fg='white', relief='flat',
-                font=('맑은 고딕', 10, 'bold'), padx=12, pady=6, cursor='hand2'
-            ).pack(side='left', padx=4)
-        tk.Button(
-            row, text='닫기', command=self.destroy,
-            bg='#9E9E9E', fg='white', relief='flat',
-            font=('맑은 고딕', 10), padx=12, pady=6
-        ).pack(side='right', padx=4)
-
-        self.status = tk.Label(self, text='', bg='#FFF5F5', fg='green',
-                               font=('맑은 고딕', 9))
-        self.status.pack(pady=(0, 8))
-
-    def grouped(self) -> list:
-        """사유별로 묶는다. 사유가 같은 사람끼리 모여야 원인을 보기 쉽다."""
-        buckets = {}
-        for item in self.items:
-            reason = item.get('failure_reason') or '알 수 없음'
-            buckets.setdefault(reason, []).append(item)
-        return sorted(buckets.items(), key=lambda pair: -len(pair[1]))
-
-    def as_text(self) -> str:
-        lines = []
-        for reason, rows in self.grouped():
-            lines.append(f'[{reason}]  {len(rows)}명')
-            for item in rows:
-                org = item.get('org', '')
-                name = item.get('name', '')
-                shown = item.get('search') or (f'{org} {name}'.strip() or org or name)
-                lines.append(f'  {shown}')
-            lines.append('')
-        return '\n'.join(lines).strip()
-
-    def _copy(self):
-        if copy_text(self, self.as_text()):
-            self.status.config(text='✓ 복사했습니다')
-
-    def _retry(self):
-        self.destroy()
-        if self.on_retry:
-            self.on_retry()
-
-
 def copy_text(widget, text: str) -> bool:
     """클립보드에 넣는다. pyperclip 이 안 되면 tk 클립보드로 넘어간다."""
     try:
@@ -929,7 +843,7 @@ class ResultReport(tk.Toplevel):
 
     def __init__(self, parent, tally, *, unit, who, where, count_label, into,
                  shown_count=None, base_count=0, note='', on_retry=None,
-                 on_compare=None, title='결과 대조'):
+                 title='결과 대조'):
         super().__init__(parent)
         self.tally = tally
         self.unit = unit
@@ -998,12 +912,6 @@ class ResultReport(tk.Toplevel):
             bg='#607D8B', fg='white', relief='flat',
             font=('맑은 고딕', 10), padx=10, pady=6, cursor='hand2'
         ).pack(side='left', padx=4)
-        if on_compare:
-            tk.Button(
-                row, text='🔍  소통메신저와 비교', command=on_compare,
-                bg='#1565C0', fg='white', relief='flat',
-                font=('맑은 고딕', 10, 'bold'), padx=10, pady=6, cursor='hand2'
-            ).pack(side='left', padx=4)
         if on_retry and not ok:
             tk.Button(
                 row, text='↻  빠진 것만 다시 실행', command=self._retry,
@@ -1060,10 +968,14 @@ class ResultReport(tk.Toplevel):
 class MessengerCompareReport(tk.Toplevel):
     """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 본 결과 창."""
 
-    def __init__(self, parent, result, total, on_retry=None, note=''):
+    def __init__(self, parent, result, total, on_add=None, note=''):
         super().__init__(parent)
         self.result = result
-        self.on_retry = on_retry
+        self.on_add = on_add
+        # 담을 사람: 빠진 사람과, 동명이인이라 들어갔는지 모르는 사람.
+        # 이미 들어 있는 사람을 또 담으면 소통메신저가 '선택된 사용자' 안내만 띄운다.
+        self.addable = list(result.missing) + [
+            item for _name, people, _have in result.unsure for item in people]
         self.title('소통메신저와 비교')
         self.geometry('560x560')
         unsure = sum(len(people) for _n, people, _h in result.unsure)
@@ -1102,18 +1014,12 @@ class MessengerCompareReport(tk.Toplevel):
 
         row = tk.Frame(self, bg=bg)
         row.pack(fill='x', padx=12, pady=(0, 10))
-        if short:
+        if self.addable and on_add:
             tk.Button(
-                row, text='📋  빠진 명단 복사', command=self._copy_missing,
-                bg='#B71C1C', fg='white', relief='flat',
-                font=('맑은 고딕', 10), padx=10, pady=6, cursor='hand2'
+                row, text=f'▶  누락된 {len(self.addable)}명 소통메신저에 추가', command=self._add,
+                bg='#2E7D32', fg='white', relief='flat',
+                font=('맑은 고딕', 10, 'bold'), padx=12, pady=6, cursor='hand2'
             ).pack(side='left', padx=4)
-            if on_retry:
-                tk.Button(
-                    row, text='↻  빠진 사람만 다시 담기', command=self._retry,
-                    bg='#795548', fg='white', relief='flat',
-                    font=('맑은 고딕', 10, 'bold'), padx=10, pady=6, cursor='hand2'
-                ).pack(side='left', padx=4)
         tk.Button(
             row, text='닫기', command=self.destroy,
             bg='#9E9E9E', fg='white', relief='flat',
@@ -1122,20 +1028,11 @@ class MessengerCompareReport(tk.Toplevel):
         self.status = tk.Label(self, text='', bg=bg, fg='green', font=('맑은 고딕', 9))
         self.status.pack(pady=(0, 8))
 
-    def missing_text(self) -> str:
-        lines = [reconcile.item_label(item) for item in self.result.missing]
-        for _name, people, _have in self.result.unsure:
-            lines.extend(f'{reconcile.item_label(item)}  (동명이인 확인 필요)' for item in people)
-        return '\n'.join(lines)
-
-    def _copy_missing(self):
-        if copy_text(self, self.missing_text()):
-            self.status.config(text='빠진 명단을 복사했습니다')
-
-    def _retry(self):
+    def _add(self):
+        # 이 창이 소통메신저를 가리면 엉뚱한 곳을 누르므로 먼저 닫는다
         self.destroy()
-        if self.on_retry:
-            self.on_retry()
+        if self.on_add:
+            self.on_add(self.addable)
 
 
 class ClipboardWalker(tk.Toplevel):
@@ -1435,9 +1332,7 @@ class App:
         self.continue_event.set()
         self.worker_thread = None
         self.guide_dialog = None
-        # 지난 실행 결과. 결과 대조 창을 닫았다가 다시 열 수 있게 둔다.
-        self.last_run = None
-        self.run_selected_before = None
+        # 지난 수신그룹 엑셀 결과. 결과 대조 창을 닫았다가 다시 열 수 있게 둔다.
         self.last_excel_result = None
         self.compare_note = ''
 
@@ -2351,13 +2246,6 @@ class App:
         )
         self.retry_failed_btn.pack(side='left', padx=4)
 
-        self.failed_list_btn = tk.Button(
-            btn_frame, text='📋  결과 대조 · 빠진 명단',
-            bg='#B71C1C', fg='white', disabledforeground='#ECEFF1', activebackground='#8E0000',
-            relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
-            cursor='hand2', state='disabled', command=self._show_failure_report
-        )
-        self.failed_list_btn.pack(side='left', padx=4)
 
         self.compare_btn = tk.Button(
             btn_frame, text='🔍  소통메신저와 비교',
@@ -2451,15 +2339,10 @@ class App:
             )
 
     def _refresh_failed_retry_state(self):
-        has_failed = any(item.get('failure_reason') for item in self.names_list)
         retryable = any(item.get('failure_reason')
                         and item.get('failure_reason') != FAIL_DUPLICATE
                         for item in self.names_list)
-        states = {
-            'retry_failed_btn': retryable,
-            # 결과 대조는 다 담겼어도 열 수 있어야 한다. 소통메신저 수와 맞춰 보는 창이다.
-            'failed_list_btn': has_failed or bool(getattr(self, 'last_run', None)),
-        }
+        states = {'retry_failed_btn': retryable}
         for name, on in states.items():
             btn = getattr(self, name, None)
             if btn:
@@ -3414,7 +3297,8 @@ class App:
         self._refresh_ready_status()
 
     # ── 자동 선택 시작/중지/계속 ───────────────
-    def _start(self):
+    def _start(self, items=None):
+        """자동 선택을 시작한다. items 를 주면 명단은 그대로 두고 그 사람들만 담는다."""
         if self._automation_is_running():
             messagebox.showwarning('이미 실행 중입니다', '진행 중인 자동 선택을 먼저 끝내세요.')
             return
@@ -3433,25 +3317,26 @@ class App:
             return
         if not self._confirm_dialog_not_moved():
             return
+        run_items = tuple(self.names_list if items is None else items)
+        if not run_items:
+            messagebox.showinfo('알림', '담을 사람이 없습니다.')
+            return
         self.stop_flag.clear()
         self.continue_event.set()
-        for item in self.names_list:
+        for item in run_items:
             item.pop('failure_reason', None)
             item.pop('added', None)
-        # 시작 전부터 [선택된 사용자] 에 있던 수. 끝난 뒤 늘어난 만큼이 이번에
-        # 들어간 수다. 못 읽으면 None 이고, 그때는 사용자가 보고 적는다.
-        self.run_selected_before = self._selected_count()
         self._rebuild_parsed_list()
         self.start_btn.config(state='disabled')
         self.stop_btn.config(state='normal')
         self.continue_btn.config(state='disabled')
-        total = len(self.names_list)
+        total = len(run_items)
         self.progress.config(maximum=total, value=0)
         self.prog_label.config(text=f'0 / {total}')
         started_at = time.strftime('%Y-%m-%d %H:%M:%S')
-        self._log(f'\n{"─" * 44}\n{started_at}  자동 선택 시작  ·  총 {total}명\n\n')
-        logging.info('자동 선택 시작: 총 %s명', total)
-        run_items = tuple(self.names_list)
+        what = '자동 선택 시작' if items is None else '누락된 사람 추가 시작'
+        self._log(f'\n{"─" * 44}\n{started_at}  {what}  ·  총 {total}명\n\n')
+        logging.info('%s: 총 %s명', what, total)
         self.worker_thread = threading.Thread(
             target=self._worker, args=(run_items,), daemon=True)
         self.worker_thread.start()
@@ -3541,40 +3426,6 @@ class App:
         self._rebuild_parsed_list()
         self.parse_status.config(text=f'실패 항목 재실행 준비: {len(failed)}명', fg='green')
         self._start()
-
-    def _show_failure_report(self):
-        """지난 실행 결과를 다시 연다. 실행한 적이 없으면 실패 명단만 보여 준다."""
-        if getattr(self, 'last_run', None):
-            self._show_run_result()
-            return
-        failed = self._failed_items()
-        if not failed:
-            messagebox.showinfo('알림', '실패한 항목이 없습니다.')
-            return
-        FailureReport(self.root, failed, self._retry_failed)
-
-    def _show_run_result(self):
-        """추출한 수와 소통메신저에 들어간 수를 대조하는 창."""
-        run = getattr(self, 'last_run', None)
-        if not run:
-            return
-        before, after = run['before'], run['after']
-        if after is not None:
-            note = ('소통메신저 [선택된 사용자] 목록을 세어 아래에 채웠습니다. '
-                    '화면에 안 보이는 아래쪽 사람까지 센 수입니다.')
-        else:
-            note = ('소통메신저 [선택된 사용자] 목록을 세지 못했습니다. 소통메신저는 담긴 '
-                    '사람 수를 따로 보여 주지 않으니, 직접 세어 보셨다면 아래에 적고 '
-                    '[대조] 를 누르세요.')
-        if before:
-            note += f'\n시작 전부터 {before}명이 들어 있었으므로 그만큼 더해서 비교합니다.'
-        ResultReport(
-            self.root, run['tally'], unit='명', who='사람',
-            where='소통메신저 [선택된 사용자]', into='받는 사람에',
-            count_label='[선택된 사용자] 에 담긴 사람 수:',
-            shown_count=after, base_count=before or 0, note=note,
-            on_retry=self._retry_failed, on_compare=self._compare_with_messenger,
-            title='소통픽 결과 대조')
 
     def _selected_count(self):
         """소통메신저 [선택된 사용자] 목록에 담긴 사람 수. 못 세면 None.
@@ -3781,8 +3632,12 @@ class App:
                                  '읽었습니다. 쓰지 않는 창은 닫아 두는 편이 안전합니다.')
         return row_texts(nodes, guess[0]['id'], guess[1]), ''
 
-    def _compare_with_messenger(self):
-        """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 누가 들어가고 빠졌는지 보여 준다."""
+    def _compare_with_messenger(self, quiet: bool = False):
+        """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 누가 들어가고 빠졌는지 보여 준다.
+
+        quiet 는 자동 선택이 끝난 뒤 저절로 부를 때다. 그때는 명단을 못 읽어도
+        경고창을 띄우지 않고 상태 줄에만 적는다.
+        """
         if not self.names_list:
             messagebox.showwarning('알림', '먼저 명단을 추출해 주세요.')
             return None
@@ -3797,6 +3652,11 @@ class App:
         self.compare_note = ''
         rows, why = self._read_messenger_selected()
         if rows is None:
+            if quiet:
+                self.status_var.set(
+                    self.status_var.get()
+                    + '  ·  소통메신저 명단은 읽지 못했습니다 ([🔍 소통메신저와 비교] 로 다시 시도)')
+                return None
             self.status_var.set('소통메신저 명단을 읽지 못했습니다')
             if self._offer_comtypes_install(why, self._compare_with_messenger):
                 return None
@@ -3810,9 +3670,20 @@ class App:
                      sum(len(p) for _n, p, _h in result.unsure), len(result.extra))
         self.status_var.set(
             f'소통메신저 비교  ·  들어감 {len(result.inside)}명  ·  빠짐 {len(result.missing)}명')
-        MessengerCompareReport(self.root, result, len(self.names_list), self._retry_failed,
-                               note=self.compare_note)
+        MessengerCompareReport(self.root, result, len(self.names_list),
+                               on_add=self._add_missing_to_messenger, note=self.compare_note)
         return result
+
+    def _add_missing_to_messenger(self, items):
+        """비교에서 빠진 사람만 소통메신저에 담는다. 명단은 그대로 둔다.
+
+        끝나면 _done 이 다시 비교해 정말 다 들어갔는지 보여 준다.
+        """
+        try:
+            self.nb.select(self.messenger_tabs[1][0])     # 진행 상황이 보이는 탭
+        except Exception as exc:
+            logging.debug('자동 선택 탭으로 옮기지 못했습니다: %s', exc)
+        self._start(list(items))
 
     def _offer_comtypes_install(self, why: str, then) -> bool:
         """화면 읽어 주기 부품(comtypes)이 없으면 지금 깔지 묻는다.
@@ -4115,17 +3986,17 @@ class App:
                 found = self._wait_for_result(before_pixels)
                 if found == 'stopped':
                     self._log('\n')
-                    self._mark_failed(idx, FAIL_MANUAL_STOP)
+                    self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                     break
                 if found != 'new':
                     fail += 1
                     no_result_streak += 1
                     if found == 'stale':
                         self._log('—  (검색 결과가 바뀌지 않았습니다)\n')
-                        self._mark_failed(idx, FAIL_SEARCH_STALE)
+                        self._mark_failed(idx, FAIL_SEARCH_STALE, item)
                     else:
                         self._log('—  (사용자 없음)\n')
-                        self._mark_failed(idx, FAIL_NO_USER)
+                        self._mark_failed(idx, FAIL_NO_USER, item)
                     if no_result_streak == 3:
                         self._log(
                             '     연달아 결과를 못 찾았습니다. 검색 후 대기 시간을 늘리거나 '
@@ -4139,7 +4010,7 @@ class App:
                     self.root.after(0, lambda n=name: self._show_continue(n))
                     self.continue_event.wait()
                     if self.stop_flag.is_set():
-                        self._mark_failed(idx, FAIL_MANUAL_STOP)
+                        self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                         break
                     ok += 1
                     item['added'] = True
@@ -4148,12 +4019,12 @@ class App:
                     result = self._do_select()
                     if result == 'stopped':
                         self._log('\n')
-                        self._mark_failed(idx, FAIL_MANUAL_STOP)
+                        self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                         break
                     if result == 'duplicate':
                         fail += 1
                         self._log('⚠  (이미 선택된 사용자)\n')
-                        self._mark_failed(idx, FAIL_DUPLICATE)
+                        self._mark_failed(idx, FAIL_DUPLICATE, item)
                         self._update_progress(idx + 1, total)
                         continue
                     ok += 1
@@ -4161,13 +4032,13 @@ class App:
                     self._log('✓\n')
             except pyautogui.FailSafeException:
                 self._log('\n⚠  긴급 중지 (화면 모서리)\n')
-                self._mark_failed(idx, FAIL_MANUAL_STOP)
+                self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                 self.stop_flag.set()
                 break
             except Exception as e:
                 fail += 1
                 self._log(f'✗  ({e})\n')
-                self._mark_failed(idx, failure_reason_from_error(e))
+                self._mark_failed(idx, failure_reason_from_error(e), item)
 
             self._update_progress(idx + 1, total)
             time.sleep(0.1)
@@ -4520,26 +4391,22 @@ class App:
                 self._paint_failed(idx, unmarked)
 
         tally = reconcile.messenger_tally(run_items, stopped)
-        before = getattr(self, 'run_selected_before', None)
-        after = self._selected_count()
-        self.last_run = {'tally': tally, 'before': before, 'after': after}
         self._refresh_failed_retry_state()
 
         sep = '─' * 44
         result_word = '중지' if stopped else '완료'
         self._log(f'\n{sep}\n{result_word}  ✓ {ok}명   ✗ {fail}명\n')
         self._log(f'{reconcile.summary_line(tally, "명")}\n')
-        if after is not None:
-            start = f' (시작 전 {before}명)' if before is not None else ''
-            self._log(f'소통메신저 [선택된 사용자] {after}명{start}\n')
         logging.info('자동 선택 결과: 추출 %s, 들어감 %s, 빠짐 %s',
                      tally.total, tally.reflected, tally.short)
 
         head = f'{result_word}  ·  {reconcile.summary_line(tally, "명")}'
         self.status_var.set(head + ('  ← 빨간색 항목 확인' if tally.short else ''))
-        # 몇 명인지만 알려 주면 누가 빠졌는지 로그를 거슬러 올라가며 찾아야 한다.
-        # 추출한 수와 들어간 수를 나란히 놓고, 빠진 사람을 사유별로 보여 준다.
-        self._show_run_result()
+        if stopped:
+            return
+        # 신통픽이 누른 것과 실제로 들어간 것은 다를 수 있다. 끝나면 바로
+        # 소통메신저 [선택된 사용자] 를 읽어 소통픽 명단과 맞춰 보여 준다.
+        self._compare_with_messenger(quiet=True)
 
     def _update_progress(self, idx: int, total: int):
         self.root.after(
@@ -4550,11 +4417,21 @@ class App:
             )
         )
 
-    def _mark_failed(self, idx: int, reason: str):
+    def _mark_failed(self, idx: int, reason: str, item=None):
+        """빨갛게 표시한다. item 을 주면 명단에서 그 항목의 자리를 찾아 칠한다.
+
+        누락된 사람만 다시 담을 때는 돌리는 순번과 명단 순번이 다르다.
+        """
         # 파일 로그에는 개인정보를 남기지 않고 순번과 사유만 기록한다.
         logging.warning('명단 추가 실패: 순번=%s, 사유=%s', idx + 1, reason)
         def apply():
-            self._paint_failed(idx, reason)
+            at = idx
+            if item is not None:
+                at = next((k for k, it in enumerate(self.names_list) if it is item), None)
+                if at is None:
+                    item['failure_reason'] = reason
+                    return
+            self._paint_failed(at, reason)
             self._refresh_failed_retry_state()
         self.root.after(0, apply)
 
