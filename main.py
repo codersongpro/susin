@@ -2548,7 +2548,7 @@ class App:
         """화면 3. 자동 선택 (소통픽만). 위쪽에 진행 판, 가운데 단추, 아래에 진행 기록."""
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure(4, weight=1)
-        _title, self.auto_intro = self._screen_header(frame, '자동으로 골라 담습니다')
+        _title, self.auto_intro = self._screen_header(frame, '자동 선택')
 
         # 진행 판: 큰 숫자, 담김/빠짐 칩, 진행 막대
         panel = Card(frame, tone='inner', pad=(18, 12))
@@ -2569,7 +2569,7 @@ class App:
         setting = Card(frame, tone='inner', pad=(18, 10))
         setting.grid(row=2, column=0, sticky='ew', padx=14, pady=(0, 8))
         self.search_setting_panel = setting
-        setting.body.columnconfigure(2, weight=1)
+        setting.body.columnconfigure(3, weight=1)
         self._section_title(setting.body, '검색 설정', setting.fill).grid(
             row=0, column=0, columnspan=4, sticky='w', pady=(0, 4))
         tk.Label(setting.body, text='검색 후 대기 시간(초)', bg=setting.fill,
@@ -2582,17 +2582,16 @@ class App:
         delay_box.bind('<FocusOut>', lambda _e: self._save_search_settings())
         delay_box.bind('<Return>', lambda _e: self._save_search_settings())
         tk.Label(
-            setting.body, text='느리면 값을 낮추세요,\n단 소통메신저 최소 검색 시간이 필요합니다.',
+            setting.body, text='느리면 값을 낮추세요, 단 소통메신저 최소 검색 시간이 필요합니다.',
             bg=setting.fill, fg=COLORS['on_surface_variant'], font=ui.font(9), justify='left',
-            anchor='w').grid(row=2, column=0, columnspan=2, sticky='w')
+            anchor='w').grid(row=1, column=2, sticky='w', padx=(10, 0))
         self.manual_var = tk.BooleanVar(value=self.config.data.get('manual_confirm', False))
         tk.Checkbutton(
             setting.body, variable=self.manual_var, bg=setting.fill, activebackground=setting.fill,
             command=self._save_search_settings,
-            text='수동 확인 모드 (권장)\n검색한 뒤 [계속] 을 눌러야 다음으로 넘어갑니다.\n'
-                 '동명이인이나 검색 오탐이 걱정될 때 켜세요.\n한 사람마다 멈추므로 느립니다.',
+            text='수동 확인 모드: 한 사람마다 [계속] 을 눌러야 넘어갑니다. 동명이인이 걱정될 때 켜세요.',
             font=ui.font(9), fg=COLORS['on_surface'], justify='left', anchor='w'
-        ).grid(row=1, column=3, rowspan=2, sticky='e', padx=(20, 0))
+        ).grid(row=2, column=0, columnspan=4, sticky='w', pady=(6, 0))
 
         # 단추 줄
         btn_frame = tk.Frame(frame, bg=PANEL_BG)
