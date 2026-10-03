@@ -1173,6 +1173,88 @@ class AppFlowTest(unittest.TestCase):
         self.assertTrue(text.startswith('결과: X'), text)
         self.assertIn('쓸 수 없습니다: No module named comtypes', text)
 
+    def _web_messenger_rows(self, names):
+        """[사용자 선택] 창이 웹 화면이고 [선택된 사용자] 에 names 가 담긴 상황."""
+        rows = [{'id': 0, 'parent': -1, 'type': 50030, 'rect': (0, 0, 800, 600),
+                 'name': '', 'offscreen': False},
+                {'id': 1, 'parent': 0, 'type': 50020, 'rect': (420, 10, 520, 30),
+                 'name': '선택된 사용자', 'offscreen': False},
+                {'id': 2, 'parent': 0, 'type': 50026, 'rect': (420, 40, 780, 500),
+                 'name': '', 'offscreen': False}]
+        for k, name in enumerate(names):
+            row_id = len(rows)
+            rows.append({'id': row_id, 'parent': 2, 'type': 50026,
+                         'rect': (420, 40 + k * 60, 780, 100 + k * 60), 'name': '',
+                         'offscreen': k > 5})
+            rows.append({'id': row_id + 1, 'parent': row_id, 'type': 50020,
+                         'rect': (440, 40 + k * 60, 700, 70 + k * 60),
+                         'name': f'{name} [교사(초등)]', 'offscreen': False})
+            rows.append({'id': row_id + 2, 'parent': row_id, 'type': 50000,
+                         'rect': (740, 40 + k * 60, 780, 70 + k * 60),
+                         'name': '', 'offscreen': False})
+        return rows
+
+    def test_compare_button_marks_who_is_missing(self):
+        """버튼을 누르면 소통메신저 [선택된 사용자] 를 읽어 누가 빠졌는지 표시한다."""
+        import reconcile
+        m = self.app_module
+        items = [{'org': '학성초등학교', 'name': '이경숙', 'failure_reason': '자동화 오류'},
+                 {'org': '학성초등학교', 'name': '문유리', 'added': True},
+                 {'org': '학성초등학교', 'name': '나상연', 'added': True}]
+        self.app.names_list = items
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        try:
+            with patch.object(self.app, '_win32gui', return_value=gui), \
+                    patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
+                    patch.object(self.app, '_uia', return_value=(object(), '')), \
+                    patch.object(self.app, '_uia_nodes',
+                                 return_value=self._web_messenger_rows(['이경숙', '문유리', '홍길동'])), \
+                    patch.object(m, 'MessengerCompareReport') as report:
+                result = self.app._compare_with_messenger()
+            report.assert_called_once()
+            self.assertEqual([i['name'] for i in result.inside], ['이경숙', '문유리'])
+            # 들어간 사람은 빨간 표시를 지우고, 빠진 사람은 빨갛게 남긴다
+            self.assertNotIn('failure_reason', items[0])
+            self.assertTrue(items[0].get('added'))
+            self.assertEqual(items[2]['failure_reason'], reconcile.NOT_IN_MESSENGER)
+            self.assertFalse(items[2].get('added'))
+            self.assertEqual(len(result.extra), 1)
+            # 빠진 사람만 다시 담는다
+            with patch.object(self.app, '_start'):
+                self.app._retry_failed()
+            self.assertEqual([i['name'] for i in self.app.names_list], ['나상연'])
+        finally:
+            self.app.names_list = []
+
+    def test_compare_explains_when_it_cannot_read(self):
+        m = self.app_module
+        self.app.names_list = [{'org': '가초', 'name': '갑'}]
+        gui, _sent = self._fake_messenger(title='충북소통메신저')
+        try:
+            with patch.object(self.app, '_win32gui', return_value=gui), \
+                    patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                    patch.object(m.messagebox, 'showwarning') as warned, \
+                    patch.object(m, 'MessengerCompareReport') as report:
+                self.assertIsNone(self.app._compare_with_messenger())
+            report.assert_not_called()
+            self.assertIn('[사용자 선택] 창이 열려 있지 않습니다', warned.call_args.args[1])
+        finally:
+            self.app.names_list = []
+
+    def test_compare_refuses_two_open_dialogs(self):
+        """[사용자 선택] 창이 두 개 겹쳐 있으면 어느 쪽인지 모른다."""
+        rows = self._web_messenger_rows(['이경숙'])
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 800, 600)
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 30}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', return_value=rows):
+            got, why = self.app._read_messenger_selected()
+        self.assertIsNone(got)
+        self.assertIn('두 개 열려 있습니다', why)
+
     def test_probe_notices_the_dialog_was_moved(self):
         """위치를 잡은 뒤 [사용자 선택] 창을 옮기면 화살표 자리에 바탕화면이 있다."""
         gui, _sent = self._fake_messenger(dialog_rect=(900, 0, 1700, 600))

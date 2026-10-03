@@ -120,6 +120,15 @@ def main():
     report.destroy()
     print('결과 대조 창 ok')
 
+    # 소통메신저와 비교 창도 진짜 tkinter 에서 그려지는지
+    compared = reconcile.compare_with_messenger(
+        [{'org': '가초', 'name': '갑돌'}, {'org': '나초', 'name': '을순'}],
+        ['갑돌 [교사(초등)] [1학년]'])
+    window = app_module.MessengerCompareReport(root, compared, 2, on_retry=lambda: None)
+    assert '을순' in window.missing_text(), window.missing_text()
+    window.destroy()
+    print('소통메신저 비교 창 ok')
+
     root.destroy()
     print('스모크 테스트 통과')
     return 0

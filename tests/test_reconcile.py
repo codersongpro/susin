@@ -152,6 +152,58 @@ class TextTest(unittest.TestCase):
         self.assertEqual(reconcile.placed_text(tally), '가초 갑\n나초 을  (원래 있던)')
 
 
+class MessengerCompareTest(unittest.TestCase):
+    """소통메신저 [선택된 사용자] 와 소통픽 명단 맞춰 보기."""
+
+    ROWS = ['이경숙 [교사(초등)] [1학년] 안전/통학버스, 도서',
+            '문유리 [부장교사] [전담] 교무, 생활교육(202,310)',
+            '김다래 [교사(초등)] [3학년] 연구학력 (303)']
+
+    def item(self, org, name):
+        return {'org': org, 'name': name}
+
+    def test_name_is_read_from_a_row(self):
+        self.assertEqual(reconcile.person_name_from_row(self.ROWS[0]), '이경숙')
+        self.assertEqual(reconcile.person_name_from_row('문유리 (부장교사)'), '문유리')
+        self.assertEqual(reconcile.person_name_from_row('송동석'), '송동석')
+        self.assertIsNone(reconcile.person_name_from_row('123 abc'))
+
+    def test_who_got_in_and_who_did_not(self):
+        items = [self.item('학성초등학교', '이경숙'), self.item('학성초등학교', '문유리'),
+                 self.item('학성초등학교', '나상연')]
+        result = reconcile.compare_with_messenger(items, self.ROWS)
+        self.assertEqual([i['name'] for i in result.inside], ['이경숙', '문유리'])
+        self.assertEqual([i['name'] for i in result.missing], ['나상연'])
+        self.assertEqual(len(result.extra), 1, '김다래는 소통메신저에만 있다')
+        self.assertEqual(result.rows, 3)
+
+    def test_same_name_in_two_schools_is_not_guessed(self):
+        """소통메신저에는 학교가 안 나온다. 김다래가 한 명뿐이면 어느 학교 사람인지 모른다."""
+        items = [self.item('가초등학교', '김다래'), self.item('나초등학교', '김다래')]
+        result = reconcile.compare_with_messenger(items, self.ROWS)
+        self.assertEqual(result.inside, [])
+        self.assertEqual(result.missing, [])
+        name, people, have = result.unsure[0]
+        self.assertEqual((name, len(people), have), ('김다래', 2, 1))
+
+    def test_same_person_listed_twice_counts_once(self):
+        items = [self.item('학성초등학교', '이경숙'), self.item('학성초등학교', '이경숙')]
+        result = reconcile.compare_with_messenger(items, self.ROWS)
+        self.assertEqual(len(result.inside), 2)
+        self.assertEqual(result.unsure, [])
+
+    def test_items_without_a_name_are_reported(self):
+        result = reconcile.compare_with_messenger([{'org': '학성초등학교'}], self.ROWS)
+        self.assertEqual(len(result.no_name), 1)
+
+    def test_text_lists_missing_first(self):
+        items = [self.item('학성초등학교', '이경숙'), self.item('학성초등학교', '나상연')]
+        text = reconcile.compare_text(reconcile.compare_with_messenger(items, self.ROWS))
+        self.assertTrue(text.startswith('[소통메신저에 없음]  1명'), text)
+        self.assertIn('학성초등학교 나상연', text)
+        self.assertIn('[들어감]  1명', text)
+
+
 class ReadWrittenCodesTest(unittest.TestCase):
     def test_reads_every_row_even_when_the_same_org_repeats(self):
         rows = [

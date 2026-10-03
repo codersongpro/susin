@@ -40,6 +40,7 @@ from automation import (
     guess_selected_list,
     pick_selected_list,
     repeated_containers,
+    row_texts,
     find_label,
     uia_type_name,
     SELECTED_LABEL,
@@ -458,6 +459,13 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   아래쪽 사람까지 셉니다. 셀 수 있는지는 [2. 위치 설정] 탭의
   [소통메신저 목록 읽기 확인] 으로 미리 볼 수 있습니다.
   셀 수 있으면 O, 없으면 X 로 알려 줍니다.
+
+  [🔍 소통메신저와 비교] 를 누르면 소통메신저 [선택된 사용자] 를 읽어
+  소통픽 명단과 이름으로 맞춰 봅니다. 들어간 사람, 빠진 사람,
+  소통메신저에만 있는 사람을 나눠 보여 주고, 빠진 사람은 빨갛게 표시해
+  [실패 항목만 다시 실행] 으로 그 사람만 다시 담을 수 있습니다.
+  소통메신저 목록에는 학교 이름이 나오지 않아서, 같은 이름이 여럿이면
+  누가 들어갔는지 가리지 않고 '동명이인 확인 필요' 로 둡니다.
 
   수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
@@ -920,7 +928,7 @@ class ResultReport(tk.Toplevel):
 
     def __init__(self, parent, tally, *, unit, who, where, count_label, into,
                  shown_count=None, base_count=0, note='', on_retry=None,
-                 title='결과 대조'):
+                 on_compare=None, title='결과 대조'):
         super().__init__(parent)
         self.tally = tally
         self.unit = unit
@@ -989,6 +997,12 @@ class ResultReport(tk.Toplevel):
             bg='#607D8B', fg='white', relief='flat',
             font=('맑은 고딕', 10), padx=10, pady=6, cursor='hand2'
         ).pack(side='left', padx=4)
+        if on_compare:
+            tk.Button(
+                row, text='🔍  소통메신저와 비교', command=on_compare,
+                bg='#1565C0', fg='white', relief='flat',
+                font=('맑은 고딕', 10, 'bold'), padx=10, pady=6, cursor='hand2'
+            ).pack(side='left', padx=4)
         if on_retry and not ok:
             tk.Button(
                 row, text='↻  빠진 것만 다시 실행', command=self._retry,
@@ -1035,6 +1049,84 @@ class ResultReport(tk.Toplevel):
     def _copy_placed(self):
         if copy_text(self, reconcile.placed_text(self.tally)):
             self.status.config(text='✓ 들어간 명단을 복사했습니다')
+
+    def _retry(self):
+        self.destroy()
+        if self.on_retry:
+            self.on_retry()
+
+
+class MessengerCompareReport(tk.Toplevel):
+    """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 본 결과 창."""
+
+    def __init__(self, parent, result, total, on_retry=None):
+        super().__init__(parent)
+        self.result = result
+        self.on_retry = on_retry
+        self.title('소통메신저와 비교')
+        self.geometry('560x560')
+        unsure = sum(len(people) for _n, people, _h in result.unsure)
+        short = len(result.missing) + unsure
+        ok = short == 0 and not result.no_name
+        bg = '#F1F8E9' if ok else '#FFF5F5'
+        self.configure(bg=bg)
+
+        head = (f'O  소통픽 명단 {total}명이 모두 소통메신저에 있습니다' if ok else
+                f'X  소통픽 명단 {total}명 중 {short}명이 소통메신저에 없거나 확인이 필요합니다')
+        tk.Label(self, text=head, bg='#2E7D32' if ok else '#B71C1C', fg='white',
+                 font=('맑은 고딕', 12, 'bold'), pady=10, wraplength=540).pack(fill='x')
+        summary = (f'소통메신저에서 읽은 사람 {result.rows}명  ·  들어감 {len(result.inside)}명  ·  '
+                   f'빠짐 {len(result.missing)}명  ·  확인 필요 {unsure}명  ·  '
+                   f'소통메신저에만 있음 {len(result.extra)}명')
+        tk.Label(self, text=summary, bg=bg, fg='#263238', font=('맑은 고딕', 9, 'bold'),
+                 wraplength=530, justify='left').pack(anchor='w', padx=12, pady=(10, 2))
+        tk.Label(
+            self,
+            text=('소통메신저 목록에는 학교 이름이 나오지 않아 이름으로 맞췄습니다. '
+                  '같은 이름이 명단에 여럿이면 누가 들어갔는지 가릴 수 없어 확인 필요로 둡니다. '
+                  '읽은 사람 수가 소통메신저에 보이는 수와 다르면 결과를 믿지 마세요.'),
+            bg=bg, fg='#555', font=('맑은 고딕', 9), wraplength=530, justify='left'
+        ).pack(anchor='w', padx=12)
+
+        box = tk.Frame(self, bg=bg)
+        box.pack(fill='both', expand=True, padx=12, pady=8)
+        self.text = scrolledtext.ScrolledText(
+            box, font=('맑은 고딕', 10), wrap='word', height=14)
+        self.text.pack(fill='both', expand=True)
+        self.text.insert('1.0', reconcile.compare_text(result) or '읽은 사람이 없습니다.')
+        self.text.config(state='disabled')
+
+        row = tk.Frame(self, bg=bg)
+        row.pack(fill='x', padx=12, pady=(0, 10))
+        if short:
+            tk.Button(
+                row, text='📋  빠진 명단 복사', command=self._copy_missing,
+                bg='#B71C1C', fg='white', relief='flat',
+                font=('맑은 고딕', 10), padx=10, pady=6, cursor='hand2'
+            ).pack(side='left', padx=4)
+            if on_retry:
+                tk.Button(
+                    row, text='↻  빠진 사람만 다시 담기', command=self._retry,
+                    bg='#795548', fg='white', relief='flat',
+                    font=('맑은 고딕', 10, 'bold'), padx=10, pady=6, cursor='hand2'
+                ).pack(side='left', padx=4)
+        tk.Button(
+            row, text='닫기', command=self.destroy,
+            bg='#9E9E9E', fg='white', relief='flat',
+            font=('맑은 고딕', 10), padx=12, pady=6
+        ).pack(side='right', padx=4)
+        self.status = tk.Label(self, text='', bg=bg, fg='green', font=('맑은 고딕', 9))
+        self.status.pack(pady=(0, 8))
+
+    def missing_text(self) -> str:
+        lines = [reconcile.item_label(item) for item in self.result.missing]
+        for _name, people, _have in self.result.unsure:
+            lines.extend(f'{reconcile.item_label(item)}  (동명이인 확인 필요)' for item in people)
+        return '\n'.join(lines)
+
+    def _copy_missing(self):
+        if copy_text(self, self.missing_text()):
+            self.status.config(text='빠진 명단을 복사했습니다')
 
     def _retry(self):
         self.destroy()
@@ -2262,6 +2354,14 @@ class App:
         )
         self.failed_list_btn.pack(side='left', padx=4)
 
+        self.compare_btn = tk.Button(
+            btn_frame, text='🔍  소통메신저와 비교',
+            bg='#1565C0', fg='white', disabledforeground='#ECEFF1', activebackground='#0D47A1',
+            relief='flat', font=('맑은 고딕', 10, 'bold'), padx=10, pady=6,
+            cursor='hand2', command=self._compare_with_messenger
+        )
+        self.compare_btn.pack(side='left', padx=4)
+
         tk.Button(
             btn_frame, text='로그 지우기',
             bg='#607D8B', fg='white', disabledforeground='#ECEFF1', activebackground='#455A64',
@@ -3468,7 +3568,8 @@ class App:
             where='소통메신저 [선택된 사용자]', into='받는 사람에',
             count_label='[선택된 사용자] 에 담긴 사람 수:',
             shown_count=after, base_count=before or 0, note=note,
-            on_retry=self._retry_failed, title='소통픽 결과 대조')
+            on_retry=self._retry_failed, on_compare=self._compare_with_messenger,
+            title='소통픽 결과 대조')
 
     def _selected_count(self):
         """소통메신저 [선택된 사용자] 목록에 담긴 사람 수. 못 세면 None.
@@ -3607,6 +3708,94 @@ class App:
                 stack.append((kid, node['id']))
         return nodes
 
+    def _read_uia_nodes(self, uia, window):
+        """크롬 화면은 누가 읽으려 할 때 비로소 내용을 내주므로 몇 번 다시 읽는다."""
+        nodes, tries = [], 0
+        for tries in range(1, 5):
+            nodes = self._uia_nodes(uia, window)
+            if len(nodes) >= 30:
+                break
+            time.sleep(0.8)
+        return nodes, tries
+
+    def _read_messenger_selected(self):
+        """소통메신저 [선택된 사용자] 목록의 줄 글을 읽는다.
+
+        돌려주는 값은 (줄 글 목록, 못 읽은 이유). 읽으면 이유는 빈 글이다.
+        """
+        if self._win32gui() is None:
+            return None, '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
+        point = self._arrow_point()
+        if point is None:
+            return None, '[2. 위치 설정] 에서 6번 화살표 버튼 위치를 먼저 잡아 주세요.'
+        dialogs = self._messenger_dialogs()
+        if not dialogs:
+            return None, ('소통메신저 [사용자 선택] 창이 열려 있지 않습니다. '
+                          '[받는사람 추가] 를 눌러 창을 연 채로 다시 눌러 주세요.')
+        inside = [w for w in dialogs if self._window_contains(w, point)]
+        if not inside:
+            return None, ('[사용자 선택] 창이 위치를 잡을 때와 다른 곳에 있습니다. '
+                          '창을 옮기셨다면 [2. 위치 설정] 에서 4, 5, 6번을 다시 잡아 주세요.')
+        if len(inside) > 1:
+            return None, '[사용자 선택] 창이 두 개 열려 있습니다. 하나를 닫고 다시 눌러 주세요.'
+        uia, why = self._uia()
+        if uia is None:
+            return None, (f'화면 읽어 주기를 쓸 수 없습니다 ({why}). '
+                          '개발용 실행.bat 을 다시 누르면 필요한 것을 깝니다.')
+        nodes, _tries = self._read_uia_nodes(uia, inside[0])
+        guess = guess_selected_list(nodes, point[0])
+        if not guess:
+            return None, ('[선택된 사용자] 목록을 찾지 못했습니다. 담긴 사람이 한 명뿐이면 '
+                          '목록을 알아보지 못합니다. 그렇지 않다면 [2. 위치 설정] 탭의 '
+                          '[소통메신저 목록 읽기 확인] 결과를 복사해 보내 주세요.')
+        return row_texts(nodes, guess[0]['id'], guess[1]), ''
+
+    def _compare_with_messenger(self):
+        """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 누가 들어가고 빠졌는지 보여 준다."""
+        if not self.names_list:
+            messagebox.showwarning('알림', '먼저 명단을 추출해 주세요.')
+            return None
+        if self._automation_is_running():
+            messagebox.showwarning('실행 중입니다', '자동 선택이 끝난 뒤에 비교해 주세요.')
+            return None
+        self.status_var.set('소통메신저 명단을 읽는 중입니다...')
+        try:
+            self.root.update_idletasks()
+        except Exception:
+            pass
+        rows, why = self._read_messenger_selected()
+        if rows is None:
+            self.status_var.set('소통메신저 명단을 읽지 못했습니다')
+            messagebox.showwarning('소통메신저 명단을 읽지 못했습니다', why)
+            return None
+        result = reconcile.compare_with_messenger(self.names_list, rows)
+        self._mark_compare_result(result)
+        # 파일 로그에는 이름 없이 수만 남긴다
+        logging.info('소통메신저 비교: 읽은 줄 %s, 들어감 %s, 빠짐 %s, 확인 필요 %s, 메신저에만 %s',
+                     result.rows, len(result.inside), len(result.missing),
+                     sum(len(p) for _n, p, _h in result.unsure), len(result.extra))
+        self.status_var.set(
+            f'소통메신저 비교  ·  들어감 {len(result.inside)}명  ·  빠짐 {len(result.missing)}명')
+        MessengerCompareReport(self.root, result, len(self.names_list), self._retry_failed)
+        return result
+
+    def _mark_compare_result(self, result):
+        """비교 결과를 명단에 남긴다. 빠진 사람은 빨갛게, 들어간 사람은 빨간 표시를 지운다.
+
+        그래야 [실패 항목만 다시 실행] 이 빠진 사람만 다시 담는다.
+        """
+        for item in result.inside:
+            item['added'] = True
+            item.pop('failure_reason', None)
+        for item in result.missing:
+            item.pop('added', None)
+            item['failure_reason'] = reconcile.NOT_IN_MESSENGER
+        for _name, people, _have in result.unsure:
+            for item in people:
+                item.pop('added', None)
+                item['failure_reason'] = reconcile.SAME_NAME_UNSURE
+        self._rebuild_parsed_list()
+
     def _probe_uia(self, window, point):
         """웹 화면 속 [선택된 사용자] 목록을 화면 읽어 주기로 찾는다.
 
@@ -3624,12 +3813,7 @@ class App:
             base_left, base_top, _r, _b = gui.GetWindowRect(window)
         except Exception:
             base_left = base_top = 0
-        nodes, tries = [], 0
-        for tries in range(1, 5):
-            nodes = self._uia_nodes(uia, window)
-            if len(nodes) >= 30:
-                break
-            time.sleep(0.8)
+        nodes, tries = self._read_uia_nodes(uia, window)
         guess = guess_selected_list(nodes, point[0])
         offscreen = sum(1 for node in nodes if node['offscreen'])
         lines.append(f'  읽은 요소: {len(nodes)}개 (화면 밖 {offscreen}개), {tries}번 읽음')

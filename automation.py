@@ -184,3 +184,28 @@ def guess_selected_list(nodes, split_x: int):
         if best is None or count > best[2]:
             best = (node, kid_type, count, offscreen)
     return best
+
+
+def row_texts(nodes, container_id: int, row_type: int) -> list:
+    """목록 요소의 줄마다 그 안의 글을 차례대로 이어 붙인다.
+
+    크롬 화면은 줄 자체 이름에 안쪽 글을 다 붙여 두기도 하고 비워 두기도 해서,
+    줄과 그 안쪽 요소의 이름을 모두 모으되 똑같은 글은 한 번만 넣는다.
+    """
+    children = {}
+    for node in nodes:
+        children.setdefault(node.get('parent'), []).append(node)
+    rows = []
+    for row in children.get(container_id, []):
+        if row['type'] != row_type:
+            continue
+        pieces = []
+        stack = [row]
+        while stack:
+            node = stack.pop()
+            name = (node.get('name') or '').strip()
+            if name and name not in pieces:
+                pieces.append(name)
+            stack.extend(reversed(children.get(node['id'], [])))
+        rows.append(' '.join(pieces))
+    return rows

@@ -156,3 +156,12 @@ class WebDialogGuessTest(unittest.TestCase):
         from automation import uia_type_name
         self.assertEqual(uia_type_name(50007), 'ListItem')
         self.assertEqual(uia_type_name(12345), '12345')
+
+
+class RowTextsTest(unittest.TestCase):
+    def test_each_row_joins_its_texts(self):
+        from automation import guess_selected_list, row_texts
+        nodes = web_dialog_nodes(selected=3)
+        node, kid_type, _count, _off = guess_selected_list(nodes, 350)
+        rows = row_texts(nodes, node['id'], kid_type)
+        self.assertEqual(rows, ['담긴사람0 소속 빼기', '담긴사람1 소속 빼기', '담긴사람2 소속 빼기'])
