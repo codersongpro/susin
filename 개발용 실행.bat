@@ -120,11 +120,12 @@ exit /b 0
 
 
 rem ---- 이 파일만 받았을 때: GitHub 에서 코드 묶음을 받아 풀기 ----
+rem PowerShell 진행 막대(ProgressPreference)를 끄지 않으면 Windows Terminal 에서 위에 찍은 한글이 겹쳐 두 번씩 보인다.
 :download_zip
 echo    GitHub 에서 최신 코드를 받습니다. 받는 곳: %APPDIR%
 set "ZIP=%TEMP%\sintongpick-main.zip"
 set "SRC=%TEMP%\sintongpick-src"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing -Uri '%REPO_ZIP%' -OutFile '%ZIP%'; if (Test-Path '%SRC%') { Remove-Item -Recurse -Force '%SRC%' }; Expand-Archive -Path '%ZIP%' -DestinationPath '%SRC%' -Force"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing -Uri '%REPO_ZIP%' -OutFile '%ZIP%'; if (Test-Path '%SRC%') { Remove-Item -Recurse -Force '%SRC%' }; Expand-Archive -Path '%ZIP%' -DestinationPath '%SRC%' -Force"
 if errorlevel 1 (
     if exist "%APPDIR%\main.py" (
         echo    받지 못했습니다. 지난번에 받아 둔 코드로 실행합니다.
