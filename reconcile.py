@@ -184,18 +184,54 @@ def compare_count(expected: int, shown: int, where: str, unit: str, who: str):
 NOT_IN_MESSENGER = '소통메신저에 없음'
 SAME_NAME_UNSURE = '동명이인 확인 필요'
 
-_NAME_BEFORE_BRACKET = re.compile(r'([가-힣]{2,5})\s*[\[(]')
+# 이름 옆의 글(상태 메시지)은 사람마다 다르다. 내선이 있을 수도 없을 수도 있고, 업무나 학생 수,
+# 맡은 반일 수도 있다. 그 글에 '해님반(208)' 이나 '6학년 [2반]' 처럼 한글 뒤에 괄호가 붙은
+# 모양이 있어도 이름으로 읽으면 안 된다. 이름은 줄 맨 앞의 '이름 [직위]' 에서만 뽑는다.
+_NAME_ROLE_AT_START = re.compile(r'^\s*([가-힣]{2,5})\s*\[[가-힣A-Za-z]')
+_NAME_ROLE_ANYWHERE = re.compile(r'([가-힣]{2,5})\s*\[[가-힣A-Za-z]')
+_NAME_AT_START = re.compile(r'^\s*([가-힣]{2,5})(?![가-힣])')
 _HANGUL_WORD = re.compile(r'[가-힣]{2,5}')
 
 
 def person_name_from_row(text: str):
-    """[선택된 사용자] 한 줄에서 사람 이름을 뽑는다. 못 뽑으면 None."""
+    """[선택된 사용자] 한 줄에서 사람 이름을 뽑는다. 못 뽑으면 None.
+
+    '이름 [직위] 상태 메시지' 가 기본 모양이다. 줄 맨 앞의 '이름 [직위]' 를 먼저 보고,
+    사진 설명 같은 것이 앞에 붙었으면 처음 나오는 '이름 [직위]' 를 본다. 직위가 없으면
+    맨 앞 한글 낱말을 이름으로 본다. 상태 메시지에서는 이름을 뽑지 않는다.
+    """
     text = text or ''
-    found = _NAME_BEFORE_BRACKET.search(text)
-    if found:
-        return found.group(1)
+    for pattern in (_NAME_ROLE_AT_START, _NAME_ROLE_ANYWHERE, _NAME_AT_START):
+        found = pattern.search(text)
+        if found:
+            return found.group(1)
     found = _HANGUL_WORD.search(text)
     return found.group(0) if found else None
+
+
+def person_row_label(text: str, status_limit: int = 24) -> str:
+    """비교 창에 보일 한 줄. '이름 [직위]' 를 앞에 두고 상태 메시지는 괄호에 줄여서 붙인다.
+
+    상태 메시지는 사람이 적는 글이라 길 수 있고 없을 수도 있다. 없으면 이름과 직위만 나온다.
+    """
+    text = re.sub(r'\s+', ' ', text or '').strip()
+    if not text:
+        return ''
+    name = person_name_from_row(text)
+    if not name:
+        return text[:status_limit * 2]
+    start = text.find(name)
+    rest = text[start + len(name):].strip()
+    role = ''
+    match = re.match(r'(\[[^\]]*\])', rest)
+    if match:
+        role = match.group(1)
+        rest = rest[match.end():].strip()
+    label = f'{name} {role}'.strip()
+    if rest:
+        rest = rest if len(rest) <= status_limit else rest[:status_limit].rstrip() + '…'
+        label += f'  ({rest})'
+    return label
 
 
 def _plain(text) -> str:
@@ -292,7 +328,7 @@ def compare_text(result: MessengerCompare) -> str:
         lines.append('')
     if result.extra:
         lines.append(f'[소통메신저에만 있음]  {len(result.extra)}명')
-        lines.extend(f'  {text[:40]}' for text in result.extra)
+        lines.extend(f'  {person_row_label(text)}' for text in result.extra)
         lines.append('')
     if result.inside:
         lines.append(f'[들어감]  {len(result.inside)}명')

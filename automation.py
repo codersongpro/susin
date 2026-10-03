@@ -229,7 +229,9 @@ def row_texts(nodes, container_id: int, row_type: int) -> list:
     return rows
 
 
-PERSON_ROW = re.compile(r'[가-힣]{2,5}\s*\[')
+# 이름 옆의 글은 사람이 정한 상태 메시지라 아무 모양이나 올 수 있다. 직위 괄호는 한글이나 영문으로 시작한다.
+PERSON_ROW = re.compile(r'[가-힣]{2,5}\s*\[[가-힣A-Za-z]')
+PERSON_ROW_START = re.compile(r'^[^가-힣]*[가-힣]{2,5}\s*\[[가-힣A-Za-z]')
 
 
 def person_rows(nodes, container_id: int, row_type: int) -> int:
@@ -251,7 +253,8 @@ def _joined_texts(nodes):
             return found
         out = []
         name = (node.get('name') or '').strip()
-        if name:
+        # 사진의 설명 글('프로필 사진' 따위)은 줄의 내용이 아니다
+        if name and node.get('type') != 50006:
             out.append(name)
         for kid in children.get(node['id'], []):
             for piece in pieces(kid):
@@ -285,7 +288,8 @@ def selected_person_rows(nodes, split_x: int) -> list:
         return label_top is None or top >= label_top
 
     def matches(node):
-        return bool(PERSON_ROW.search(texts.get(node['id'], '')))
+        # 맨 앞이 '이름 [직위]' 인 글만 사람 줄이다. 상태 메시지(이름 옆 글)에 든 괄호는 거른다.
+        return bool(PERSON_ROW_START.search(texts.get(node['id'], '')))
 
     minimal = []
     for node in nodes:
@@ -296,6 +300,25 @@ def selected_person_rows(nodes, split_x: int) -> list:
         minimal.append(node)
     if not minimal:
         return []
+
+    # 한 줄 안에 이름과 상태 메시지가 둘 다 '이름 [직위]' 모양일 수 있다 (예: '담임 [전담]').
+    # 사진이나 빼기 단추 같은 것이 함께 있는 한 줄 틀 안에서는 맨 앞 하나만 사람이다.
+    text_like = {50020, 50029}
+    by_parent = {}
+    for node in minimal:
+        by_parent.setdefault(node.get('parent'), []).append(node)
+    drop = set()
+    for parent_id, group in by_parent.items():
+        parent = by_id.get(parent_id)
+        if parent is None or len(group) < 2:
+            continue
+        has_row_parts = any(kid['type'] not in text_like and kid['id'] not in
+                            {g['id'] for g in group} for kid in children.get(parent_id, []))
+        height = max(group[0]['rect'][3] - group[0]['rect'][1], 1)
+        if has_row_parts and parent['rect'][3] - parent['rect'][1] <= max(120, height * 2.6):
+            first = min(group, key=lambda n: (n['rect'][1], n['rect'][0]))
+            drop.update(n['id'] for n in group if n is not first)
+    minimal = [node for node in minimal if node['id'] not in drop]
 
     minimal_ids = {node['id'] for node in minimal}
 

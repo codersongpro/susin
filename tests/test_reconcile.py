@@ -246,5 +246,37 @@ class ReadWrittenCodesTest(unittest.TestCase):
                              ['M100000001', 'M100000001', 'M100000002'])
 
 
+class StatusMessageTest(unittest.TestCase):
+    """이름 옆의 글은 사람이 정한 상태 메시지다 (업무, 학생 수, 맡은 반, 내선, 없을 수도 있다)."""
+
+    def test_name_is_the_one_before_the_role(self):
+        for row in ('권성희 [교사(유치원)]',
+                    '권성희 [교사(유치원)] 해님반(208)',
+                    '권성희 [교사(유치원)] 6학년 [2반]',
+                    '권성희 [교사(초등)] 담임 [전담] 학생 25명',
+                    '프로필 권성희 [교사(초등)] 업무: 방과후(2)'):
+            self.assertEqual(reconcile.person_name_from_row(row), '권성희', row)
+
+    def test_a_status_with_brackets_never_becomes_the_name(self):
+        self.assertEqual(reconcile.person_name_from_row('권성희 해님반(208)'), '권성희')
+        self.assertEqual(reconcile.person_name_from_row('권성희 [교사] 해님반(208)'), '권성희')
+        self.assertIsNone(reconcile.person_name_from_row('208 (3) [1]'))
+
+    def test_row_label_shortens_the_status_and_survives_a_missing_one(self):
+        self.assertEqual(reconcile.person_row_label('권성희 [교사(유치원)]'), '권성희 [교사(유치원)]')
+        label = reconcile.person_row_label('권성희 [교사(유치원)] 해님반(208)')
+        self.assertEqual(label, '권성희 [교사(유치원)]  (해님반(208))')
+        long = reconcile.person_row_label('권성희 [교사] ' + '가' * 60)
+        self.assertTrue(long.endswith('…)'))
+        self.assertLess(len(long), 60)
+
+    def test_extra_people_are_listed_with_name_role_and_a_short_status(self):
+        result = reconcile.compare_with_messenger(
+            [], ['권성희 [교사(유치원)] 해님반(208)', '강명희 [교사(보건)]'])
+        text = reconcile.compare_text(result)
+        self.assertIn('권성희 [교사(유치원)]  (해님반(208))', text)
+        self.assertIn('강명희 [교사(보건)]', text)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -233,7 +233,7 @@ class RealMessengerTest(unittest.TestCase):
         self.assertEqual(names, ['정수신', '박소통', '김충북', '최신통', '한충주', '오청주', '송동석'])
 
 
-def photo_rows_nodes(people=2, with_label=True, hint_group=True):
+def photo_rows_nodes(people=2, with_label=True, hint_group=True, statuses=None):
     """2026-10-03 실제 화면의 짜임새. 담긴 사람이 두 명이고 줄마다 사진이 있다.
 
     오른쪽에 '선택된 사용자' 제목, 사람 줄(사진, '이름 [직위]', 소속과 내선), 그 아래
@@ -258,12 +258,15 @@ def photo_rows_nodes(people=2, with_label=True, hint_group=True):
         add(doc, 50020, (x0 + 339, y0 + 60, x0 + 450, y0 + 78), '선택된 사용자')
     box = add(doc, 50025, (x0 + 339, y0 + 83, x0 + 615, y0 + 383))
     names = [('권성희', '[교사(유치원)]', '해님반(208)'), ('강명희', '[교사(보건)]', '보건 내선 222')]
+    if statuses is not None:
+        names = [(n, r, d) for (n, r, _old), d in zip(names, statuses)]
     for k, (name, role, dept) in enumerate(names[:people]):
         top = y0 + 83 + k * 49
         row = add(box, 50026, (x0 + 339, top, x0 + 600, top + 49))
-        add(row, 50006, (x0 + 339, top, x0 + 380, top + 49))
+        add(row, 50006, (x0 + 339, top, x0 + 380, top + 49), '프로필 사진')
         add(row, 50020, (x0 + 385, top, x0 + 520, top + 24), f'{name} {role}')
-        add(row, 50020, (x0 + 385, top + 24, x0 + 520, top + 48), dept)
+        if dept:
+            add(row, 50020, (x0 + 385, top + 24, x0 + 520, top + 48), dept)
         add(row, 50000, (x0 + 570, top + 10, x0 + 590, top + 30), '빼기')
     if hint_group:
         group = add(doc, 50025, (x0 + 339, y0 + 400, x0 + 615, y0 + 417))
@@ -300,6 +303,16 @@ class TwoSelectedPeopleTest(unittest.TestCase):
         from automation import selected_person_rows
         rows = selected_person_rows(photo_rows_nodes(2), 1284)
         self.assertFalse(any(row.startswith('조직도') for row in rows))
+
+    def test_status_messages_of_any_kind_do_not_change_who_is_read(self):
+        """이름 옆의 글은 사람이 정한 상태 메시지다. 없거나, 업무, 학생 수, 맡은 반, 괄호가 든 글이어도 같다."""
+        import reconcile
+        from automation import selected_person_rows
+        for statuses in (['', ''], ['해님반(208)', '보건 내선 222'], ['6학년 [2반]', '학생 25명'],
+                         ['담임 [전담]', '교무, 생활교육(202,310)'], ['', '급식 담당 김철수 [대체]']):
+            rows = selected_person_rows(photo_rows_nodes(2, statuses=statuses), 1284)
+            names = [reconcile.person_name_from_row(t) for t in rows]
+            self.assertEqual(names, ['권성희', '강명희'], statuses)
 
     def test_a_single_person_is_found_too(self):
         from automation import selected_person_rows
