@@ -71,3 +71,34 @@ class ResultDetectionTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SelectedListTest(unittest.TestCase):
+    """[선택된 사용자] 목록 칸 고르기."""
+
+    def test_message_depends_on_the_kind_of_list(self):
+        from automation import LB_GETCOUNT, LVM_GETITEMCOUNT, count_message_for
+        self.assertEqual(count_message_for('ListBox'), LB_GETCOUNT)
+        self.assertEqual(count_message_for('TListBox'), LB_GETCOUNT)
+        self.assertEqual(count_message_for('SysListView32'), LVM_GETITEMCOUNT)
+        self.assertIsNone(count_message_for('Button'))
+        self.assertIsNone(count_message_for(''))
+
+    def test_picks_the_list_right_of_the_arrow(self):
+        from automation import pick_selected_list
+        children = [
+            (1, 'ListBox', (0, 0, 300, 500)),        # 검색 결과
+            (2, 'Button', (310, 240, 340, 260)),     # 화살표
+            (3, 'ListBox', (350, 0, 650, 500)),      # 선택된 사용자
+            (4, 'ListBox', (700, 0, 900, 500)),      # 더 먼 목록
+        ]
+        self.assertEqual(pick_selected_list(children, 325, 250)[0], 3)
+
+    def test_list_must_span_the_arrow_height(self):
+        from automation import pick_selected_list
+        children = [(3, 'ListBox', (350, 0, 650, 200))]
+        self.assertIsNone(pick_selected_list(children, 325, 250))
+
+    def test_nothing_to_the_right(self):
+        from automation import pick_selected_list
+        self.assertIsNone(pick_selected_list([(1, 'ListBox', (0, 0, 300, 500))], 325, 250))

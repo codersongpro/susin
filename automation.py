@@ -68,3 +68,47 @@ def looks_like_result(pixels, width: int, height: int,
                       min_columns: int = RESULT_MIN_COLUMNS) -> bool:
     """검색 결과 첫 줄에 글자가 그려져 있는가."""
     return result_text_columns(pixels, width, height) >= min_columns
+
+
+# ── [선택된 사용자] 목록 세기 ──────────────────
+# 소통메신저는 담긴 사람 수를 숫자로 보여 주지 않는다. 목록도 스크롤해야 다 보이고
+# 가나다순도 아니라 화면으로는 셀 수 없다. 대신 그 목록이 윈도우 표준 목록 칸이면
+# 칸에게 항목 수를 직접 물을 수 있다. 화면에 안 보이는 항목도 함께 센다.
+LB_GETCOUNT = 0x018B          # 목록 상자(ListBox) 항목 수
+LVM_GETITEMCOUNT = 0x1004     # 목록 보기(ListView) 항목 수
+
+
+def count_message_for(class_name: str):
+    """이 종류의 칸에 항목 수를 묻는 메시지. 목록 칸이 아니면 None.
+
+    모르는 칸에는 아무 메시지도 보내지 않는다. 사용자 정의 칸은 같은 번호를
+    다른 뜻으로 쓸 수 있다.
+    """
+    name = (class_name or '').lower()
+    if 'listview' in name:
+        return LVM_GETITEMCOUNT
+    if 'listbox' in name:
+        return LB_GETCOUNT
+    return None
+
+
+def pick_selected_list(children, arrow_x: int, arrow_y: int):
+    """[선택된 사용자] 목록 칸을 고른다.
+
+    children 은 (핸들, 클래스 이름, (왼, 위, 오른, 아래)) 목록이다.
+    오른쪽 화살표 버튼의 오른쪽에 있고, 버튼 높이를 위아래로 걸치는 목록 칸이
+    [선택된 사용자] 다. 검색 결과 목록은 버튼 왼쪽에 있어서 걸러진다.
+    그런 칸이 여럿이면 버튼에 가장 가까운 것을 고른다. 없으면 None.
+    """
+    hits = []
+    for hwnd, class_name, rect in children:
+        if count_message_for(class_name) is None:
+            continue
+        left, top, right, bottom = rect
+        if left >= arrow_x and top <= arrow_y <= bottom and right > left:
+            hits.append((left - arrow_x, hwnd, class_name, rect))
+    if not hits:
+        return None
+    hits.sort(key=lambda hit: hit[0])
+    _gap, hwnd, class_name, rect = hits[0]
+    return hwnd, class_name, rect

@@ -1067,13 +1067,72 @@ class AppFlowTest(unittest.TestCase):
         report.count_var.set('네 명')
         self.assertIsNone(report.check_count())
 
-    def test_selected_count_is_read_from_the_window(self):
-        with patch.object(self.app, '_win32gui', return_value=object()), \
-                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
-                patch.object(self.app, '_window_texts',
-                             return_value=['사용자 선택', '검색 결과(2명)',
-                                           '선택된 사용자(17명)']):
+    def _fake_messenger(self, list_class='ListBox', count=17):
+        """화살표 버튼 (400, 300) 을 사이에 두고 목록 칸 두 개가 있는 소통메신저.
+
+        왼쪽은 검색 결과(3명), 오른쪽은 [선택된 사용자]. 신통픽 창(20)이 같은
+        자리를 덮고 있어도 뒤의 소통메신저 창을 찾아야 한다.
+        """
+        rects = {10: (0, 0, 800, 600), 20: (100, 100, 700, 500), 30: (900, 900, 999, 999)}
+        children = {
+            10: [(11, list_class, (20, 100, 380, 500)),
+                 (12, 'Button', (385, 285, 415, 315)),
+                 (13, list_class, (420, 100, 780, 500))],
+            20: [(21, 'TkChild', (100, 100, 700, 500))],
+            30: [],
+        }
+        counts = {11: 3, 13: count}
+        sent = []
+
+        def send(hwnd, message, wparam, lparam, flags, timeout):
+            sent.append((hwnd, message))
+            return 1, counts.get(hwnd, 0)
+
+        def enum_children(parent, cb, extra):
+            for hwnd, _cls, _rect in children[parent]:
+                cb(hwnd, extra)
+
+        classes = {h: c for kids in children.values() for h, c, _r in kids}
+        child_rects = {h: r for kids in children.values() for h, _c, r in kids}
+        gui = types.SimpleNamespace(
+            GetWindowRect=lambda h: rects.get(h) or child_rects[h],
+            GetClassName=lambda h: classes.get(h, 'TkTopLevel'),
+            EnumChildWindows=enum_children,
+            SendMessageTimeout=send,
+        )
+        self.app.config.data['add_button_x'] = 400
+        self.app.config.data['add_button_y'] = 300
+        return gui, sent
+
+    def test_selected_count_asks_the_list_right_of_the_arrow(self):
+        """소통메신저는 수를 보여 주지 않는다. 목록 칸에 항목 수를 직접 묻는다."""
+        from automation import LB_GETCOUNT
+        gui, sent = self._fake_messenger()
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20, 30}):
             self.assertEqual(self.app._selected_count(), 17)
+        self.assertEqual(sent, [(13, LB_GETCOUNT)], '검색 결과 목록에 물으면 안 된다')
+
+    def test_selected_count_is_none_without_a_standard_list(self):
+        gui, sent = self._fake_messenger(list_class='CustomGrid')
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}):
+            self.assertIsNone(self.app._selected_count())
+        self.assertEqual(sent, [], '모르는 칸에는 메시지를 보내지 않는다')
+
+    def test_probe_reports_what_it_found_without_reading_names(self):
+        gui, _sent = self._fake_messenger()
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}):
+            text = self.app._probe_messenger_lists()
+        self.assertIn('지금 17명이 들어 있습니다', text)
+        self.assertIn('항목 3', text)
+
+    def test_probe_asks_for_the_arrow_position_first(self):
+        self.app.config.data['add_button_x'] = None
+        with patch.object(self.app, '_win32gui', return_value=object()):
+            text = self.app._probe_messenger_lists()
+        self.assertIn('화살표 버튼 위치를 먼저 잡아', text)
 
     def test_excel_is_read_back_and_compared(self):
         """만든 엑셀을 다시 열어, 추출한 기관이 실제로 몇 줄 들어갔는지 대조한다."""

@@ -36,6 +36,8 @@ from app_config import (
 import edufine
 from automation import (
     FAIL_DUPLICATE,
+    count_message_for,
+    pick_selected_list,
     FAIL_MANUAL_STOP,
     FAIL_NO_USER,
     FAIL_SEARCH_STALE,
@@ -96,9 +98,6 @@ except ImportError:
 
 # 소통메신저가 결과 목록 위에 적어 두는 '검색 결과(2명)' 같은 글.
 SEARCH_COUNT_RE = re.compile(r'검색\s*결과\s*\(?\s*(\d+)\s*명')
-# 소통메신저 [선택된 사용자] 옆에 적힌 수. 읽히면 다 끝난 뒤 직접 세어 보지 않아도
-# 몇 명이 실제로 들어갔는지 대조할 수 있다. 못 읽으면 사용자가 보고 적는다.
-SELECTED_COUNT_RE = re.compile(r'선택된\s*사용자\s*[\(\[]?\s*(\d+)\s*명')
 
 VK_LBUTTON = 0x01
 VK_RETURN = 0x0D
@@ -447,8 +446,10 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   검색해서 나오지 않은 사람은 빨간 항목으로 남습니다.
   다 끝나면 결과 대조 창이 뜹니다. 추출한 사람 수와 들어간 수를
   나란히 보여 주고, 빠진 사람은 누구인지 사유별로 모아 줍니다.
-  소통메신저 [선택된 사용자] 수를 읽어 와 맞는지도 알려 줍니다.
-  못 읽으면 화면에 보이는 수를 적고 [대조] 를 누르세요.
+  소통메신저는 담긴 사람 수를 따로 보여 주지 않습니다. 그래서 신통픽이
+  [선택된 사용자] 목록을 직접 세어 맞는지 알려 줍니다. 스크롤해야 보이는
+  아래쪽 사람까지 셉니다. 셀 수 있는지는 [2. 위치 설정] 탭의
+  [소통메신저 목록 읽기 확인] 으로 미리 볼 수 있습니다.
 
   수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
@@ -905,7 +906,7 @@ def copy_text(widget, text: str) -> bool:
 class ResultReport(tk.Toplevel):
     """추출한 수와 실제로 들어간 수를 나란히 보여 주고, 빠진 것을 알려 주는 창.
 
-    소통픽은 소통메신저 [선택된 사용자] 수와, 수신픽은 에듀파인 수신그룹에 보이는
+    소통픽은 소통메신저 [선택된 사용자] 목록을 센 수와, 수신픽은 에듀파인 수신그룹에 보이는
     기관 수와 한 번 더 맞춰 볼 수 있다. 그 수를 앱이 읽었으면 미리 채워 둔다.
     """
 
@@ -1702,6 +1703,20 @@ class App:
             frame, text='', fg='green', font=('맑은 고딕', 9)
         )
         self.calib_msg.grid(row=5, column=0)
+
+        probe = tk.Frame(frame)
+        probe.grid(row=6, column=0, pady=(4, 10))
+        tk.Button(
+            probe, text='소통메신저 목록 읽기 확인',
+            bg='#546E7A', fg='white', disabledforeground='#ECEFF1', activebackground='#455A64',
+            relief='flat', font=('맑은 고딕', 9), padx=10, pady=4,
+            cursor='hand2', command=self._probe_messenger_lists
+        ).pack(side='left')
+        tk.Label(
+            probe,
+            text='[받는사람 추가] 창을 연 채로 누르면, 담긴 사람 수를 신통픽이 셀 수 있는지 알려 드립니다.',
+            fg='#555', font=('맑은 고딕', 8)
+        ).pack(side='left', padx=(8, 0))
 
     # ── 탭 4: 수신그룹 엑셀 (에듀파인 전용) ────
     def _tab_edufine(self, frame: ttk.Frame):
@@ -3408,33 +3423,163 @@ class App:
             return
         before, after = run['before'], run['after']
         if after is not None:
-            note = ('소통메신저 [선택된 사용자] 수를 읽어 와 아래에 채웠습니다. '
-                    '화면의 수와 다르면 고쳐 적고 [대조] 를 누르세요.')
+            note = ('소통메신저 [선택된 사용자] 목록을 세어 아래에 채웠습니다. '
+                    '화면에 안 보이는 아래쪽 사람까지 센 수입니다.')
         else:
-            note = ('소통메신저 [선택된 사용자] 수를 읽지 못했습니다. 화면에 보이는 수를 '
-                    '아래에 적고 [대조] 를 누르면 모자란지 알려 드립니다.')
+            note = ('소통메신저 [선택된 사용자] 목록을 세지 못했습니다. 소통메신저는 담긴 '
+                    '사람 수를 따로 보여 주지 않으니, 직접 세어 보셨다면 아래에 적고 '
+                    '[대조] 를 누르세요.')
         if before:
             note += f'\n시작 전부터 {before}명이 들어 있었으므로 그만큼 더해서 비교합니다.'
         ResultReport(
             self.root, run['tally'], unit='명', who='사람',
             where='소통메신저 [선택된 사용자]', into='받는 사람에',
-            count_label='소통메신저 [선택된 사용자] 수:',
+            count_label='[선택된 사용자] 에 담긴 사람 수:',
             shown_count=after, base_count=before or 0, note=note,
             on_retry=self._retry_failed, title='소통픽 결과 대조')
 
     def _selected_count(self):
-        """소통메신저 [선택된 사용자] 옆의 수를 읽는다. 못 읽으면 None."""
-        if self._win32gui() is None:
+        """소통메신저 [선택된 사용자] 목록에 담긴 사람 수. 못 세면 None.
+
+        소통메신저는 이 수를 화면에 적어 두지 않고, 목록은 스크롤해야 다 보이며
+        가나다순도 아니다. 그래서 화면을 읽지 않고 목록 칸에 항목 수를 직접
+        묻는다. 표준 목록 칸일 때만 되고, 아니면 None 이다.
+        """
+        found = self._find_selected_list()
+        if not found:
+            return None
+        hwnd, class_name, _rect = found
+        return self._count_items(hwnd, class_name)
+
+    def _arrow_point(self):
+        x = self.config.data.get('add_button_x')
+        y = self.config.data.get('add_button_y')
+        if x is None or y is None:
+            return None
+        return int(x), int(y)
+
+    def _windows_at(self, x: int, y: int) -> list:
+        """그 자리를 덮고 있는 최상위 창들. 신통픽 창이 앞에 있어도 뒤의 것까지 본다."""
+        gui = self._win32gui()
+        if gui is None:
+            return []
+        hits = []
+        for hwnd in self._snapshot_dialogs():
+            try:
+                left, top, right, bottom = gui.GetWindowRect(hwnd)
+            except Exception:
+                continue
+            if left <= x <= right and top <= y <= bottom:
+                hits.append(hwnd)
+        return hits
+
+    def _child_controls(self, parent) -> list:
+        """창 안의 칸들. (핸들, 클래스 이름, 화면 위치) 로 돌려준다. 글은 읽지 않는다."""
+        gui = self._win32gui()
+        if gui is None:
+            return []
+        found = []
+
+        def collect(child, _):
+            try:
+                found.append((child, gui.GetClassName(child), gui.GetWindowRect(child)))
+            except Exception:
+                pass
+            return True
+
+        try:
+            gui.EnumChildWindows(parent, collect, None)
+        except Exception as exc:
+            logging.debug('창 안의 칸 확인 실패: %s', exc)
+        return found
+
+    def _find_selected_list(self):
+        """화살표 버튼 오른쪽의 목록 칸. 못 찾으면 None."""
+        point = self._arrow_point()
+        if point is None:
+            return None
+        for window in self._windows_at(*point):
+            picked = pick_selected_list(self._child_controls(window), *point)
+            if picked:
+                return picked
+        return None
+
+    def _count_items(self, hwnd, class_name):
+        """목록 칸에 항목 수를 묻는다. 응답이 없으면 기다리지 않고 None."""
+        gui = self._win32gui()
+        message = count_message_for(class_name)
+        if gui is None or message is None:
             return None
         try:
-            for window in self._snapshot_dialogs():
-                for text in self._window_texts(window):
-                    found = SELECTED_COUNT_RE.search(text or '')
-                    if found:
-                        return int(found.group(1))
+            # 소통메신저가 멈춰 있으면 신통픽까지 같이 멈추지 않게 0.5초만 기다린다.
+            _ok, count = gui.SendMessageTimeout(hwnd, message, 0, 0, 0x0002, 500)
         except Exception as exc:
-            logging.debug('선택된 사용자 수를 읽지 못했습니다: %s', exc)
-        return None
+            logging.debug('목록 항목 수를 묻지 못했습니다: %s', exc)
+            return None
+        return count if isinstance(count, int) and count >= 0 else None
+
+    def _probe_messenger_lists(self):
+        """소통메신저 목록을 셀 수 있는지 확인하고, 본 것을 보여 준다.
+
+        이름 같은 글은 읽지 않는다. 칸의 종류와 위치, 항목 수만 적는다.
+        """
+        lines = []
+        point = self._arrow_point()
+        if self._win32gui() is None:
+            lines.append('이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.')
+        elif point is None:
+            lines.append('6번 오른쪽 화살표 버튼 위치를 먼저 잡아 주세요.')
+        else:
+            windows = self._windows_at(*point)
+            picked = self._find_selected_list()
+            if picked:
+                count = self._count_items(picked[0], picked[1])
+                lines.append(f'✓ [선택된 사용자] 목록을 찾았습니다. 지금 {count}명이 들어 있습니다.')
+                lines.append('소통메신저에 보이는 사람 수와 같은지 확인해 주세요.')
+            else:
+                lines.append('✗ [선택된 사용자] 목록을 찾지 못했습니다.')
+                lines.append('[받는사람 추가] 창을 연 채로 다시 눌러 보세요. 그래도 안 되면 아래 내용을 보내 주세요.')
+            lines.append('')
+            lines.append(f'화살표 버튼 위치: ({point[0]}, {point[1]})')
+            lines.append(f'그 자리를 덮은 창: {len(windows)}개')
+            gui = self._win32gui()
+            for window in windows:
+                try:
+                    lines.append(f'\n[창] {gui.GetClassName(window)}  {gui.GetWindowRect(window)}')
+                except Exception:
+                    continue
+                kinds = {}
+                for hwnd, class_name, rect in self._child_controls(window):
+                    kinds[class_name] = kinds.get(class_name, 0) + 1
+                    if count_message_for(class_name) is not None:
+                        count = self._count_items(hwnd, class_name)
+                        lines.append(f'  목록 칸 {class_name}  {rect}  항목 {count}')
+                summary = ', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))
+                lines.append(f'  칸 종류: {summary or "없음"}')
+        text = '\n'.join(lines)
+        logging.info('소통메신저 목록 확인:\n%s', text)
+
+        win = tk.Toplevel(self.root)
+        win.title('소통메신저 목록 읽기 확인')
+        win.geometry('620x420')
+        box = scrolledtext.ScrolledText(win, font=('맑은 고딕', 9), wrap='word')
+        box.pack(fill='both', expand=True, padx=10, pady=(10, 4))
+        box.insert('1.0', text)
+        box.config(state='disabled')
+        row = tk.Frame(win)
+        row.pack(fill='x', padx=10, pady=(0, 10))
+        status = tk.Label(row, text='', fg='green', font=('맑은 고딕', 9))
+        tk.Button(
+            row, text='📋  내용 복사',
+            command=lambda: copy_text(win, text) and status.config(text='✓ 복사했습니다'),
+            bg='#607D8B', fg='white', relief='flat', font=('맑은 고딕', 10),
+            padx=10, pady=4, cursor='hand2'
+        ).pack(side='left')
+        status.pack(side='left', padx=8)
+        tk.Button(row, text='닫기', command=win.destroy, bg='#9E9E9E', fg='white',
+                  relief='flat', font=('맑은 고딕', 10), padx=12, pady=4
+                  ).pack(side='right')
+        return text
 
     # ── 자동화 워커 ────────────────────────────
     def _worker(self, run_items):
@@ -3568,7 +3713,7 @@ class App:
 
         추가됐는지 되짚어 확인하지는 않는다. 확인하려면 사람마다 선택 버튼을
         한 번 더 눌러야 해서 시간이 두 배로 든다. 그래서 빼 두었다.
-        대신 끝난 뒤 소통메신저의 [선택된 사용자] 수를 직접 보시면 된다.
+        대신 끝난 뒤 [선택된 사용자] 목록을 세어 들어간 수와 맞춰 본다(_selected_count).
 
         이미 선택된 사용자였다면 '선택된 사용자 입니다.' 안내창이 뜬다.
         그때는 중복으로 남긴다.
