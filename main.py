@@ -60,6 +60,8 @@ from sotong_parser import (
 from ui_helpers import format_item_label
 
 LOG_FILE = os.path.join(APP_DATA_DIR, 'app.log')
+# 소통메신저 [받는사람 추가] 를 누르면 뜨는 창의 제목
+MESSENGER_DIALOG_TITLE = '사용자 선택'
 LATEST_RELEASE_API = 'https://api.github.com/repos/codersongpro/susin/releases/latest'
 RELEASES_PAGE = 'https://github.com/codersongpro/susin/releases/latest'
 GUIDE_VIDEO_URLS = {
@@ -3319,6 +3321,8 @@ class App:
             return
         if not self._confirm_screen_unchanged():
             return
+        if not self._confirm_dialog_not_moved():
+            return
         self.stop_flag.clear()
         self.continue_event.set()
         for item in self.names_list:
@@ -3363,6 +3367,28 @@ class App:
             f'누를 수 있습니다. [2. 위치 설정] 탭에서 세 곳을 다시 잡는 것이 '
             f'안전합니다.\n\n'
             f'그래도 지금 이대로 시작할까요?'
+        )
+
+    def _confirm_dialog_not_moved(self) -> bool:
+        """[사용자 선택] 창이 위치를 잡을 때 그 자리에 있는지 보고, 아니면 물어본다.
+
+        창을 옮기면 저장한 세 자리가 창 밖을 가리켜 바탕화면이나 다른 창을 누른다.
+        창을 제목으로 찾았는데 화살표 자리가 그 밖에 있을 때만 묻는다. 창을 못
+        찾으면 판단할 근거가 없으므로 묻지 않는다.
+        """
+        point = self._arrow_point()
+        if point is None:
+            return True
+        dialogs = self._messenger_dialogs()
+        if not dialogs or any(self._window_contains(w, point) for w in dialogs):
+            return True
+        return messagebox.askyesno(
+            '[사용자 선택] 창이 옮겨졌습니다',
+            '위치를 잡을 때와 [사용자 선택] 창의 자리가 다릅니다.\n\n'
+            '이대로 시작하면 저장해 둔 자리가 창 밖을 가리켜 엉뚱한 곳을 누릅니다. '
+            '창을 처음 자리로 옮기거나, [2. 위치 설정] 탭에서 4, 5, 6번을 다시 잡는 것이 '
+            '안전합니다.\n\n'
+            '그래도 지금 이대로 시작할까요?'
         )
 
     def _stop(self):
@@ -3494,16 +3520,73 @@ class App:
             logging.debug('창 안의 칸 확인 실패: %s', exc)
         return found
 
+    def _messenger_dialogs(self) -> list:
+        """제목에 '사용자 선택' 이 들어간 창. 소통메신저의 [받는사람 추가] 창이다.
+
+        저장한 화살표 위치로만 창을 찾으면, 창을 옮겼을 때 엉뚱한 창(바탕화면 등)을
+        들여다본다. 제목으로 먼저 찾는다.
+        """
+        gui = self._win32gui()
+        if gui is None:
+            return []
+        found = []
+        for hwnd in self._snapshot_dialogs():
+            try:
+                if MESSENGER_DIALOG_TITLE in (gui.GetWindowText(hwnd) or ''):
+                    found.append(hwnd)
+            except Exception:
+                continue
+        return found
+
     def _find_selected_list(self):
         """화살표 버튼 오른쪽의 목록 칸. 못 찾으면 None."""
         point = self._arrow_point()
         if point is None:
             return None
-        for window in self._windows_at(*point):
+        # 화살표 자리를 덮고 있는 창만 본다. 창을 옮긴 뒤에는 저장한 화살표 자리가
+        # 창 밖이라, 거기서 '오른쪽 목록' 을 고르면 검색 결과 목록을 셀 수 있다.
+        dialogs = [w for w in self._messenger_dialogs() if self._window_contains(w, point)]
+        others = [w for w in self._windows_at(*point) if w not in dialogs]
+        for window in dialogs + others:
             picked = pick_selected_list(self._child_controls(window), *point)
             if picked:
                 return picked
         return None
+
+    def _window_contains(self, hwnd, point) -> bool:
+        gui = self._win32gui()
+        try:
+            left, top, right, bottom = gui.GetWindowRect(hwnd)
+        except Exception:
+            return False
+        return left <= point[0] <= right and top <= point[1] <= bottom
+
+    def _describe_dialog(self, window, point) -> list:
+        """[사용자 선택] 창 안의 칸을 종류와 위치로 적는다. 위치는 창 왼쪽 위 기준이다."""
+        gui = self._win32gui()
+        try:
+            left, top, right, bottom = gui.GetWindowRect(window)
+        except Exception:
+            return ['  창 위치를 읽지 못했습니다.']
+        where = '안' if self._window_contains(window, point) else '밖'
+        lines = [f'\n[창] {gui.GetClassName(window)}  ({left}, {top}, {right}, {bottom})'
+                 f'  화살표 위치는 이 창 {where}에 있습니다']
+        children = self._child_controls(window)
+        kinds = {}
+        for shown, (hwnd, class_name, rect) in enumerate(children):
+            kinds[class_name] = kinds.get(class_name, 0) + 1
+            if shown >= 60:
+                continue
+            l, t, r, b = rect
+            line = f'  {class_name}  ({l - left}, {t - top}) 크기 {r - l}x{b - t}'
+            if count_message_for(class_name) is not None:
+                line += f'  항목 {self._count_items(hwnd, class_name)}'
+            lines.append(line)
+        if len(children) > 60:
+            lines.append(f'  … 외 {len(children) - 60}개')
+        summary = ', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))
+        lines.append(f'  칸 종류: {summary or "없음 (창 전체를 한 덩어리로 그림)"}')
+        return lines
 
     def _count_items(self, hwnd, class_name):
         """목록 칸에 항목 수를 묻는다. 응답이 없으면 기다리지 않고 None."""
@@ -3524,48 +3607,52 @@ class App:
 
         이름 같은 글은 읽지 않는다. 칸의 종류와 위치, 항목 수만 적는다.
         """
-        lines = []
+        gui = self._win32gui()
         point = self._arrow_point()
+        dialogs = self._messenger_dialogs() if gui is not None else []
         # 결과는 O 아니면 X 다. 한눈에 보이도록 창 맨 위에 크게 쓴다.
         mark, headline, advice = 'X', '', ''
-        if self._win32gui() is None:
+        if gui is None:
             headline = '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
         elif point is None:
             headline = '6번 오른쪽 화살표 버튼 위치를 먼저 잡아 주세요.'
         else:
             picked = self._find_selected_list()
             count = self._count_items(picked[0], picked[1]) if picked else None
+            inside = [w for w in dialogs if self._window_contains(w, point)]
             if count is not None:
                 mark = 'O'
                 headline = f'[선택된 사용자] 목록을 셀 수 있습니다. 지금 {count}명이 들어 있습니다.'
                 advice = '소통메신저에 담아 둔 사람 수와 같은지 확인해 주세요.'
+            elif not dialogs:
+                headline = '소통메신저 [사용자 선택] 창을 찾지 못했습니다.'
+                advice = '소통메신저에서 [받는사람 추가] 를 눌러 창을 연 채로 다시 눌러 주세요.'
+            elif not inside:
+                headline = '[사용자 선택] 창이 위치를 잡을 때와 다른 곳에 있습니다.'
+                advice = ('창을 옮기셨다면 [2. 위치 설정] 에서 4, 5, 6번을 다시 잡고 다시 눌러 '
+                          '주세요. 이대로 자동 선택을 시작하면 엉뚱한 곳을 누릅니다.')
             else:
                 headline = '[선택된 사용자] 목록을 셀 수 없습니다.'
-                advice = ('[받는사람 추가] 창을 연 채로 다시 눌러 보세요. '
-                          '그래도 X 면 [내용 복사] 로 아래 내용을 보내 주세요.')
-        lines.append(f'결과: {mark}')
-        lines.append(headline)
+                advice = ('[내용 복사] 로 아래 내용을 보내 주세요. 목록이 어떤 부품으로 '
+                          '되어 있는지 보고 다른 방법을 찾겠습니다.')
+
+        lines = [f'결과: {mark}', headline]
         if advice:
             lines.append(advice)
-        if point is not None and self._win32gui() is not None:
-            windows = self._windows_at(*point)
+        if gui is not None and point is not None:
             lines.append('')
-            lines.append(f'화살표 버튼 위치: ({point[0]}, {point[1]})')
-            lines.append(f'그 자리를 덮은 창: {len(windows)}개')
-            gui = self._win32gui()
-            for window in windows:
-                try:
-                    lines.append(f'\n[창] {gui.GetClassName(window)}  {gui.GetWindowRect(window)}')
-                except Exception:
-                    continue
-                kinds = {}
-                for hwnd, class_name, rect in self._child_controls(window):
-                    kinds[class_name] = kinds.get(class_name, 0) + 1
-                    if count_message_for(class_name) is not None:
-                        count = self._count_items(hwnd, class_name)
-                        lines.append(f'  목록 칸 {class_name}  {rect}  항목 {count}')
-                summary = ', '.join(f'{k} {v}' for k, v in sorted(kinds.items()))
-                lines.append(f'  칸 종류: {summary or "없음"}')
+            lines.append(f'6번 화살표 버튼 위치: ({point[0]}, {point[1]})')
+            lines.append(f'[사용자 선택] 창: {len(dialogs)}개')
+            for window in dialogs:
+                lines.extend(self._describe_dialog(window, point))
+            if not dialogs:
+                # 제목으로 못 찾았으면 화살표 자리에 있는 창이라도 적어 둔다
+                for window in self._windows_at(*point):
+                    try:
+                        name = gui.GetClassName(window)
+                    except Exception:
+                        continue
+                    lines.append(f'  화살표 자리의 창: {name}')
         text = '\n'.join(lines)
         logging.info('소통메신저 목록 확인:\n%s', text)
 

@@ -1067,17 +1067,24 @@ class AppFlowTest(unittest.TestCase):
         report.count_var.set('네 명')
         self.assertIsNone(report.check_count())
 
-    def _fake_messenger(self, list_class='ListBox', count=17):
+    def _fake_messenger(self, list_class='ListBox', count=17, title='사용자 선택',
+                        dialog_rect=(0, 0, 800, 600)):
         """화살표 버튼 (400, 300) 을 사이에 두고 목록 칸 두 개가 있는 소통메신저.
 
         왼쪽은 검색 결과(3명), 오른쪽은 [선택된 사용자]. 신통픽 창(20)이 같은
         자리를 덮고 있어도 뒤의 소통메신저 창을 찾아야 한다.
         """
-        rects = {10: (0, 0, 800, 600), 20: (100, 100, 700, 500), 30: (900, 900, 999, 999)}
+        rects = {10: dialog_rect, 20: (100, 100, 700, 500), 30: (900, 900, 999, 999)}
+        titles = {10: title, 20: '신통픽 v2.2.10', 30: ''}
+        dx, dy = dialog_rect[0], dialog_rect[1]
+
+        def moved(l, t, r, b):
+            return (l + dx, t + dy, r + dx, b + dy)
+
         children = {
-            10: [(11, list_class, (20, 100, 380, 500)),
-                 (12, 'Button', (385, 285, 415, 315)),
-                 (13, list_class, (420, 100, 780, 500))],
+            10: [(11, list_class, moved(20, 100, 380, 500)),
+                 (12, 'Button', moved(385, 285, 415, 315)),
+                 (13, list_class, moved(420, 100, 780, 500))],
             20: [(21, 'TkChild', (100, 100, 700, 500))],
             30: [],
         }
@@ -1097,6 +1104,7 @@ class AppFlowTest(unittest.TestCase):
         gui = types.SimpleNamespace(
             GetWindowRect=lambda h: rects.get(h) or child_rects[h],
             GetClassName=lambda h: classes.get(h, 'TkTopLevel'),
+            GetWindowText=lambda h: titles.get(h, ''),
             EnumChildWindows=enum_children,
             SendMessageTimeout=send,
         )
@@ -1135,7 +1143,55 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(self.app, '_snapshot_dialogs', return_value={10}):
             text = self.app._probe_messenger_lists()
         self.assertTrue(text.startswith('결과: X'), text)
+        self.assertIn('목록을 셀 수 없습니다', text)
         self.assertIn('칸 종류: Button 1, CustomGrid 2', text)
+        self.assertIn('CustomGrid  (420, 100) 크기 360x400', text, '창 기준 위치로 적는다')
+
+    def test_probe_notices_the_dialog_was_moved(self):
+        """위치를 잡은 뒤 [사용자 선택] 창을 옮기면 화살표 자리에 바탕화면이 있다."""
+        gui, _sent = self._fake_messenger(dialog_rect=(900, 0, 1700, 600))
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}):
+            text = self.app._probe_messenger_lists()
+        self.assertTrue(text.startswith('결과: X'), text)
+        self.assertIn('위치를 잡을 때와 다른 곳에 있습니다', text)
+        self.assertIn('화살표 위치는 이 창 밖에 있습니다', text)
+
+    def test_start_warns_when_the_dialog_was_moved(self):
+        m = self.app_module
+        gui, _sent = self._fake_messenger(dialog_rect=(900, 0, 1700, 600))
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
+                patch.object(m.messagebox, 'askyesno', return_value=False) as asked:
+            self.assertFalse(self.app._confirm_dialog_not_moved())
+        asked.assert_called_once()
+
+    def test_start_does_not_ask_when_the_dialog_is_in_place_or_unknown(self):
+        m = self.app_module
+        for snapshot, title in (({10, 20}, '사용자 선택'), ({20}, '사용자 선택'),
+                                ({10, 20}, '다른 창')):
+            gui, _sent = self._fake_messenger(title=title)
+            with patch.object(self.app, '_win32gui', return_value=gui), \
+                    patch.object(self.app, '_snapshot_dialogs', return_value=snapshot), \
+                    patch.object(m.messagebox, 'askyesno') as asked:
+                self.assertTrue(self.app._confirm_dialog_not_moved())
+            asked.assert_not_called()
+
+    def test_moved_dialog_is_not_counted(self):
+        """창을 옮긴 뒤 옛 화살표 자리 오른쪽에는 검색 결과 목록이 온다. 그것을 세면 안 된다."""
+        gui, sent = self._fake_messenger(dialog_rect=(900, 0, 1700, 600))
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}):
+            self.assertIsNone(self.app._selected_count())
+        self.assertEqual(sent, [])
+
+    def test_probe_says_when_the_dialog_is_not_open(self):
+        gui, _sent = self._fake_messenger(title='충북소통메신저')
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={20}):
+            text = self.app._probe_messenger_lists()
+        self.assertTrue(text.startswith('결과: X'), text)
+        self.assertIn('[사용자 선택] 창을 찾지 못했습니다', text)
 
     def test_probe_asks_for_the_arrow_position_first(self):
         self.app.config.data['add_button_x'] = None
