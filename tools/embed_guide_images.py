@@ -1,8 +1,10 @@
-"""안내 그림을 랜딩페이지에 박아 넣는다.
+"""안내 그림과 앱 화면 캡처를 랜딩페이지에 박아 넣는다.
 
 `index.html` 은 파일 한 장으로 배포한다 (`.vercelignore` 가 나머지를 전부 뺀다).
 그래서 `assets/guide/` 의 PNG 를 data URI 로 바꿔 `src` 에 직접 넣는다.
 그림을 새로 찍거나 바꾼 뒤에 한 번 돌리면 된다.
+소통메신저와 에듀파인의 누르는 자리 그림은 `assets/guide/` (data-guide, PNG),
+신통픽 앱 화면 캡처는 `assets/landing/` (data-shot, WebP) 에 둔다.
 
     python3 tools/embed_guide_images.py            # 미리보기
     python3 tools/embed_guide_images.py --apply    # index.html 갱신
@@ -18,6 +20,12 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GUIDE_DIR = os.path.join(ROOT, 'assets', 'guide')
+LANDING_DIR = os.path.join(ROOT, 'assets', 'landing')
+# (html 속성, 그림이 있는 폴더, data URI 종류)
+SOURCES = (
+    ('data-guide', GUIDE_DIR, 'image/png'),
+    ('data-shot', LANDING_DIR, 'image/webp'),
+)
 HTML_PATH = os.path.join(ROOT, 'index.html')
 
 for _stream in (sys.stdout, sys.stderr):
@@ -27,36 +35,37 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 
-def data_uri(name: str) -> str:
+def data_uri(name: str, folder: str = GUIDE_DIR, mime: str = 'image/png') -> str:
     """그림 한 장을 data URI 로. 파일이 없으면 그대로 알린다."""
-    path = os.path.join(GUIDE_DIR, name)
+    path = os.path.join(folder, name)
     with open(path, 'rb') as image:
         encoded = base64.b64encode(image.read()).decode('ascii')
-    return f'data:image/png;base64,{encoded}'
+    return f'data:{mime};base64,{encoded}'
 
 
-def referenced_names(html: str) -> list:
+def referenced_names(html: str, attr: str = 'data-guide') -> list:
     """랜딩페이지가 쓰겠다고 적어 둔 그림 이름들."""
-    return re.findall(r'data-guide="([^"]+)"', html)
+    return re.findall(attr + r'="([^"]+)"', html)
 
 
 def embed(html: str) -> tuple:
     """(고친 html, 바뀐 그림 이름들). 없는 파일은 SystemExit."""
     changed = []
-    for name in dict.fromkeys(referenced_names(html)):
-        if not os.path.exists(os.path.join(GUIDE_DIR, name)):
-            raise SystemExit(f'assets/guide/{name} 이 없습니다')
-        uri = data_uri(name)
-        pattern = re.compile(
-            r'(<img\b[^>]*\bdata-guide="' + re.escape(name) + r'"[^>]*\bsrc=")[^"]*(")'
-        )
-        html, hits = pattern.subn(lambda m: m.group(1) + uri + m.group(2), html)
-        if not hits:
-            raise SystemExit(
-                f'{name} 을 가리키는 <img> 에 src 속성이 없습니다. '
-                'data-guide 뒤에 src="" 를 적어 두세요'
+    for attr, folder, mime in SOURCES:
+        for name in dict.fromkeys(referenced_names(html, attr)):
+            if not os.path.exists(os.path.join(folder, name)):
+                raise SystemExit(f'{os.path.relpath(folder, ROOT)}/{name} 이 없습니다')
+            uri = data_uri(name, folder, mime)
+            pattern = re.compile(
+                r'(<img\b[^>]*\b' + attr + r'="' + re.escape(name) + r'"[^>]*\bsrc=")[^"]*(")'
             )
-        changed.append(name)
+            html, hits = pattern.subn(lambda m: m.group(1) + uri + m.group(2), html)
+            if not hits:
+                raise SystemExit(
+                    f'{name} 을 가리키는 <img> 에 src 속성이 없습니다. '
+                    f'{attr} 뒤에 src="" 를 적어 두세요'
+                )
+            changed.append(name)
     return html, changed
 
 

@@ -451,8 +451,8 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     에듀파인   — 개인수신그룹 일괄등록 엑셀 만들기
     소통메신저 — [사용자 선택] 창에서 자동으로 골라 담기
 
-  [1. 명단 입력] 탭 맨 위에서 어느 쪽을 쓸지 고릅니다.
-  고른 쪽에 필요한 탭만 남습니다.
+  창 맨 위에서 수신픽과 소통픽 중 어느 쪽을 쓸지 고릅니다.
+  고른 쪽에 필요한 단계만 왼쪽에 남습니다.
 
   ─ 소통메신저를 고르면 ─
   소통메신저에서 아래 3단계를 자동으로 반복합니다.
@@ -1599,7 +1599,7 @@ class App:
         left.rowconfigure(1, weight=1)
         tk.Label(left, text='명단 붙여넣기', font=('맑은 고딕', 12, 'bold'),
                  fg=COLORS['on_surface'], anchor='w').grid(row=0, column=0, sticky='w', pady=(0, 6))
-        input_card, self.input_text = ui.text_field(left, height=10, wrap='none')
+        input_card, self.input_text = ui.text_field(left, height=8, wrap='none')
         input_card.grid(row=1, column=0, sticky='nsew')
         self.input_card = input_card
         tk.Label(left, text='한 줄에 한 사람(기관), 줄 순서대로 들어갑니다.',
@@ -1637,7 +1637,7 @@ class App:
         self.org_issue_card.grid_remove()
 
         list_card, self.parsed_list = ui.list_card(
-            right, font=('맑은 고딕', 10), selectmode='extended', height=8)
+            right, font=('맑은 고딕', 10), selectmode='extended', height=6)
         list_card.grid(row=3, column=0, sticky='nsew')
         self.list_card = list_card
 
@@ -1648,7 +1648,7 @@ class App:
         # 아래 단추들은 수신픽에서만 쓴다. _apply_target 이 보이고 감춘다.
         # 부서는 전체경로를 외울 수 없으니 목록에서 고르게 한다
         tools = tk.Frame(bottom, bg=PANEL_BG)
-        tools.grid(row=0, column=0, sticky='w')
+        tools.grid(row=0, column=0, columnspan=2, sticky='w')
         self.bulk_fix_btn = M3Button(
             tools,
             text='확인 필요 기관 일괄 수정',
@@ -1664,17 +1664,17 @@ class App:
         )
         self.org_history_btn = M3Button(tools, text='추출 기록 보기', command=self._open_org_history, variant='text')
         self.delete_btn = M3Button(
-            tools,
+            bottom,
             text='선택 항목 삭제',
             command=self._delete_selected,
             variant='danger',
             size='sm'
         )
         self.next_btn = M3Button(bottom, text='다음', command=self._go_next_step)
-        self.next_btn.grid(row=0, column=1, sticky='e', padx=(8, 0))
+        self.next_btn.grid(row=1, column=1, sticky='e', padx=(8, 0), pady=(6, 0))
         # 단추들을 놓는 틀. 수신픽 단추는 _apply_target 이 pack/pack_forget 한다.
         self.input_tools = tools
-        self.delete_btn.pack(side='right', padx=(6, 0))
+        self.delete_btn.grid(row=1, column=0, sticky='w', pady=(6, 0))
         tk.Label(right, text='더블클릭으로 수정  ·  Delete 키로 삭제  ·  붉은 줄은 확인이나 선택이 필요합니다',
                  font=('맑은 고딕', 8), fg=COLORS['on_surface_variant'], anchor='w'
                  ).grid(row=5, column=0, sticky='w', padx=4, pady=(4, 0))

@@ -67,6 +67,28 @@ class LandingPageTest(unittest.TestCase):
                 'python3 tools/embed_guide_images.py --apply 를 돌리세요',
             )
 
+    def test_app_screenshots_match_the_files_on_disk(self):
+        """앱 화면 캡처(assets/landing)도 같은 방식으로 박혀 있어야 한다."""
+        names = re.findall(r'data-shot="([^"]+)"', self.html)
+        self.assertGreaterEqual(len(names), 8, '앱 화면 캡처가 랜딩페이지에서 빠졌습니다')
+        for name in dict.fromkeys(names):
+            path = os.path.join(self.root, 'assets', 'landing', name)
+            self.assertTrue(os.path.exists(path), f'assets/landing/{name} 이 없습니다')
+            with open(path, 'rb') as image:
+                encoded = base64.b64encode(image.read()).decode('ascii')
+            self.assertIn(
+                f'data:image/webp;base64,{encoded}', self.html,
+                f'{name} 이 파일과 다릅니다. '
+                'python3 tools/embed_guide_images.py --apply 를 돌리세요',
+            )
+
+    def test_page_has_no_dashes_or_arrow_chains(self):
+        """문체 규칙: 제목과 문장에 대시나 화살표를 쓰지 않는다."""
+        text = re.sub(r'data:[^"]+', '', self.html)
+        text = re.sub(r'<style.*?</style>|<script.*?</script>', '', text, flags=re.S)
+        self.assertNotIn('\u2014', text)
+        self.assertNotIn('\u2192', text)
+
     def test_old_code_import_instructions_are_removed(self):
         self.assertNotIn('기관코드 가져오기', self.html)
         self.assertIn('충청북도교육청으로 자동 적용', self.html)

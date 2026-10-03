@@ -56,6 +56,18 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
 - FAQ 에 적힌 동작 설명 (없앤 기능이 FAQ 에 남아 있던 적이 있다)
 - 기능 카드 설명
 
+## 화면 디자인
+
+앱과 랜딩페이지는 같은 Material 3 + 글래스 테마를 쓴다. 색과 모서리는 `theme.py`,
+창 바탕과 유리 판은 `glass.py` (Pillow), 단추·칩·카드는 `ui_kit.py` 에 있다.
+랜딩페이지 색은 `assets/theme_tokens.json` 과 같은 값이다.
+
+- 도구 색은 소통픽이 남보라(primary), 수신픽이 청록(tertiary)이다. 화면마다 따로 고르지 않는다.
+- Pillow 가 없어도 앱은 떠야 한다. 유리 바탕이 평평한 색으로 바뀔 뿐이다.
+- 랜딩페이지 화면 캡처는 `assets/landing/*.webp` 이고 `index.html` 에 `data-shot` 으로 박는다.
+  앱 화면을 바꾸면 다시 찍고 `python3 tools/embed_guide_images.py --apply` 를 돌린다.
+  캡처에는 지어낸 이름만 쓴다. 실제 선생님 이름을 넣지 않는다.
+
 ## 문체
 
 사용자에게 보이는 모든 글(앱 문구, 랜딩페이지, 릴리즈 노트, README)에 적용한다.
