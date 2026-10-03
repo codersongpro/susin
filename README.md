@@ -275,4 +275,19 @@ GUI 없이도 핵심 로직은 모두 테스트합니다. 파싱, 매칭 등급,
 
 ---
 
+## 라이선스
+
+신통픽의 소스 코드와 문서는 [MIT 라이선스](LICENSE) 입니다. 함께 묶인 소프트웨어와 글꼴은
+각자의 라이선스를 따르며, 저작권 표시와 전문은 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+와 `licenses/` 폴더에 있습니다. 실행 파일과 zip 에도 같은 파일이 들어갑니다. 이용 조건은
+랜딩페이지의 이용약관에 있습니다.
+
+PyAutoGUI 가 딸고 오는 MouseInfo 는 GPL-3.0 이며 실행 파일에 함께 묶여 있습니다.
+신통픽은 이 부품의 기능을 쓰지 않습니다.
+
+사용하는 라이브러리를 바꾸면 `tools/build_notices.py` 의 목록을 고치고 `--apply` 로 돌립니다.
+고지문과 랜딩페이지의 오픈소스 고지가 한꺼번에 다시 만들어지고, 어긋나면 테스트가 잡습니다.
+
+---
+
 만든 사람: 송동석(Dustin) · Teacher / App developer / Data analyst · 협업 dungst.me@gmail.com

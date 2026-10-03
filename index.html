@@ -269,20 +269,39 @@
     .version-pill { display: inline-block; padding: 2px 10px; border-radius: 8px; background: var(--primary-c); color: var(--on-primary-c); font-size: 12px; font-weight: 700; }
     .dev .note { margin-top: 16px; font-size: 13px; line-height: 1.7; }
 
-    /* ── 라이선스 ── */
-    .lic-group { margin-top: 24px; padding: 22px 28px; }
-    .lic-group h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .lic-group > p { font-size: 13px; color: var(--ink-2); line-height: 1.7; max-width: 720px; }
-    .lic-rows { margin-top: 10px; }
-    .lic-row { display: grid; grid-template-columns: minmax(150px, 1.1fr) 1.5fr 1.1fr; gap: 6px 20px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.6; }
-    .lic-row:first-child { border-top: 0; }
-    .lic-row .n { font-weight: 700; }
-    .lic-row .u { color: var(--ink-2); }
-    .lic-row .l { font-weight: 600; }
-    .lic-note { margin-top: 18px; font-size: 13px; color: var(--ink-2); line-height: 1.7; max-width: 760px; }
+    /* ── 이용약관과 라이선스 ── */
+    .lic-group { margin-top: 24px; padding: 24px 28px; }
+    .lic-group h3 { font-size: 19px; font-weight: 700; margin-bottom: 6px; }
+    .lic-group > p { font-size: 14px; color: var(--ink-2); line-height: 1.75; max-width: 760px; }
+    .lic-group code { font-size: 13px; background: rgba(0, 0, 0, .05); padding: 1px 6px; border-radius: 6px; }
+    .lic-note { font-size: 13px !important; }
+    .terms h4 { font-size: 15px; font-weight: 700; margin: 20px 0 4px; }
+    .terms p { font-size: 14px; }
+    .terms ol { margin: 4px 0 0 20px; max-width: 760px; font-size: 14px; color: var(--ink-2); line-height: 1.75; }
+    .terms li + li { margin-top: 4px; }
+    .oss-head, .oss-item summary {
+      display: grid; grid-template-columns: minmax(130px, 1fr) 1.6fr 1.3fr 22px; gap: 6px 20px;
+      align-items: center; font-size: 14px; line-height: 1.6;
+    }
+    .oss-head { margin-top: 14px; padding: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+    .oss-item { border-top: 1px solid var(--line); }
+    .oss-item summary { padding: 11px 0; cursor: pointer; list-style: none; }
+    .oss-item summary::-webkit-details-marker { display: none; }
+    .oss-item summary .n { font-weight: 700; }
+    .oss-item summary .u { color: var(--ink-2); }
+    .oss-item summary .l { font-weight: 600; }
+    .oss-item summary:hover .n { text-decoration: underline; }
+    .oss-item .oss-link { margin: 0 0 8px; font-size: 13px !important; }
+    .oss-item pre {
+      margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: rgba(255, 255, 255, .65);
+      border: 1px solid var(--line); font: 12px/1.6 ui-monospace, Consolas, 'Courier New', monospace;
+      color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto;
+    }
     @media (max-width: 640px) {
-      .lic-group { padding: 18px 16px; }
-      .lic-row { grid-template-columns: 1fr; gap: 2px; }
+      .lic-group { padding: 20px 16px; }
+      .oss-head { display: none; }
+      .oss-item summary { grid-template-columns: 1fr 22px; gap: 2px 12px; }
+      .oss-item summary::after { grid-column: 2; grid-row: 1 / span 3; }
     }
 
     footer {
@@ -348,6 +367,7 @@
     <a href="#howto">사용 방법</a>
     <a href="#faq">자주 묻는 질문</a>
     <a href="#developer">만든 사람</a>
+    <a href="#terms">이용약관</a>
     <a href="#license">라이선스</a>
   </div>
   <a class="btn btn-filled btn-sm"
@@ -1053,61 +1073,719 @@
 </section>
 
 
-<!-- ═══ 라이선스 ═══ -->
+<!-- ═══ 이용약관과 라이선스 ═══ -->
 <section class="glass" id="license">
-  <span class="label">라이선스</span>
-  <h2 class="title">쓰는 소프트웨어와 라이선스</h2>
-  <p class="lead">신통픽은 아래 오픈소스 소프트웨어와 글꼴을 바탕으로 만들었습니다. 각 라이선스가 요구하는 저작권 표시를 이곳에 모았습니다. 소스코드와 빌드 기록은 <a href="https://github.com/codersongpro/susin/releases" target="_blank" rel="noopener">GitHub 릴리즈 페이지</a>에서 볼 수 있습니다.</p>
+  <span class="label">약관과 라이선스</span>
+  <h2 class="title">이용약관과 라이선스</h2>
+  <p class="lead">신통픽을 쓰기 전에 알아 두실 내용입니다. 신통픽의 라이선스, 이용약관, 함께 묶인 오픈소스의 고지 순서로 적었습니다.</p>
 
-  <div class="lic-group glass-inner">
-    <h3>글꼴</h3>
-    <p>Copyright (c) 2021, Kil Hyung-jin. 글꼴 이름(Pretendard)을 바꾸거나 줄이지 않고 라이선스 전문과 함께 앱에 넣었습니다.</p>
-    <div class="lic-rows">
-        <div class="lic-row"><div class="n"><a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noopener">Pretendard</a></div><div class="u">앱 화면과 이 페이지의 글꼴</div><div class="l">SIL Open Font License 1.1</div></div>
-    </div>
+  <div class="lic-group glass-inner" id="license-app">
+    <h3>신통픽 라이선스</h3>
+    <p>신통픽의 소스 코드와 문서는 MIT 라이선스입니다. 저작권자는 송동석(Dustin)이고, 누구나 무료로 쓰고 고쳐서 나눌 수 있습니다. 단, 아래 저작권 표시와 허가 문구를 함께 넣어야 합니다.</p>
+    <details class="oss-item">
+      <summary><span class="n">MIT License</span><span class="u">신통픽 소스 코드와 문서</span><span class="l">Copyright (c) 2026 송동석 (Dustin)</span></summary>
+      <pre>MIT License
+
+Copyright (c) 2026 송동석 (Dustin)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre>
+    </details>
+    <p style="margin-top:10px;">함께 묶인 다른 소프트웨어와 글꼴은 이 라이선스가 아니라 각자의 라이선스를 따릅니다. 아래 오픈소스 고지에 모았습니다.</p>
+  </div>
+
+  <div class="lic-group glass-inner terms" id="terms">
+    <h3>이용약관</h3>
+    <p>시행일 2026년 10월 3일</p>
+
+    <h4>제1조 목적</h4>
+    <p>이 약관은 송동석(이하 제작자)이 무료로 나누는 신통픽(수신픽과 소통픽)의 이용 조건을 정합니다.</p>
+
+    <h4>제2조 이용 대상과 환경</h4>
+    <ol>
+      <li>신통픽은 누구나 무료로 쓸 수 있고, 윈도우에서만 돌아갑니다.</li>
+      <li>업무망 PC 에서 쓰기 전에 기관의 정보보안 담당자와 상의해 주세요. 백신 예외는 임의로 등록하지 마세요.</li>
+      <li>신통픽은 개인이 만든 프로그램입니다. 충청북도교육청, 소통메신저와 에듀파인의 제공 기관이 만들거나 보증한 프로그램이 아닙니다.</li>
+    </ol>
+
+    <h4>제3조 프로그램이 하는 일</h4>
+    <ol>
+      <li>소통픽은 마우스와 키보드를 대신 움직여 소통메신저 [사용자 선택] 창에서 수신자를 담습니다.</li>
+      <li>수신픽은 에듀파인 일괄등록에 올릴 엑셀 파일을 만듭니다. 파일을 올리고 공문을 보내는 일은 이용자가 직접 합니다.</li>
+    </ol>
+
+    <h4>제4조 이용자의 확인 책임</h4>
+    <ol>
+      <li>신통픽이 고른 수신자와 만든 엑셀은 보조 결과입니다. 쪽지나 공문을 보내기 전에 수신자가 맞는지 이용자가 직접 확인해야 합니다.</li>
+      <li>같은 이름이 여럿이거나 이름이 비슷해 짐작만 한 항목은 신통픽이 확정하지 않고 이용자가 고르게 합니다. 확인하지 않고 보내서 생긴 결과의 책임은 이용자에게 있습니다.</li>
+      <li>자동 선택이 도는 동안에는 마우스를 움직이지 마세요. 멈추려면 마우스를 화면 왼쪽 위 모서리로 옮기거나 [중지] 를 누릅니다.</li>
+      <li>화면 해상도, 확대 배율, 소통메신저 창의 자리가 바뀌면 마우스 위치를 다시 캡처해야 합니다.</li>
+    </ol>
+
+    <h4>제5조 정보 처리</h4>
+    <ol>
+      <li>이용자가 넣은 명단과 기관 정보는 이용자의 PC 안에서만 다루며 제작자나 다른 곳으로 보내지 않습니다.</li>
+      <li>소통픽과 수신픽에 넣은 명단은 앱을 닫으면 지워집니다.</li>
+      <li>이용자의 PC 에는 설정 파일이 남습니다. 캡처한 마우스 위치, 검색 후 대기 시간, 수신픽의 사용자ID, 사용자명, 그룹명, 최근 30회의 기관 추출 기록(기관 이름)이 들어 있고, 위치는 <code>%LOCALAPPDATA%\SintongPick</code> 폴더입니다. 같은 폴더의 작동 기록(app.log)에는 사람 이름을 남기지 않고 순번과 사유만 적습니다. 이 폴더를 지우면 모두 없어집니다.</li>
+      <li>인터넷은 새 버전이 나왔는지 확인할 때만 쓰며, 이때 명단이나 이름은 보내지 않습니다.</li>
+    </ol>
+
+    <h4>제6조 보증의 한계</h4>
+    <ol>
+      <li>신통픽은 있는 그대로 제공합니다. 오류가 없다는 것과 모든 PC 에서 돌아간다는 것을 보증하지 않습니다.</li>
+      <li>소통메신저나 에듀파인 화면이 바뀌면 신통픽이 동작하지 않거나 엉뚱한 곳을 누를 수 있습니다.</li>
+      <li>마우스와 키보드를 대신 움직이는 방식 때문에 백신이 신통픽을 의심해 막을 수 있습니다.</li>
+    </ol>
+
+    <h4>제7조 책임의 한계</h4>
+    <p>제작자는 신통픽을 쓰다가 생긴 손해에 대해 법이 허용하는 범위에서 책임지지 않습니다. 제작자의 고의 또는 중대한 과실로 생긴 손해는 제외합니다.</p>
+
+    <h4>제8조 지식재산권</h4>
+    <p>신통픽의 소스 코드와 문서는 위 MIT 라이선스를 따르고, 함께 묶인 소프트웨어와 글꼴은 아래 오픈소스 고지의 라이선스를 따릅니다. 소통메신저, 에듀파인, 나이스 같은 이름과 화면은 각 제공 기관의 것입니다. 이 페이지의 화면 사진은 사용 방법을 설명하려고 일부를 실은 것입니다.</p>
+
+    <h4>제9조 약관의 변경</h4>
+    <p>이 약관을 바꾸면 이 페이지에 바뀐 내용과 시행일을 올립니다.</p>
+
+    <h4>제10조 문의</h4>
+    <p><a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a></p>
+  </div>
+
+  <div class="lic-group glass-inner" id="oss">
+    <h3>오픈소스 고지</h3>
+    <p>신통픽은 아래 소프트웨어와 글꼴을 바탕으로 만들었습니다. 이 가운데 대부분은 실행 파일(sintongpick.exe)에 함께 묶여 있습니다. 항목을 누르면 저작권과 라이선스 전문이 나옵니다. 같은 내용이 앱과 함께 받는 <code>THIRD_PARTY_NOTICES.md</code> 에도 들어 있습니다.</p>
+    <div class="oss-head"><span>이름</span><span>쓰임</span><span>라이선스</span><span></span></div>
+    <!--NOTICES:START-->
+    <details class="oss-item">
+      <summary><span class="n">Pretendard</span><span class="u">앱 화면과 이 페이지의 글꼴</span><span class="l">SIL Open Font License 1.1</span></summary>
+      <p class="oss-link"><a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noopener">https://github.com/orioncactus/pretendard</a></p>
+      <pre>Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard),
+with Reserved Font Name Pretendard.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+https://scripts.sil.org/OFL
+
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded, 
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION &amp; CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Python</span><span class="u">프로그램을 돌리는 바탕</span><span class="l">PSF License</span></summary>
+      <p class="oss-link"><a href="https://docs.python.org/3/license.html" target="_blank" rel="noopener">https://docs.python.org/3/license.html</a></p>
+      <pre>Python is licensed under the PSF License Agreement.
+Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
+
+전문: https://docs.python.org/3/license.html</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Tcl/Tk (tkinter)</span><span class="u">앱 화면을 그리는 부분</span><span class="l">Tcl/Tk License (BSD 계열)</span></summary>
+      <p class="oss-link"><a href="https://www.tcl.tk/software/tcltk/license.html" target="_blank" rel="noopener">https://www.tcl.tk/software/tcltk/license.html</a></p>
+      <pre>This software is copyrighted by the Regents of the University of
+California, Sun Microsystems, Inc., Scriptics Corporation, ActiveState
+Corporation, Apple Inc. and other parties.  The following terms apply to
+all files associated with the software unless explicitly disclaimed in
+individual files.
+
+The authors hereby grant permission to use, copy, modify, distribute,
+and license this software and its documentation for any purpose, provided
+that existing copyright notices are retained in all copies and that this
+notice is included verbatim in any distributions. No written agreement,
+license, or royalty fee is required for any of the authorized uses.
+Modifications to this software may be copyrighted by their authors
+and need not follow the licensing terms described here, provided that
+the new terms are clearly indicated on the first page of each file where
+they apply.
+
+IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY PARTY
+FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
+ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION, OR ANY
+DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.  THIS SOFTWARE
+IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
+NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
+MODIFICATIONS.
+
+GOVERNMENT USE: If you are acquiring this software on behalf of the
+U.S. government, the Government shall have only "Restricted Rights"
+in the software and related documentation as defined in the Federal
+Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2).  If you
+are acquiring the software on behalf of the Department of Defense, the
+software shall be classified as "Commercial Computer Software" and the
+Government shall have only "Restricted Rights" as defined in Clause
+252.227-7013 (b) (3) of DFARs.  Notwithstanding the foregoing, the
+authors grant the U.S. Government and others acting in its behalf
+permission to use and distribute the software in accordance with the
+terms specified in this license.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyAutoGUI</span><span class="u">마우스와 키보드를 대신 움직임</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyautogui" target="_blank" rel="noopener">https://github.com/asweigart/pyautogui</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the PyAutoGUI nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyMsgBox</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pymsgbox" target="_blank" rel="noopener">https://github.com/asweigart/pymsgbox</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the {organization} nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyGetWindow</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/PyGetWindow" target="_blank" rel="noopener">https://github.com/asweigart/PyGetWindow</a></p>
+      <pre>Copyright (c) 2015, Al Sweigart
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the PyAutoGUI nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyRect</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyrect" target="_blank" rel="noopener">https://github.com/asweigart/pyrect</a></p>
+      <pre>Copyright (c) 2018, Al Sweigart
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the PyBresenham nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyScreeze</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyscreeze" target="_blank" rel="noopener">https://github.com/asweigart/pyscreeze</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of PyScreeze nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyTweening</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pytweening" target="_blank" rel="noopener">https://github.com/asweigart/pytweening</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the {organization} nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">MouseInfo</span><span class="u">PyAutoGUI 에 딸려 오는 부품 (신통픽은 쓰지 않음)</span><span class="l">GPL-3.0</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/mouseinfo" target="_blank" rel="noopener">https://github.com/asweigart/mouseinfo</a></p>
+      <pre>MouseInfo (https://github.com/asweigart/mouseinfo), Al Sweigart.
+GNU General Public License version 3 (PyPI 분류는 GPLv3+).
+
+PyAutoGUI 를 설치하면 함께 따라 오는 부품입니다. 신통픽은 이 부품의 기능을 쓰지 않습니다.
+실행 파일에는 함께 묶여 있으므로 GPL 조건에 따라 아래를 안내합니다.
+
+  - 라이선스 전문: licenses/MouseInfo-GPL-3.0-full.txt, https://www.gnu.org/licenses/gpl-3.0.html
+  - 원본 소스: https://github.com/asweigart/mouseinfo, https://pypi.org/project/MouseInfo/
+  - 신통픽 소스: https://github.com/codersongpro/susin</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Pyperclip</span><span class="u">클립보드 복사</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyperclip" target="_blank" rel="noopener">https://github.com/asweigart/pyperclip</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the {organization} nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">openpyxl</span><span class="u">엑셀 파일 읽기와 쓰기</span><span class="l">MIT</span></summary>
+      <p class="oss-link"><a href="https://openpyxl.readthedocs.io" target="_blank" rel="noopener">https://openpyxl.readthedocs.io</a></p>
+      <pre>This software is under the MIT Licence
+======================================
+
+Copyright (c) 2010 openpyxl
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">et-xmlfile</span><span class="u">openpyxl 이 함께 쓰는 부품</span><span class="l">MIT</span></summary>
+      <p class="oss-link"><a href="https://foss.heptapod.net/openpyxl/et_xmlfile" target="_blank" rel="noopener">https://foss.heptapod.net/openpyxl/et_xmlfile</a></p>
+      <pre>This software is under the MIT Licence
+======================================
+
+Copyright (c) 2010 openpyxl
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Pillow</span><span class="u">유리 같은 바탕과 화면 이미지</span><span class="l">MIT-CMU (HPND)</span></summary>
+      <p class="oss-link"><a href="https://python-pillow.org" target="_blank" rel="noopener">https://python-pillow.org</a></p>
+      <pre>The Python Imaging Library (PIL) is
+
+    Copyright © 1997-2011 by Secret Labs AB
+    Copyright © 1995-2011 by Fredrik Lundh and contributors
+
+Pillow is the friendly PIL fork. It is
+
+    Copyright © 2010 by Jeffrey 'Alex' Clark and contributors
+
+Like PIL, Pillow is licensed under the open source MIT-CMU License:
+
+By obtaining, using, and/or copying this software and/or its associated
+documentation, you agree that you have read, understood, and will comply
+with the following terms and conditions:
+
+Permission to use, copy, modify and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appears in all copies, and that
+both that copyright notice and this permission notice appear in supporting
+documentation, and that the name of Secret Labs AB or the author not be
+used in advertising or publicity pertaining to distribution of the software
+without specific, written prior permission.
+
+SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
+IN NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL,
+INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">pywin32</span><span class="u">윈도우 기능 호출</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/mhammond/pywin32" target="_blank" rel="noopener">https://github.com/mhammond/pywin32</a></p>
+      <pre>Unless stated in the specific source file, this work is
+Copyright (c) 1994-2008, Mark Hammond
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in
+the documentation and/or other materials provided with the distribution.
+
+Neither name of Mark Hammond nor the name of contributors may be used
+to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS
+IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">comtypes</span><span class="u">소통메신저 목록 읽기</span><span class="l">MIT</span></summary>
+      <p class="oss-link"><a href="https://github.com/enthought/comtypes" target="_blank" rel="noopener">https://github.com/enthought/comtypes</a></p>
+      <pre>This software is OSI Certified Open Source Software.
+OSI Certified is a certification mark of the Open Source Initiative.
+
+Copyright (c) 2006-2013, Thomas Heller.
+Copyright (c) 2014, Comtypes Developers.
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">olefile</span><span class="u">한글(HWP) 파일 읽기</span><span class="l">BSD 2-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/decalage2/olefile" target="_blank" rel="noopener">https://github.com/decalage2/olefile</a></p>
+      <pre>LICENSE for the olefile package:
+
+olefile (formerly OleFileIO_PL) is copyright (c) 2005-2023 Philippe Lagadec
+(https://www.decalage.info)
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+
+olefile is based on source code from the OleFileIO module of the Python
+Imaging Library (PIL) published by Fredrik Lundh under the following license:
+
+The Python Imaging Library (PIL) is
+- Copyright (c) 1997-2009 by Secret Labs AB
+- Copyright (c) 1995-2009 by Fredrik Lundh
+
+By obtaining, using, and/or copying this software and/or its associated
+documentation, you agree that you have read, understood, and will comply with
+the following terms and conditions:
+
+Permission to use, copy, modify, and distribute this software and its
+associated documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appears in all copies, and that both
+that copyright notice and this permission notice appear in supporting
+documentation, and that the name of Secret Labs AB or the author not be used
+in advertising or publicity pertaining to distribution of the software without
+specific, written prior permission.
+
+SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN
+NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL,
+INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyInstaller</span><span class="u">exe 파일로 묶는 도구 (부트로더가 exe 에 들어감)</span><span class="l">GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항</span></summary>
+      <p class="oss-link"><a href="https://pyinstaller.org" target="_blank" rel="noopener">https://pyinstaller.org</a></p>
+      <pre>PyInstaller (https://pyinstaller.org).
+GPL-2.0 or later, with a special exception that allows the programs it builds
+to be distributed under any license.
+
+실행 파일을 만드는 도구입니다. 만들어진 실행 파일에는 PyInstaller 의 부트로더가
+들어가며, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.
+
+  - 라이선스 전문: licenses/PyInstaller-COPYING-full.txt</pre>
+    </details>
+    <!--NOTICES:END-->
+    <p class="lic-note" style="margin-top:14px;">
+      소스 코드와 빌드 기록은 <a href="https://github.com/codersongpro/susin/releases" target="_blank" rel="noopener">GitHub 릴리즈 페이지</a>에서 볼 수 있습니다.
+      MouseInfo 는 GPL-3.0 입니다. 라이선스 전문과 원본 소스 주소는 위 항목에 있습니다.
+    </p>
   </div>
 
   <div class="lic-group glass-inner">
-    <h3>앱 안에 들어 있는 부품</h3>
-    <p>실행 파일(sintongpick.exe)에 함께 묶여 있는 소프트웨어입니다. 이름과 라이선스는 각 프로젝트의 안내를 따랐습니다.</p>
-    <div class="lic-rows">
-        <div class="lic-row"><div class="n"><a href="https://docs.python.org/3/license.html" target="_blank" rel="noopener">Python</a></div><div class="u">프로그램을 돌리는 바탕</div><div class="l">PSF License</div></div>
-        <div class="lic-row"><div class="n">Tcl/Tk (tkinter)</div><div class="u">앱 화면을 그리는 부분</div><div class="l">Tcl/Tk License (BSD 계열)</div></div>
-        <div class="lic-row"><div class="n"><a href="https://github.com/asweigart/pyautogui" target="_blank" rel="noopener">PyAutoGUI</a></div><div class="u">마우스와 키보드를 대신 움직임</div><div class="l">BSD</div></div>
-        <div class="lic-row"><div class="n">PyMsgBox, PyGetWindow, PyRect</div><div class="u">PyAutoGUI 가 함께 쓰는 부품</div><div class="l">BSD</div></div>
-        <div class="lic-row"><div class="n">PyScreeze, PyTweening</div><div class="u">PyAutoGUI 가 함께 쓰는 부품</div><div class="l">MIT</div></div>
-        <div class="lic-row"><div class="n"><a href="https://github.com/asweigart/mouseinfo" target="_blank" rel="noopener">MouseInfo</a></div><div class="u">PyAutoGUI 에 딸려 오는 부품 (신통픽은 쓰지 않음)</div><div class="l">GPL-3.0 이상</div></div>
-        <div class="lic-row"><div class="n"><a href="https://github.com/asweigart/pyperclip" target="_blank" rel="noopener">Pyperclip</a></div><div class="u">클립보드 복사</div><div class="l">BSD</div></div>
-        <div class="lic-row"><div class="n"><a href="https://openpyxl.readthedocs.io" target="_blank" rel="noopener">openpyxl</a>, et-xmlfile</div><div class="u">엑셀 파일 읽기와 쓰기</div><div class="l">MIT</div></div>
-        <div class="lic-row"><div class="n"><a href="https://python-pillow.org" target="_blank" rel="noopener">Pillow</a></div><div class="u">유리 같은 바탕과 화면 이미지</div><div class="l">MIT-CMU (HPND)</div></div>
-        <div class="lic-row"><div class="n"><a href="https://github.com/mhammond/pywin32" target="_blank" rel="noopener">pywin32</a></div><div class="u">윈도우 기능 호출</div><div class="l">PSF License</div></div>
-        <div class="lic-row"><div class="n"><a href="https://github.com/enthought/comtypes" target="_blank" rel="noopener">comtypes</a></div><div class="u">소통메신저 목록 읽기</div><div class="l">MIT</div></div>
-        <div class="lic-row"><div class="n"><a href="https://github.com/decalage2/olefile" target="_blank" rel="noopener">olefile</a></div><div class="u">한글(HWP) 파일 읽기</div><div class="l">BSD</div></div>
-    </div>
-  </div>
-
-  <div class="lic-group glass-inner">
-    <h3>만들 때만 쓴 도구</h3>
-    <div class="lic-rows">
-        <div class="lic-row"><div class="n"><a href="https://pyinstaller.org" target="_blank" rel="noopener">PyInstaller</a></div><div class="u">exe 파일로 묶는 도구 (실행 파일에는 들어가지 않음)</div><div class="l">GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항</div></div>
-    </div>
-  </div>
-
-  <div class="lic-group glass-inner">
-    <h3>기관 이름 자료와 서비스 이름</h3>
+    <h3>기관 이름 자료</h3>
     <p>
       기관 이름 사전은 교육부 나이스의 학교기본정보(2026년 8월 31일 기준)와 에듀파인 조직도에 나온 기관 이름을 정리한 것입니다.
       학교 이름, 학교급, 기관 이름 같은 사실 정보만 담고 있습니다.
     </p>
-    <p style="margin-top:10px;">
-      소통메신저, 에듀파인, 나이스는 각 제공 기관의 서비스이며 신통픽과는 별개입니다.
-      이 페이지의 화면 사진에는 사용 방법을 설명하려고 이 서비스의 화면 일부가 나오고, 사람 이름은 모두 지어낸 예시입니다.
-    </p>
   </div>
-
-  <p class="lic-note">
-    신통픽은 무료로 쓸 수 있고, 만든 사람은 송동석입니다. 위 라이선스에 관한 문의는 <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a> 으로 보내 주세요.
-  </p>
 </section>
 
 </main>
@@ -1116,7 +1794,7 @@
   <div class="foot glass">
     <strong>신통픽</strong>
     <span>&nbsp;·&nbsp; Developed by 송동석(Dustin) &nbsp;·&nbsp; Teacher / App developer / Data analyst</span>
-    <span>&nbsp;·&nbsp; <a href="#license">라이선스</a></span>
+    <span>&nbsp;·&nbsp; <a href="#terms">이용약관</a> &nbsp;·&nbsp; <a href="#license">라이선스</a> &nbsp;·&nbsp; <a href="#oss">오픈소스 고지</a></span>
   </div>
 </footer>
 
