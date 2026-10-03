@@ -97,20 +97,21 @@ def main():
         print(f"창 바탕 ok - {app._shell['drawn']}")
 
     # 탭 내용이 스크롤 틀 안에 있어야 한다. 안내 그림이 들어가면서 [설정 저장]
-    # 버튼이 창 밖으로 밀려난 적이 있다.
-    inner = app.calib_msg.nametowidget(app.calib_msg.winfo_parent())
-    holder = inner.nametowidget(inner.winfo_parent())
-    assert holder.winfo_class() == 'Canvas', (
-        '위치 설정 탭이 스크롤 틀 안에 있지 않습니다', holder.winfo_class())
-    print(f'스크롤 틀 ok — 위치 설정 탭이 {holder.winfo_class()} 안에 있습니다')
+    # 버튼이 창 밖으로 밀려난 적이 있다. 위젯에서 위로 거슬러 올라가 스크롤 캔버스를 찾는다
+    # (창 틀 캔버스는 빼고).
+    def scroll_canvas_of(widget):
+        node = widget
+        while node is not None:
+            if node.winfo_class() == 'Canvas' and str(node) != str(app.canvas):
+                return node
+            parent = node.winfo_parent()
+            node = node.nametowidget(parent) if parent else None
+        return None
 
-    # 수신그룹 엑셀 탭도 스크롤 틀 안에 있어야 한다. STEP 3 안내 그림이
-    # 들어가면서 길어졌다.
-    inner = app.edufine_msg.nametowidget(app.edufine_msg.winfo_parent())
-    holder = inner.nametowidget(inner.winfo_parent())
-    assert holder.winfo_class() == 'Canvas', (
-        '수신그룹 엑셀 탭이 스크롤 틀 안에 있지 않습니다', holder.winfo_class())
-    print(f'스크롤 틀 ok — 수신그룹 엑셀 탭이 {holder.winfo_class()} 안에 있습니다')
+    for label, widget in (('위치 설정', app.calib_msg), ('수신그룹 엑셀', app.edufine_msg)):
+        holder = scroll_canvas_of(widget)
+        assert holder is not None, f'{label} 탭이 스크롤 틀 안에 있지 않습니다'
+        print(f'스크롤 틀 ok — {label} 탭이 {holder.winfo_class()} 안에 있습니다')
 
     # 안내 그림이 실제로 읽히는지. 이름이 어긋나면 조용히 글만 나온다.
     for step in app_module.GUIDE_IMAGES:

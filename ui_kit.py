@@ -12,6 +12,8 @@ import logging
 
 import tkinter as tk
 
+from tkinter import ttk
+
 from theme import COLORS, PANEL_BG, accent, mix
 
 try:
@@ -235,19 +237,23 @@ class M3Button(tk.Label):
                        bg=fill or self._container, padx=14, pady=6)
             return
         pad = 22 if self._size == 'md' else 16
-        icon_w = (height // 2 + 6) if self._icon_name else 0
-        width = measure(self, font, self._text) + pad * 2 + icon_w
+        icon_size = height // 2
+        icon_w = (icon_size + 8) if self._icon_name else 0
+        text_w = measure(self, font, self._text)
+        width = text_w + pad * 2 + icon_w
         key = (width, height, fill, outline, self._icon_name, text_color if self._icon_name else '')
         if key not in self._images:
             shape = glass.pill(width, height, fill=fill, outline=outline)
             if self._icon_name:
-                mark = glass.icon(self._icon_name, height // 2, text_color)
-                shape.alpha_composite(mark, (pad - 2, (height - mark.height) // 2))
+                # 글자는 가운데에 두고, 아이콘은 글자 바로 왼쪽에 놓는다
+                mark = glass.icon(self._icon_name, icon_size, text_color)
+                x = max(8, (width - text_w) // 2 - icon_size - 6)
+                shape.alpha_composite(mark, (x, (height - mark.height) // 2))
             self._images[key] = glass.png_base64(shape)
         self._photo = tk.PhotoImage(master=self, data=self._images[key])
         self._base(image=self._photo, text=self._text, compound='center', fg=text_color,
                    activeforeground=text_color, activebackground=self._container,
-                   font=font, cursor=cursor, bg=self._container, padx=icon_w, pady=0)
+                   font=font, cursor=cursor, bg=self._container, padx=0, pady=0)
 
 
 # 도구를 바꾸면 단추 색도 바꾼다
@@ -269,6 +275,7 @@ def retheme_buttons():
 
 TONES = {
     'inner': (INNER_BG, COLORS['on_surface']),
+    'field': ('#FFFFFF', COLORS['on_surface']),
     'warn': (COLORS['warn_container'], COLORS['on_warn_container']),
     'error': (COLORS['error_container'], COLORS['on_error_container']),
     'ok': (COLORS['ok_container'], COLORS['on_ok_container']),
@@ -282,10 +289,11 @@ class Card(tk.Frame):
     안쪽 틀의 바탕이 카드 색(card.fill)이라, 안쪽 위젯은 bg=card.fill 을 쓰면 된다.
     """
 
-    def __init__(self, master, tone='inner', pad=(16, 12), radius=20):
+    def __init__(self, master, tone='inner', pad=(16, 12), radius=None):
         self.tone = tone
         self.fill, self.ink = TONES.get(tone, TONES['inner'])
-        self._radius = radius
+        self._radius = radius or (14 if tone == 'field' else 20)
+        self._focused = False
         self._container = container_bg(master)
         self._pending = None
         self._drawn = None
@@ -302,6 +310,34 @@ class Card(tk.Frame):
             self._back.place_forget()
             return
         self.bind('<Configure>', self._on_size)
+
+    def set_tone(self, tone):
+        """카드 색을 바꾼다 (경고 배너가 확인 필요에서 오류로 바뀔 때). 안쪽 틀 바탕도 같이 바뀐다."""
+        if tone == self.tone:
+            return
+        self.tone = tone
+        self.fill, self.ink = TONES.get(tone, TONES['inner'])
+        self.body.configure(bg=self.fill)
+        for child in self.body.winfo_children():
+            try:
+                child.configure(bg=self.fill, fg=self.ink)
+            except Exception:
+                try:
+                    child.configure(bg=self.fill)
+                except Exception:
+                    pass
+        if not HAVE_GLASS:
+            self.configure(bg=self.fill)
+            return
+        self._drawn = None
+        self._on_size()
+
+    def set_focus(self, focused):
+        """입력칸에 커서가 들어오면 테두리를 강조색 2px 로."""
+        if focused != self._focused:
+            self._focused = focused
+            self._drawn = None
+            self._on_size()
 
     def _on_size(self, _event=None):
         if self._pending is not None:
@@ -320,8 +356,16 @@ class Card(tk.Frame):
         if w < 8 or h < 8 or self._drawn == (w, h):
             return
         self._drawn = (w, h)
-        edge = EDGE if self.tone == 'inner' else mix('#000000', self.fill, 0.08)
-        image = glass.pill(w, h, fill=self.fill, outline=edge, radius=min(self._radius, h // 2))
+        if self._focused:
+            edge, width = acc()[0], 2
+        elif self.tone == 'field':
+            edge, width = COLORS['outline'], 1
+        elif self.tone == 'inner':
+            edge, width = EDGE, 1
+        else:
+            edge, width = mix('#000000', self.fill, 0.08), 1
+        image = glass.pill(w, h, fill=self.fill, outline=edge, outline_width=width,
+                           radius=min(self._radius, h // 2))
         self._photo = photo(self, image)
         self._back.configure(image=self._photo)
 
@@ -348,9 +392,10 @@ class Chip(tk.Label):
         self.set(text, kind)
 
     def set(self, text, kind='neutral'):
-        fill, ink, outline = CHIP_KINDS.get(kind)
         if kind == 'info':
             fill, ink, outline = acc()[2], acc()[3], None
+        else:
+            fill, ink, outline = CHIP_KINDS.get(kind, CHIP_KINDS['neutral'])
         font = (FONT, 9, 'bold')
         if not HAVE_GLASS:
             self.configure(text=text, fg=ink, font=font, bg=fill or self._container,
@@ -448,3 +493,65 @@ class RailItem(tk.Frame):
 
     def retheme(self):
         self.set_selected(self._selected)
+
+
+# ── 입력 부품 ────────────────────────────────────────────────────────
+
+def text_field(master, height=8, wrap='word', font=None, width=10, **kw):
+    """둥근 입력 판 안의 tk.Text 와 스크롤바. (판, 글 상자) 를 돌려준다.
+
+    판은 grid/pack 으로 놓고, 글 상자는 예전 그대로 get/insert/delete 로 쓴다.
+    """
+    card = Card(master, tone='field', pad=(8, 6))
+    text = tk.Text(card.body, height=height, width=width, wrap=wrap, bd=0, highlightthickness=0,
+                   relief='flat', bg='#FFFFFF', fg=COLORS['on_surface'],
+                   insertbackground=COLORS['on_surface'], font=font or (FONT, 10),
+                   padx=6, pady=4, **kw)
+    bar = ttk.Scrollbar(card.body, orient='vertical', command=text.yview)
+    text.configure(yscrollcommand=bar.set)
+    text.grid(row=0, column=0, sticky='nsew')
+    bar.grid(row=0, column=1, sticky='ns')
+    card.body.columnconfigure(0, weight=1)
+    card.body.rowconfigure(0, weight=1)
+    text.bind('<FocusIn>', lambda _e: card.set_focus(True))
+    text.bind('<FocusOut>', lambda _e: card.set_focus(False))
+    text.scrollbar = bar
+    return card, text
+
+
+def entry_field(master, textvariable=None, width=10, show=None):
+    """둥근 한 줄 입력칸. (판, tk.Entry) 를 돌려준다."""
+    card = Card(master, tone='field', pad=(12, 7))
+    entry = tk.Entry(card.body, textvariable=textvariable, width=width, bd=0,
+                     highlightthickness=0, relief='flat', bg='#FFFFFF',
+                     fg=COLORS['on_surface'], insertbackground=COLORS['on_surface'],
+                     font=(FONT, 10), show=show or '')
+    entry.grid(row=0, column=0, sticky='ew')
+    card.body.columnconfigure(0, weight=1)
+    entry.bind('<FocusIn>', lambda _e: card.set_focus(True))
+    entry.bind('<FocusOut>', lambda _e: card.set_focus(False))
+    return card, entry
+
+
+def list_card(master, width=10, **options):
+    """둥근 판 안의 tk.Listbox 와 스크롤바. (판, 목록) 을 돌려준다."""
+    card = Card(master, tone='inner', pad=(8, 8))
+    box = tk.Listbox(card.body, width=width, bd=0, highlightthickness=0, relief='flat', bg=INNER_BG,
+                     fg=COLORS['on_surface'], activestyle='none', exportselection=False,
+                     selectbackground=acc()[2], selectforeground=acc()[3], **options)
+    bar = ttk.Scrollbar(card.body, orient='vertical', command=box.yview)
+    box.configure(yscrollcommand=bar.set)
+    box.grid(row=0, column=0, sticky='nsew')
+    bar.grid(row=0, column=1, sticky='ns')
+    card.body.columnconfigure(0, weight=1)
+    card.body.rowconfigure(0, weight=1)
+    return card, box
+
+
+def retheme_lists(boxes):
+    """도구를 바꾸면 목록의 선택 색도 강조색으로 바꾼다."""
+    for box in boxes:
+        try:
+            box.configure(selectbackground=acc()[2], selectforeground=acc()[3])
+        except Exception:
+            pass

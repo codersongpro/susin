@@ -4,9 +4,9 @@ GRADE_MARKS = {
     'exact':  '',
     'abbr':   '',
     'prefix': '',
-    'fuzzy':  '?  추정 — 확인 필요',
-    'ambiguous': '?  같은 이름이 여럿 — 골라야 함',
-    'none':   '!  찾지 못함 — 확인 필요',
+    'fuzzy':  '[추정, 확인 필요]',
+    'ambiguous': '[같은 이름이 여럿, 골라야 함]',
+    'none':   '[찾지 못함, 확인 필요]',
 }
 
 
@@ -26,7 +26,7 @@ def format_item_label(item: dict) -> str:
         if mark:
             label = f'{label}      {mark}'
         if item.get('code_missing'):
-            label = f'{label}      !  기관코드 없음 — 확인 필요'
+            label = f'{label}      [기관코드 없음, 확인 필요]'
         source_count = int(item.get('source_count') or 1)
         if source_count > 1:
             label = (f'{label}      [입력 {source_count}회 · '
@@ -37,4 +37,4 @@ def format_item_label(item: dict) -> str:
     if reason.startswith('동명이인'):
         # 실패가 아니라 누가 들어갔는지 모르는 것이다. 이름 옆에 그대로 붙인다.
         return f'{label}  ({reason})'
-    return f'{label}  — 실패: {reason}' if reason else label
+    return f'{label}  (실패: {reason})' if reason else label

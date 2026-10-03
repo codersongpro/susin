@@ -31,7 +31,8 @@ class _Text:
     def __init__(self, *args, **kwargs):
         self._text = ''
 
-    def insert(self, index, text):
+    def insert(self, index, text, *tags):
+        # 진짜 Text 처럼 태그를 세 번째 자리에 받는다
         self._text += text
 
     def get(self, *args, **kwargs):
@@ -549,8 +550,9 @@ class AppFlowTest(unittest.TestCase):
         row = self.parse('행정과')[0]
 
         self.assertTrue(self.app._org_needs_review(row))
+        from theme import COLORS
         self.app.parsed_list.itemconfig.assert_called_with(
-            'end', {'bg': '#FFEBEE', 'fg': '#B71C1C'})
+            'end', {'bg': COLORS['warn_container'], 'fg': COLORS['on_warn_container']})
         self.assertEqual(self.app.bulk_fix_btn.state_value, 'normal')
 
     def test_bulk_confirmation_updates_the_original_row(self):
@@ -621,7 +623,8 @@ class AppFlowTest(unittest.TestCase):
         try:
             with patch.object(m.tk, 'Listbox', Recorder):
                 self.app._open_bulk_org_editor()
-            self.assertEqual(made[0].get('fg'), '#B71C1C')
+            from theme import COLORS
+            self.assertEqual(made[0].get('fg'), COLORS['error'])
         finally:
             self.app.names_list.clear()
 
