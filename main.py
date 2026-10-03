@@ -735,7 +735,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   ⑤ 코드 없는 기관 순차 복사
   ──────────────────────────────────────────────────────
     기관명을 한 건씩 클립보드에 넣어 줍니다.
-    조직명 칸에 Ctrl+V → Enter → 체크 → [>>] 만 반복하면 됩니다.
+    조직명 칸에 Ctrl+V 로 붙여넣고 Enter, 체크, [>>] 를 차례로 누르는 일만 반복하면 됩니다.
     Enter 키로 다음으로 넘어갑니다.
 
 
@@ -1040,7 +1040,7 @@ class ClipboardWalker(tk.Toplevel):
     """기관명을 한 건씩 클립보드에 넣어 주는 창.
 
     기관코드가 없어도 쓸 수 있는 경로다. 에듀파인 [수신자 지정] 조직명 칸에
-    Ctrl+V → Enter → 체크 → >> 만 반복하면 된다.
+    Ctrl+V 로 붙여넣고 Enter, 체크, >> 를 차례로 누르는 일만 반복하면 된다.
     """
 
     def __init__(self, parent, items):
@@ -1048,14 +1048,14 @@ class ClipboardWalker(tk.Toplevel):
         self.items = list(items)
         self.idx = 0
         self.title('클립보드 순차 복사')
-        self.geometry('520x260')
+        self.geometry('520x230')
         self.resizable(False, False)
         self.configure(bg=PANEL_BG)
         self.transient(parent)
 
         tk.Label(
-            self, text='에듀파인 조직명 칸에 Ctrl+V → Enter → 체크 → >>  를 반복하세요.',
-            bg=PANEL_BG, fg=COLORS['on_surface_variant'], font=(FONT, 9)
+            self, text='에듀파인 조직명 칸에 붙여넣고(Ctrl+V) Enter 를 누른 뒤,\n체크하고 [>>] 를 누르는 일을 반복하세요.',
+            bg=PANEL_BG, fg=COLORS['on_surface_variant'], font=(FONT, 9), justify='center'
         ).pack(pady=(14, 6))
 
         self.name_var = tk.StringVar()
@@ -1892,7 +1892,7 @@ class App:
         frame.columnconfigure(0, weight=1, uniform='excel')
         frame.columnconfigure(1, weight=1, uniform='excel')
         _title, sub = self._screen_header(frame, '에듀파인에 올릴 수신그룹 엑셀', columnspan=2)
-        sub.config(text='에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록] 에 올릴 엑셀을 만듭니다. '
+        sub.config(text='에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록] 에 올릴 엑셀을 만듭니다.\n'
                         '한 번 등록해 두면 다음부터는 기안할 때 [수신자 지정 > 개인수신그룹] 에서 '
                         '그룹만 고르면 됩니다.')
         self.codes_status = tk.Label(frame, text='', anchor='w', font=(FONT, 9, 'bold'),
@@ -2067,7 +2067,8 @@ class App:
                 cat_row,
                 text=f'{name} {counts[name]}',
                 command=lambda n=name: choose_category(n),
-                variant='text'
+                variant='text',
+                size='sm'
             )
             btn.pack(side='left', padx=2)
             cat_buttons[name] = btn
@@ -3204,7 +3205,8 @@ class App:
                 title.config(text='소속기관과 이름을 넣으세요')
                 body.config(text=(
                     '소통메신저에서 고를 사람의 명단입니다. 엑셀이나 한글에서 소속기관과 이름 두 열을 '
-                    '복사해 붙여넣거나 파일을 바로 여세요.   예) 충주중학교  홍길동 (소속기관, 이름 순서)'
+                    '복사해 붙여넣으세요.\n'
+                    '파일을 바로 열어도 됩니다.   예) 충주중학교  홍길동 (소속기관, 이름 순서)'
                 ))
         nxt = getattr(self, 'next_btn', None)
         if nxt:
