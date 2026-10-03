@@ -4,7 +4,9 @@ design/tokens.json 과 같은 값이다. 한쪽을 고치면 다른 쪽도 고�
 tkinter 없이 import 할 수 있다 (테스트가 돈다).
 """
 
-FONT_FAMILY = '맑은 고딕'   # Windows 기본. Noto Sans KR 은 포함하지 않는다.
+import fonts
+
+FONT_FAMILY = fonts.family()   # Pretendard, 못 올리면 맑은 고딕
 
 # 소통픽 = primary(남보라), 수신픽 = tertiary(청록)
 TOOLS = ('sotong', 'susin')

@@ -58,6 +58,10 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
 
 ## 화면 디자인
 
+글꼴은 Pretendard 다. 앱은 `assets/fonts/` 의 파일을 `fonts.py` 가 프로세스 전용으로 올리고
+(Windows), 못 올리면 맑은 고딕을 쓴다. 글꼴은 SIL OFL 이라 이름을 바꾸거나 줄이지 않고 그대로 둔다.
+랜딩페이지는 jsDelivr 의 Pretendard 를 쓴다. 글꼴 이름은 코드에 직접 적지 말고 `theme.FONT_FAMILY` 를 쓴다.
+
 앱과 랜딩페이지는 같은 Material 3 + 글래스 테마를 쓴다. 색과 모서리는 `theme.py`,
 창 바탕과 유리 판은 `glass.py` (Pillow), 단추·칩·카드는 `ui_kit.py` 에 있다.
 랜딩페이지 색은 `assets/theme_tokens.json` 과 같은 값이다.
@@ -80,6 +84,7 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
 - 광고 카피체를 쓰지 않는다. `지금 바로 시작하세요`, `반복 작업, 이제 맡기세요` 같은 것.
 - `~처리합니다`, `~제공합니다` 같은 번역투 대신 사람이 말하는 쪽으로.
 - 영어 나열을 피한다. `Teacher · Data Analytics` (X) → `초등교사 · 데이터 분석` (O)
+  (예외: 만든 사람 표기는 `송동석(Dustin) Teacher / App developer / Data analyst` 로 정해져 있다)
 - **`CHANGELOG.md` 는 명사형으로 짧게 쓴다.** 목록 한 줄에 한 가지씩, 무엇이 달라졌는지만.
   `~했습니다` 로 풀어쓴 문단 (X) → `추가됐는지 확인하고 넘어감` (O)
   앱 화면과 랜딩페이지는 지금처럼 존댓말 문장으로 쓴다. 명사형은 릴리즈 노트에만 쓴다.

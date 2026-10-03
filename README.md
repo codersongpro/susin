@@ -274,4 +274,4 @@ GUI 없이도 핵심 로직은 전부 테스트된다 — 파싱, 매칭 등급,
 
 ---
 
-만든 사람: 송동석 · 협업 dungst.me@gmail.com
+만든 사람: 송동석(Dustin) · Teacher / App developer / Data analyst · 협업 dungst.me@gmail.com

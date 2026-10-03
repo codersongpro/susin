@@ -14,7 +14,7 @@ import tkinter as tk
 
 from tkinter import ttk
 
-from theme import COLORS, PANEL_BG, accent, mix
+from theme import COLORS, FONT_FAMILY, PANEL_BG, accent, mix
 
 try:
     import glass
@@ -23,7 +23,7 @@ except ImportError:                  # Pillow 가 없다
 
 HAVE_GLASS = glass is not None
 
-FONT = '맑은 고딕'
+FONT = FONT_FAMILY
 INNER_BG = mix('#FFFFFF', PANEL_BG, 0.5)           # 판 위의 판
 EDGE = mix(COLORS['outline'], '#FFFFFF', 0.22)     # 카드 가장자리
 
