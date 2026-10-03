@@ -7,6 +7,12 @@ tkinter 없이 import 할 수 있다 (테스트가 돈다).
 import fonts
 
 FONT_FAMILY = fonts.family()   # Pretendard, 못 올리면 맑은 고딕
+FONT_SCALE = 1.2               # 글자는 이 배율로 키워서 쓴다 (fs 로 감싼다)
+
+
+def fs(pt: int) -> int:
+    """설계 크기(pt)를 화면에 쓸 크기로."""
+    return int(round(pt * FONT_SCALE))
 
 # 소통픽 = primary(남보라), 수신픽 = tertiary(청록)
 TOOLS = ('sotong', 'susin')
@@ -83,8 +89,12 @@ def contrast(a, b):
     return (hi + 0.05) / (lo + 0.05)
 
 
-def shell_layout(width, height, pad=16, gap=14, rail=92, top=64, status=40):
-    """창 틀 네 판의 자리 (x0, y0, x1, y1). 설계 문서 '화면 틀' 과 같다."""
+def shell_layout(width, height, pad=16, gap=14, rail=92, top=64, status=40, zoom=1.0):
+    """창 틀 네 판의 자리 (x0, y0, x1, y1). 설계 문서 '화면 틀' 과 같다.
+
+    zoom 은 글자 배율. 글자가 커지면 상단바, 레일, 상태줄도 같이 커진다.
+    """
+    pad, gap, rail, top, status = (round(v * zoom) for v in (pad, gap, rail, top, status))
     top_box = (pad, pad, width - pad, pad + top)
     status_box = (pad, height - pad - status, width - pad, height - pad)
     y0, y1 = top_box[3] + gap, status_box[1] - gap

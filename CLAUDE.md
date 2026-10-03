@@ -67,6 +67,16 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
 랜딩페이지 색은 `assets/theme_tokens.json` 과 같은 값이다.
 
 - 도구 색은 소통픽이 남보라(primary), 수신픽이 청록(tertiary)이다. 화면마다 따로 고르지 않는다.
+- **글자 크기와 픽셀은 직접 적지 않는다.** 글자는 `ui.font(크기, 굵기)`, 길이는 `ui.px(픽셀)` 로 쓴다.
+  창을 키우고 줄이면 배율(`ui.set_zoom`)이 바뀌고, 글자와 단추, 칩, 레일, 창 틀이 곧바로 따라온다.
+  `(FONT, 10)` 같은 튜플이나 `wraplength=500` 같은 숫자를 새로 넣으면 그 자리만 배율을 못 따라간다.
+- 창 크기를 끌어 바꾸는 동안 다시 그리는 것은 빨라야 한다. 바탕은 작게 그려 키우고
+  (`glass.make_backdrop`), 카드와 판의 둥근 모서리는 `glass.fast_rounded_mask` 로 만든다.
+  가려진 탭의 카드와 단추는 열릴 때 그린다 (`ui.refresh_or_defer`).
+- 사용 가이드는 Iorad 처럼 창 안쪽을 한 번 찍어 어둡게 만든 그림을 덮고 대상만 밝게 오려 낸다
+  (`WalkthroughDialog`, `glass.spotlight`). 화면을 못 찍으면 테두리 네 줄로만 가리킨다.
+  '노란 상자', '노란색 테두리' 같은 말은 쓰지 않는다 ('밝게 보이는 곳').
+- 도구 선택 단추(수신픽, 소통픽)는 붙어 있고, 어느 쪽을 골라도 폭과 자리가 같아야 한다.
 - Pillow 가 없어도 앱은 떠야 한다. 유리 바탕이 평평한 색으로 바뀔 뿐이다.
 - 랜딩페이지 화면 캡처는 `assets/landing/*.webp` 이고 `index.html` 에 `data-shot` 으로 박는다.
   앱 화면을 바꾸면 다시 찍고 `python3 tools/embed_guide_images.py --apply` 를 돌린다.

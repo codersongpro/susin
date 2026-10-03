@@ -116,5 +116,89 @@ class ShellTest(unittest.TestCase):
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(data))).size, (12, 12))
 
 
+@unittest.skipIf(glass is None, 'Pillow 가 없습니다')
+class FastDrawingTest(unittest.TestCase):
+    """창 크기를 끌어 바꾸는 동안 쓰는 빠른 그리기가 느린 쪽과 같은 모양을 내야 한다."""
+
+    def test_fast_mask_matches_the_slow_one(self):
+        from PIL import ImageChops
+        for size, radius in (((300, 200), 28), ((120, 60), 30), ((50, 50), 20)):
+            fast = glass.fast_rounded_mask(size, radius)
+            slow = glass._rounded_mask(size, min(radius, size[0] // 2, size[1] // 2))
+            diff = ImageChops.difference(fast, slow)
+            self.assertLessEqual(diff.getextrema()[1], 40, (size, radius))
+            # 모서리 바깥은 비고 가운데는 찬다
+            self.assertEqual(fast.getpixel((0, 0)), 0)
+            self.assertEqual(fast.getpixel((size[0] // 2, size[1] // 2)), 255)
+
+    def test_card_image_has_round_corners_and_a_ring(self):
+        image = glass.card_image(200, 100, '#FFFFFF', outline='#767684', outline_width=1, radius=20)
+        self.assertEqual(image.size, (200, 100))
+        self.assertEqual(image.getpixel((0, 0))[3], 0)
+        self.assertEqual(image.getpixel((100, 50))[:3], (255, 255, 255))
+        self.assertGreater(image.getpixel((100, 0))[3], 200)        # 위쪽 가장자리 선
+
+    def test_backdrop_keeps_its_size_when_drawn_small(self):
+        for size in ((1280, 820), (333, 211), (40, 30)):
+            self.assertEqual(glass.make_backdrop(*size, 'sotong').size, size)
+
+    def test_compose_shell_is_fast_enough_for_live_resizing(self):
+        import time
+        start = time.time()
+        glass.compose_shell(1280, 820, 'sotong')
+        self.assertLess(time.time() - start, 0.6)          # 예전에는 0.35~0.6초였다
+
+    def test_ppm_round_trip(self):
+        from PIL import Image
+        import io
+        image = Image.new('RGB', (7, 5), (10, 20, 30))
+        data = glass.ppm_bytes(image)
+        self.assertTrue(data.startswith(b'P6 7 5 255\n'))
+        self.assertEqual(Image.open(io.BytesIO(data)).getpixel((3, 2)), (10, 20, 30))
+
+    def test_layout_scales_with_zoom(self):
+        base = glass.shell_layout(1280, 820)
+        zoomed = glass.shell_layout(1600, 1025, zoom=1.25)
+        self.assertEqual(zoomed['rail'][2] - zoomed['rail'][0], round(92 * 1.25))
+        self.assertGreater(zoomed['top'][3] - zoomed['top'][1], base['top'][3] - base['top'][1])
+
+
+@unittest.skipIf(glass is None, 'Pillow 가 없습니다')
+class GuideDrawingTest(unittest.TestCase):
+    """Iorad 처럼 화면을 어둡게 하고 대상만 밝게 비추는 그림."""
+
+    def setUp(self):
+        from PIL import Image
+        self.base = Image.new('RGB', (400, 300), (240, 240, 250))
+
+    def test_spotlight_keeps_the_target_bright_and_dims_the_rest(self):
+        out = glass.spotlight(self.base, (100, 100, 200, 160), radius=12, dim=0.6, ring='#4A53C9')
+        self.assertEqual(out.getpixel((150, 130)), (240, 240, 250))     # 대상은 그대로
+        dark = out.getpixel((20, 20))
+        self.assertLess(sum(dark), sum((240, 240, 250)) * 0.6)          # 나머지는 어둡다
+        # 테두리 색이 구멍 바로 바깥에 있다
+        ring = out.getpixel((150, 100 - 2))
+        self.assertGreater(ring[2], ring[0])
+
+    def test_spotlight_without_a_target_only_dims(self):
+        out = glass.spotlight(self.base, None, dim=0.5)
+        self.assertEqual(out.size, self.base.size)
+        self.assertLess(sum(out.getpixel((200, 150))), sum((240, 240, 250)))
+
+    def test_spotlight_survives_a_box_outside_the_image(self):
+        out = glass.spotlight(self.base, (-30, -30, 60, 40), ring='#00695C')
+        self.assertEqual(out.size, self.base.size)
+        out = glass.spotlight(self.base, (390, 290, 500, 400), ring='#00695C')
+        self.assertEqual(out.size, self.base.size)
+
+    def test_callout_draws_a_white_bubble_with_a_tail(self):
+        dark = glass.spotlight(self.base, None, dim=0.6)
+        out = glass.callout(dark, (150, 100, 330, 220), radius=18,
+                            arrow=[(152, 140), (136, 160), (152, 180)])
+        self.assertEqual(out.getpixel((240, 160)), (255, 255, 255))     # 말풍선 안
+        self.assertEqual(out.getpixel((142, 160)), (255, 255, 255))     # 꼬리
+        self.assertNotEqual(out.getpixel((151, 101)), (255, 255, 255))  # 둥근 모서리 바깥
+
+
 if __name__ == '__main__':
     unittest.main()

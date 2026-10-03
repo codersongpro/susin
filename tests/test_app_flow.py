@@ -330,7 +330,7 @@ class AppFlowTest(unittest.TestCase):
         )
         self.assertIn('소통픽 사용법', self.app_module.HELP_TEXTS['messenger'])
         self.assertNotIn(
-            '■ 에듀파인 — 수신그룹 일괄등록',
+            '■ 수신픽: 에듀파인 수신그룹 일괄등록',
             self.app_module.HELP_TEXTS['messenger'],
         )
         self.assertIn('수신픽 사용법', self.app_module.HELP_TEXTS['edufine'])
@@ -603,7 +603,7 @@ class AppFlowTest(unittest.TestCase):
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'main.py')
         with open(main_py, encoding='utf-8') as f:
             source = f.read()
-        calls = re.findall(r'tk\.Listbox\((?:[^()]|\([^()]*\))*\)', source)
+        calls = re.findall(r'tk\.Listbox\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)', source)
         self.assertTrue(calls, '목록을 하나도 찾지 못했습니다')
         for call in calls:
             self.assertIn('exportselection=False', call,
@@ -689,23 +689,91 @@ class AppFlowTest(unittest.TestCase):
         self.assertIsNone(self.app.guide_dialog)
 
     def test_guide_highlights_each_real_control_and_cleans_up(self):
-        """가이드 단계가 실제 위젯을 강조하고 종료할 때 테두리를 치운다."""
+        """가이드 단계가 실제 위젯을 비추고, 끝낼 때 덮개와 말풍선을 치운다."""
         from app_config import TARGET_EDUFINE
 
         self.app._show_onboarding(TARGET_EDUFINE)
         guide = self.app.guide_dialog
         self.assertIsNotNone(guide)
         self.assertIs(guide.highlight_target, self.app.input_text)
-        self.assertTrue(all(border.place.called for border in guide.highlight_frames))
+        self.assertTrue(guide.winfo_exists())
 
         guide.next()
         self.assertIs(guide.highlight_target, self.app.parse_button)
 
-        borders = list(guide.highlight_frames)
+        guide.prev()
+        self.assertIs(guide.highlight_target, self.app.input_text)
+
+        overlay, bubble = guide.overlay, guide.bubble
         guide.finish()
         self.assertIsNone(self.app.guide_dialog)
-        self.assertTrue(all(border.place_forget.called for border in borders))
-        self.assertTrue(all(border.destroy.called for border in borders))
+        self.assertFalse(guide.winfo_exists())
+        self.assertTrue(overlay.destroy.called)
+        self.assertTrue(bubble.destroy.called)
+
+    def test_zoom_scales_pixels_and_is_clamped(self):
+        """창 크기에 따른 배율. 범위를 넘지 않고, 바뀌었을 때만 True 를 돌려준다."""
+        ui = self.app_module.ui
+        try:
+            ui.set_zoom(1.0)
+            self.assertEqual(ui.px(40), 40)
+            self.assertTrue(ui.set_zoom(1.25))
+            self.assertEqual(ui.px(40), 50)
+            self.assertFalse(ui.set_zoom(1.25))
+            ui.set_zoom(9.0)
+            self.assertEqual(ui.zoom(), ui.ZOOM_RANGE[1])
+            ui.set_zoom(0.1)
+            self.assertEqual(ui.zoom(), ui.ZOOM_RANGE[0])
+        finally:
+            ui.set_zoom(1.0)
+
+    def test_tool_switch_buttons_do_not_move_when_the_tool_changes(self):
+        """수신픽과 소통픽 단추는 어느 쪽을 골라도 같은 폭, 같은 자리여야 한다."""
+        ui = self.app_module.ui
+        if ui.glass is None:
+            self.skipTest('Pillow 가 없습니다')
+        widths = []
+        real_pill = ui.glass.pill
+
+        def spy(width, height, **kw):
+            widths.append((width, height, kw.get('sides')))
+            return real_pill(width, height, **kw)
+
+        switch = self.app.tool_switch
+        with patch.object(ui.glass, 'pill', side_effect=spy):
+            switch.select('edufine')
+            first = list(widths)
+            widths.clear()
+            switch.select('messenger')
+            second = list(widths)
+        self.assertEqual(len(first), 2)
+        self.assertEqual(first, second, '고르는 쪽이 바뀌어도 단추 크기가 같아야 합니다')
+        self.assertEqual(first[0][0], first[1][0], '두 단추의 폭이 같아야 합니다')
+
+    def test_shell_layout_gets_the_zoom(self):
+        """창 틀(상단바, 레일, 상태줄)도 글자를 따라 커져야 한다."""
+        from theme import shell_layout
+        ui = self.app_module.ui
+        try:
+            ui.set_zoom(1.2)
+            self.app._shell['size'] = (1500, 960)
+            self.app._place_shell()
+            expected = shell_layout(1500, 960, zoom=1.2)
+            self.assertGreater(expected['rail'][2] - expected['rail'][0], 92)
+        finally:
+            ui.set_zoom(1.0)
+
+    def test_guide_wording_does_not_mention_a_yellow_box(self):
+        """강조는 화면을 어둡게 하고 대상만 밝게 비추는 방식이므로 '노란' 이라고 적지 않는다."""
+        import re
+
+        main_py = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'main.py')
+        with open(main_py, encoding='utf-8') as f:
+            source = f.read()
+        self.assertNotIn('노란색 테두리', source)
+        self.assertNotIn('노란 상자', source)
+        self.assertIn('밝게 보이는 곳', source)
 
     def test_clipboard_walker_receives_only_code_missing_orgs(self):
         self.app.names_list = [

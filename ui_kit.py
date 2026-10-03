@@ -9,12 +9,13 @@ tkinter 위젯은 투명할 수 없으므로 판 위 위젯의 바탕은 모두 
 """
 
 import logging
+import weakref
 
 import tkinter as tk
 
 from tkinter import ttk
 
-from theme import COLORS, FONT_FAMILY, PANEL_BG, accent, mix
+from theme import COLORS, FONT_FAMILY, FONT_SCALE, PANEL_BG, accent, fs, mix
 
 try:
     import glass
@@ -27,7 +28,99 @@ FONT = FONT_FAMILY
 INNER_BG = mix('#FFFFFF', PANEL_BG, 0.5)           # 판 위의 판
 EDGE = mix(COLORS['outline'], '#FFFFFF', 0.22)     # 카드 가장자리
 
-_state = {'tool': 'susin'}
+_state = {'tool': 'susin', 'zoom': 1.0}
+_fonts = {}                         # (크기, 굵기) -> 이름 붙은 글꼴. 크기를 바꾸면 쓰는 곳이 한꺼번에 바뀐다
+_scalables = weakref.WeakSet()      # 창 크기에 따라 다시 그려야 하는 부품 (칩, 도구 선택, 레일)
+
+ZOOM_RANGE = (0.85, 1.6)
+
+
+def px(n):
+    """설계 픽셀을 지금 배율로."""
+    return max(1, int(round(n * _state['zoom'])))
+
+
+def _pt(pt):
+    return max(8, int(round(pt * FONT_SCALE * _state['zoom'])))
+
+
+def font(pt, weight='normal'):
+    """배율을 따라 커지고 줄어드는 글꼴. 같은 (크기, 굵기)는 하나를 같이 쓴다.
+
+    이름 붙은 글꼴(tkinter.font.Font)이라 크기를 바꾸면 그 글꼴을 쓰는 글자가 곧바로 바뀐다.
+    Tk 가 없는 곳(테스트 스텁)에서는 그냥 (글꼴, 크기, 굵기) 로 돌려준다.
+    """
+    key = (pt, weight)
+    found = _fonts.get(key)
+    if found is None:
+        try:
+            import tkinter.font as tkfont
+            found = tkfont.Font(family=FONT, size=_pt(pt), weight=weight)
+        except Exception:
+            found = (FONT, fs(pt), weight)
+        _fonts[key] = found
+    return found
+
+
+ft = font
+
+
+def zoom():
+    return _state['zoom']
+
+
+def set_zoom(value):
+    """배율을 바꾼다. 글꼴은 곧바로 바뀌고, 그림으로 그린 부품은 다시 그린다. 바뀌었으면 True."""
+    low, high = ZOOM_RANGE
+    value = round(min(max(value, low), high), 2)
+    if value == _state['zoom']:
+        return False
+    _state['zoom'] = value
+    for (pt, _weight), found in _fonts.items():
+        if hasattr(found, 'configure'):
+            try:
+                found.configure(size=_pt(pt))
+            except Exception as exc:
+                logging.debug('글꼴 크기 바꾸기 실패: %s', exc)
+    retheme_buttons()
+    for widget in list(_scalables):
+        refresh_or_defer(widget, widget.rescale)
+    return True
+
+
+_stale = weakref.WeakKeyDictionary()   # 가려져서 다시 그리지 못한 부품 -> 열리면 부를 함수
+
+
+def refresh_or_defer(widget, action):
+    """보이는 부품은 바로 다시 그리고, 가려진 탭의 부품은 탭이 열릴 때 다시 그린다.
+
+    가려진 탭의 부품은 Map 이벤트를 받지 못하므로(윗 틀만 Map 을 받는다), 탭이 바뀔 때
+    flush_stale() 로 보이게 된 것들을 다시 그린다.
+    """
+    try:
+        try:
+            visible = bool(widget.winfo_viewable())
+        except Exception:
+            visible = True                      # 알 수 없으면 바로 그린다
+        if visible:
+            _stale.pop(widget, None)
+            action()
+        else:
+            _stale[widget] = action
+    except Exception as exc:
+        logging.debug('부품 다시 그리기 실패: %s', exc)
+
+
+def flush_stale():
+    """가려져 있다가 보이게 된 부품을 다시 그린다. 탭이 바뀔 때마다 부른다."""
+    for widget, action in list(_stale.items()):
+        try:
+            if widget.winfo_exists() and widget.winfo_viewable():
+                _stale.pop(widget, None)
+                action()
+        except Exception as exc:
+            logging.debug('가려졌던 부품 다시 그리기 실패: %s', exc)
+            _stale.pop(widget, None)
 
 
 def set_tool(tool):
@@ -57,7 +150,23 @@ def container_bg(master):
 
 def photo(widget, image):
     """PIL 그림을 tk.PhotoImage 로. 돌려받은 것을 위젯이 붙들고 있어야 사라지지 않는다."""
-    return tk.PhotoImage(master=widget, data=glass.png_base64(image))
+    return tk.PhotoImage(master=widget, data=glass.png_base64(image, level=1))
+
+
+def autowrap(label, margin=0, minimum=240):
+    """라벨의 줄바꿈 폭을 놓인 틀의 폭에 맞춘다. 창을 키우고 줄이면 글이 따라서 다시 줄을 바꾼다."""
+    holder = label.master
+
+    def fit(_event=None):
+        try:
+            width = holder.winfo_width() - margin
+            if width > minimum and abs(int(float(label.cget('wraplength') or 0)) - width) > 4:
+                label.configure(wraplength=width)
+        except Exception as exc:
+            logging.debug('줄바꿈 폭 맞추기 실패: %s', exc)
+
+    holder.bind('<Configure>', fit, add='+')
+    return label
 
 
 def measure(widget, font, text):
@@ -66,7 +175,11 @@ def measure(widget, font, text):
         return int(widget.tk.call('font', 'measure', font, text))
     except Exception as exc:
         logging.debug('글자 폭 재기 실패: %s', exc)
-        return int(len(text) * font[1] * 1.4)
+        try:
+            size = font.cget('size') if hasattr(font, 'cget') else font[1]
+        except Exception:
+            size = 10
+        return int(len(text) * abs(int(size)) * 1.4)
 
 
 # ── 단추 ─────────────────────────────────────────────────────────────
@@ -229,16 +342,16 @@ class M3Button(tk.Label):
 
     def render(self):
         fill, text_color, outline = _button_colors(self._variant, self._container, self._mode())
-        height = 40 if self._size == 'md' else 32
-        font = (FONT, 10 if self._size == 'md' else 9, 'bold')
+        height = px(40 if self._size == 'md' else 32)
+        font = ft(10 if self._size == 'md' else 9, 'bold')
         cursor = 'arrow' if self.state_value == 'disabled' else 'hand2'
         if not HAVE_GLASS:
             self._base(text=self._text, fg=text_color, font=font, cursor=cursor,
                        bg=fill or self._container, padx=14, pady=6)
             return
-        pad = 22 if self._size == 'md' else 16
+        pad = px(22 if self._size == 'md' else 16)
         icon_size = height // 2
-        icon_w = (icon_size + 8) if self._icon_name else 0
+        icon_w = (icon_size + px(8)) if self._icon_name else 0
         text_w = measure(self, font, self._text)
         width = text_w + pad * 2 + icon_w
         key = (width, height, fill, outline, self._icon_name, text_color if self._icon_name else '')
@@ -249,7 +362,7 @@ class M3Button(tk.Label):
                 mark = glass.icon(self._icon_name, icon_size, text_color)
                 x = max(8, (width - text_w) // 2 - icon_size - 6)
                 shape.alpha_composite(mark, (x, (height - mark.height) // 2))
-            self._images[key] = glass.png_base64(shape)
+            self._images[key] = glass.png_base64(shape, level=1)
         self._photo = tk.PhotoImage(master=self, data=self._images[key])
         self._base(image=self._photo, text=self._text, compound='center', fg=text_color,
                    activeforeground=text_color, activebackground=self._container,
@@ -264,7 +377,7 @@ def retheme_buttons():
     for button in list(_all_buttons):
         try:
             if button.winfo_exists():
-                button.render()
+                refresh_or_defer(button, button.render)
             else:
                 _all_buttons.discard(button)
         except Exception:
@@ -310,6 +423,7 @@ class Card(tk.Frame):
             self._back.place_forget()
             return
         self.bind('<Configure>', self._on_size)
+        self.bind('<Map>', self._on_size)
 
     def set_tone(self, tone):
         """카드 색을 바꾼다 (경고 배너가 확인 필요에서 오류로 바뀔 때). 안쪽 틀 바탕도 같이 바뀐다."""
@@ -345,11 +459,14 @@ class Card(tk.Frame):
                 self.after_cancel(self._pending)
             except Exception:
                 pass
-        self._pending = self.after(60, self._draw)
+        self._pending = self.after(8, self._draw)
 
     def _draw(self):
         self._pending = None
         try:
+            if not self.winfo_viewable():        # 안 보이는 탭의 카드는 열릴 때 그린다
+                _stale[self] = self._on_size
+                return
             w, h = self.winfo_width(), self.winfo_height()
         except Exception:
             return
@@ -364,8 +481,8 @@ class Card(tk.Frame):
             edge, width = EDGE, 1
         else:
             edge, width = mix('#000000', self.fill, 0.08), 1
-        image = glass.pill(w, h, fill=self.fill, outline=edge, outline_width=width,
-                           radius=min(self._radius, h // 2))
+        image = glass.card_image(w, h, fill=self.fill, outline=edge, outline_width=width,
+                                 radius=min(self._radius, h // 2))
         self._photo = photo(self, image)
         self._back.configure(image=self._photo)
 
@@ -388,24 +505,31 @@ class Chip(tk.Label):
     def __init__(self, master, text='', kind='neutral'):
         self._container = container_bg(master)
         self._photo = None
+        self._text = text
+        self._kind = kind
         super().__init__(master, bd=0, highlightthickness=0, bg=self._container)
+        _scalables.add(self)
         self.set(text, kind)
 
+    def rescale(self):
+        self.set(self._text, self._kind)
+
     def set(self, text, kind='neutral'):
+        self._text, self._kind = text, kind
         if kind == 'info':
             fill, ink, outline = acc()[2], acc()[3], None
         else:
             fill, ink, outline = CHIP_KINDS.get(kind, CHIP_KINDS['neutral'])
-        font = (FONT, 9, 'bold')
+        font = ft(9, 'bold')
         if not HAVE_GLASS:
             self.configure(text=text, fg=ink, font=font, bg=fill or self._container,
                            padx=8, pady=2)
             return
-        width, height = measure(self, font, text) + 20, 26
+        width, height = measure(self, font, text) + px(20), px(26)
         key = (width, height, fill, outline)
         if key not in self._images:
             self._images[key] = glass.png_base64(
-                glass.pill(width, height, fill=fill, outline=outline, radius=8))
+                glass.pill(width, height, fill=fill, outline=outline, radius=px(8)), level=1)
         self._photo = tk.PhotoImage(master=self, data=self._images[key])
         self.configure(image=self._photo, text=text, compound='center', fg=ink, font=font,
                        bg=self._container, padx=0, pady=0)
@@ -414,46 +538,67 @@ class Chip(tk.Label):
 # ── 도구 선택 (소통픽 / 수신픽) ──────────────────────────────────────
 
 class ToolSwitch(tk.Frame):
-    """붙어 있는 두 알약. 고른 쪽이 강조색 연한 바탕에 체크 표시를 단다."""
+    """붙어 있는 두 알약. 고른 쪽이 강조색 연한 바탕에 체크 표시를 단다.
 
-    def __init__(self, master, items, on_select, width=120, height=40):
+    두 쪽의 폭과 자리는 늘 같다. 체크 표시 자리를 양쪽에 미리 비워 두므로
+    도구를 바꿔도 단추가 움직이지 않는다.
+    """
+
+    def __init__(self, master, items, on_select, width=0, height=0):
         self._container = container_bg(master)
         super().__init__(master, bg=self._container)
         self.items = {}
         self._keys = [key for key, _text in items]
         self._texts = dict(items)
         self._on_select = on_select
-        self._size = (width, height)
+        self._width = width
+        self._height = height
         self._selected = None
         for column, (key, _text) in enumerate(items):
-            label = tk.Label(self, bd=0, highlightthickness=0, bg=self._container, cursor='hand2')
-            label.grid(row=0, column=column)
+            label = tk.Label(self, bd=0, highlightthickness=0, padx=0, pady=0,
+                             bg=self._container, cursor='hand2')
+            label.grid(row=0, column=column, padx=0, pady=0)
             label.bind('<Button-1>', lambda _e, k=key: self._on_select(k))
             self.items[key] = label
+        _scalables.add(self)
+
+    def rescale(self):
+        if self._selected is not None:
+            self.select(self._selected)
+
+    def _fixed_width(self):
+        """두 글자 가운데 긴 쪽에 체크 자리(양쪽)를 더한 폭. 고른 쪽과 상관없다."""
+        if self._width:
+            return self._width
+        first = self.items[self._keys[0]]
+        widest = max(measure(first, ft(10, 'bold'), text) for text in self._texts.values())
+        return max(px(112), widest + 2 * px(38))
 
     def select(self, key):
         self._selected = key
-        width, height = self._size
+        width, height = self._fixed_width(), self._height or px(40)
         a, _on_a, a_c, on_a_c = acc()
         for index, item_key in enumerate(self._keys):
             label = self.items[item_key]
             chosen = item_key == key
             side = 'left' if index == 0 else 'right'
             text = self._texts[item_key]
-            font = (FONT, 10, 'bold' if chosen else 'normal')
+            font = ft(10, 'bold' if chosen else 'normal')
             ink = on_a_c if chosen else COLORS['on_surface']
             if not HAVE_GLASS:
-                label.configure(text=('✓ ' if chosen else '') + text, font=font, fg=ink,
-                                bg=a_c if chosen else self._container, padx=18, pady=8)
+                # 글자 수로 폭을 고정한다 (체크 자리는 늘 비워 둔다)
+                label.configure(text=('\u2713 ' if chosen else '    ') + text, font=font, fg=ink,
+                                bg=a_c if chosen else self._container, padx=0, pady=8,
+                                width=max(len(t) for t in self._texts.values()) + 6)
                 continue
             shape = glass.pill(width, height, fill=a_c if chosen else None,
                                outline=COLORS['outline'], sides=side)
             if chosen:
-                mark = glass.icon('check', 16, on_a_c)
-                shape.alpha_composite(mark, (14, (height - mark.height) // 2))
+                mark = glass.icon('check', px(16), on_a_c)
+                shape.alpha_composite(mark, (px(14), (height - mark.height) // 2))
             label._photo = photo(label, shape)
             label.configure(image=label._photo, text=text, compound='center', font=font, fg=ink,
-                            bg=self._container, padx=22 if chosen else 0)
+                            bg=self._container, padx=0)
 
 
 # ── 단계 레일 ────────────────────────────────────────────────────────
@@ -469,25 +614,30 @@ class RailItem(tk.Frame):
         self._selected = False
         self._pill = tk.Label(self, bd=0, highlightthickness=0, bg=self._container)
         self._pill.pack(pady=(8, 2))
-        self._name = tk.Label(self, text=text, bg=self._container, font=(FONT, 9),
-                              fg=COLORS['on_surface_variant'], wraplength=80, justify='center')
+        self._name = tk.Label(self, text=text, bg=self._container, font=ft(9),
+                              fg=COLORS['on_surface_variant'], wraplength=px(80), justify='center')
         self._name.pack(pady=(0, 6))
         for widget in (self, self._pill, self._name):
             widget.bind('<Button-1>', lambda _e: command())
+        _scalables.add(self)
         self.set_selected(False)
+
+    def rescale(self):
+        self._name.configure(wraplength=px(80))
+        self.set_selected(self._selected)
 
     def set_selected(self, selected):
         self._selected = selected
         a, _on_a, a_c, on_a_c = acc()
         ink = on_a_c if selected else COLORS['on_surface_variant']
         self._name.configure(fg=COLORS['on_surface'] if selected else COLORS['on_surface_variant'],
-                             font=(FONT, 9, 'bold' if selected else 'normal'))
+                             font=ft(9, 'bold' if selected else 'normal'))
         if not HAVE_GLASS:
             self._pill.configure(text=self._text[:1], bg=a_c if selected else self._container,
                                  fg=ink, width=3)
             return
-        shape = glass.pill(56, 32, fill=a_c if selected else None)
-        shape.alpha_composite(glass.icon(self._icon, 20, ink), (18, 6))
+        shape = glass.pill(px(56), px(32), fill=a_c if selected else None)
+        shape.alpha_composite(glass.icon(self._icon, px(20), ink), (px(18), px(6)))
         self._photo = photo(self._pill, shape)
         self._pill.configure(image=self._photo)
 
@@ -505,7 +655,7 @@ def text_field(master, height=8, wrap='word', font=None, width=10, **kw):
     card = Card(master, tone='field', pad=(8, 6))
     text = tk.Text(card.body, height=height, width=width, wrap=wrap, bd=0, highlightthickness=0,
                    relief='flat', bg='#FFFFFF', fg=COLORS['on_surface'],
-                   insertbackground=COLORS['on_surface'], font=font or (FONT, 10),
+                   insertbackground=COLORS['on_surface'], font=font or ft(10),
                    padx=6, pady=4, **kw)
     bar = ttk.Scrollbar(card.body, orient='vertical', command=text.yview)
     text.configure(yscrollcommand=bar.set)
@@ -525,7 +675,7 @@ def entry_field(master, textvariable=None, width=10, show=None):
     entry = tk.Entry(card.body, textvariable=textvariable, width=width, bd=0,
                      highlightthickness=0, relief='flat', bg='#FFFFFF',
                      fg=COLORS['on_surface'], insertbackground=COLORS['on_surface'],
-                     font=(FONT, 10), show=show or '')
+                     font=ft(10), show=show or '')
     entry.grid(row=0, column=0, sticky='ew')
     card.body.columnconfigure(0, weight=1)
     entry.bind('<FocusIn>', lambda _e: card.set_focus(True))

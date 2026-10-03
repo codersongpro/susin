@@ -48,6 +48,24 @@ def referenced_names(html: str, attr: str = 'data-guide') -> list:
     return re.findall(attr + r'="([^"]+)"', html)
 
 
+def _fit_size(html: str, attr: str, name: str, path: str) -> str:
+    """<img> 의 width, height 를 그림 크기에 맞춘다 (화면이 흔들리지 않게). Pillow 가 없으면 그대로."""
+    try:
+        from PIL import Image
+        with Image.open(path) as image:
+            width, height = image.size
+    except Exception:
+        return html
+    tag = re.compile(r'<img\b[^>]*\b' + attr + r'="' + re.escape(name) + r'"[^>]*>')
+
+    def fix(match):
+        text = match.group(0)
+        text = re.sub(r'\bwidth="\d+"', f'width="{width}"', text, count=1)
+        text = re.sub(r'\bheight="\d+"', f'height="{height}"', text, count=1)
+        return text
+    return tag.sub(fix, html)
+
+
 def embed(html: str) -> tuple:
     """(고친 html, 바뀐 그림 이름들). 없는 파일은 SystemExit."""
     changed = []
@@ -60,6 +78,7 @@ def embed(html: str) -> tuple:
                 r'(<img\b[^>]*\b' + attr + r'="' + re.escape(name) + r'"[^>]*\bsrc=")[^"]*(")'
             )
             html, hits = pattern.subn(lambda m: m.group(1) + uri + m.group(2), html)
+            html = _fit_size(html, attr, name, os.path.join(folder, name))
             if not hits:
                 raise SystemExit(
                     f'{name} 을 가리키는 <img> 에 src 속성이 없습니다. '

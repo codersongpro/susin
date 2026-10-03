@@ -69,7 +69,7 @@ from sotong_parser import (
 from ui_helpers import format_item_label
 import ui_kit as ui
 from ui_kit import M3Button, Card, Chip, RailItem, ToolSwitch
-from theme import COLORS, FONT_FAMILY as FONT, PANEL_BG, shell_layout
+from theme import COLORS, FONT_FAMILY as FONT, PANEL_BG, fs, shell_layout
 
 try:
     import glass
@@ -295,14 +295,14 @@ class CaptureDialog(tk.Toplevel):
         self.resizable(True, True)
 
         tk.Label(
-            self, text=f'📍  캡처 대상: {label}',
-            bg=ui.acc()[2], fg=ui.acc()[3], font=(FONT, 12, 'bold'), pady=12
+            self, text=f'캡처 대상: {label}',
+            bg=ui.acc()[2], fg=ui.acc()[3], font=ui.font(12, 'bold'), pady=12
         ).pack(fill='x')
 
         if hint:
             tk.Label(
                 self, text=f'소통메신저에서 이 부분을 클릭하세요.\n{hint}',
-                bg=ui.acc()[2], fg=ui.acc()[3], font=(FONT, 11, 'bold'),
+                bg=ui.acc()[2], fg=ui.acc()[3], font=ui.font(11, 'bold'),
                 justify='center', pady=10
             ).pack(fill='x')
 
@@ -316,7 +316,7 @@ class CaptureDialog(tk.Toplevel):
             self,
             text='[캡처 시작] 을 누른 뒤 위에 적힌 자리를 클릭하면 저장됩니다.\n'
                  '마우스를 옮긴 뒤 Enter 로 확정해도 되고, Esc 로 취소합니다.',
-            font=(FONT, 10), justify='center', pady=8
+            font=ui.font(10), justify='center', pady=8
         ).pack()
 
         if step == '6':
@@ -325,12 +325,12 @@ class CaptureDialog(tk.Toplevel):
                 self,
                 text='이 버튼을 누르면 그 사람이 실제로 추가됩니다.\n'
                      '캡처를 마친 뒤 받는 사람 목록을 확인하세요.',
-                font=(FONT, 9), justify='center', fg=COLORS['error']
+                font=ui.font(9), justify='center', fg=COLORS['error']
             ).pack()
 
         self.status = tk.Label(
             self, text='아래 버튼을 클릭하여 캡처를 시작하세요.',
-            font=(FONT, 11, 'bold'), fg=COLORS['warn']
+            font=ui.font(11, 'bold'), fg=COLORS['warn']
         )
         self.status.pack(pady=6)
 
@@ -439,102 +439,94 @@ class CaptureDialog(tk.Toplevel):
 #  도움말 텍스트
 # ─────────────────────────────────────────────
 _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  {APP_NAME}  v{APP_VERSION}  —  소통메신저·에듀파인 수신자 한 번에
-  처음 사용자도 따라할 수 있도록 작성되었습니다.
+  {APP_NAME}  v{APP_VERSION}  (소통메신저와 에듀파인 수신자 선택)
+  처음 쓰시는 분도 따라 할 수 있게 순서대로 적었습니다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ■ 이 프로그램이 하는 일
 ──────────────────────────────────────────────────────
-  명단을 붙여넣으면 충북 기관명으로 정리해 주고,
-  그 결과를 두 곳 중 한 곳으로 내보냅니다.
+  붙여넣은 명단을 충북 기관명으로 맞춘 뒤, 두 가지 중 하나로 씁니다.
 
-    에듀파인   — 개인수신그룹 일괄등록 엑셀 만들기
-    소통메신저 — [사용자 선택] 창에서 자동으로 골라 담기
+    수신픽   에듀파인 개인수신그룹 일괄등록 엑셀을 만듭니다.
+    소통픽   소통메신저 [사용자 선택] 창에서 수신자를 자동으로 담습니다.
 
-  창 맨 위에서 수신픽과 소통픽 중 어느 쪽을 쓸지 고릅니다.
+  창 맨 위에서 수신픽과 소통픽 중 쓸 쪽을 고릅니다.
   고른 쪽에 필요한 단계만 왼쪽에 남습니다.
 
-  ─ 소통메신저를 고르면 ─
-  소통메신저에서 아래 3단계를 자동으로 반복합니다.
+  소통픽은 이름마다 아래 세 가지를 반복합니다.
 
-    1단계: 검색 입력창에 이름을 넣고 검색합니다
-    2단계: 검색 결과 첫 번째 항목을 누릅니다
-    3단계: [사용자 선택] 버튼을 눌러 받는 사람에 추가합니다
+    1. 검색 입력칸에 이름을 넣고 검색합니다.
+    2. 검색 결과 첫 번째 줄을 누릅니다.
+    3. 오른쪽 화살표 버튼을 눌러 받는 사람에 추가합니다.
 
-  검색해서 나오지 않은 사람은 빨간 항목으로 남습니다.
+  검색 결과가 없는 사람은 빨간 항목으로 남습니다.
 
-  다 끝나면 소통메신저 [선택된 사용자] 를 읽어 소통픽 명단과 바로
-  맞춰 봅니다. 들어간 사람, 빠진 사람, 소통메신저에만 있는 사람을
-  나눠 보여 줍니다. 스크롤해야 보이는 아래쪽 사람까지 읽습니다.
-  빠진 사람이 있으면 [▶ 누락된 N명 소통메신저에 추가] 를 누르세요.
+  다 끝나면 소통메신저 [선택된 사용자] 를 읽어 소통픽 명단과 맞춰 봅니다.
+  들어간 사람, 빠진 사람, 소통메신저에만 있는 사람을 나눠 보여 줍니다.
+  스크롤해야 보이는 아래쪽 사람까지 읽습니다.
+  빠진 사람이 있으면 [누락된 N명 소통메신저에 추가] 를 누르세요.
   그 사람들만 다시 담고, 다 담은 뒤 다시 맞춰 봅니다.
-  [🔍 소통메신저와 비교] 로 언제든 다시 맞춰 볼 수 있습니다.
+  [소통메신저와 비교] 를 누르면 언제든 다시 맞춰 볼 수 있습니다.
 
   소통메신저 목록에는 학교 이름이 나오지 않아서 이름으로 맞춥니다.
-  같은 이름이 명단에 여럿인데 그중 일부만 들어 있으면, 누가 들어갔는지
-  짐작하지 않고 이름마다 '(동명이인 2명 중 1명만 들어감, 확인 필요)'
-  처럼 붙여 따로 보여 줍니다. 모두 들어 있으면 문제없으니 그냥 넘어갑니다.
-  읽을 수 있는지는 [2. 위치 설정] 탭의 [소통메신저 목록 읽기 확인] 으로
-  미리 볼 수 있습니다. 읽을 수 있으면 O, 없으면 X 로 알려 줍니다.
-
-  수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
+  같은 이름이 명단에 여럿인데 일부만 들어 있으면 누가 들어갔는지 알 수 없으므로,
+  이름마다 '(동명이인 2명 중 1명만 들어감, 확인 필요)' 를 붙여 따로 보여 줍니다.
+  모두 들어 있으면 문제가 없는 것으로 보고 넘어갑니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 시작 전 준비 사항
+■ 시작하기 전에
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   1. 소통메신저에 로그인합니다.
-  2. 오른쪽 위의 편지 버튼(✉) 클릭 →
-     '쪽지 작성' 또는 '대화하기'를 선택합니다.
-  3. 메시지 작성 화면에서 [사용자 선택] 버튼을 클릭합니다.
-  4. 사용자 선택 창 상단 탭에서 [전체조직]을 선택합니다.
-  5. 소통메신저 창과 {APP_NAME} 창을 나란히 배치하면 편리합니다.
+  2. 오른쪽 위 편지 버튼에 마우스를 올리고 [쪽지작성] 이나 [대화하기] 를 누릅니다.
+  3. 메시지 작성 화면에서 [사용자 선택] 버튼을 누릅니다.
+  4. 사용자 선택 창 위쪽에서 [전체조직] 탭을 엽니다.
+  5. 소통메신저 창과 {APP_NAME} 창을 나란히 놓으면 편합니다.
 
-  ※ 실행 중에는 마우스를 움직이지 마세요.
-     긴급 중지: 마우스를 화면 왼쪽 위 모서리(0,0)로 빠르게 이동
+  실행 중에는 마우스를 움직이지 마세요.
+  급히 멈추려면 마우스를 화면 왼쪽 위 모서리로 빠르게 옮기거나 [중지] 를 누릅니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 탭 1 — 명단 입력
+■ 명단 입력
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  명단 입력 방법은 세 가지입니다.
+  명단은 세 가지 방법 중 편한 쪽으로 넣습니다.
 
-  [ 방법 A ]  파일 직접 열기
-    ① [엑셀 파일 열기] 또는 [HWP 파일 열기] 버튼을 클릭합니다.
-    ② 파일을 선택하면 자동으로 입력창에 불러옵니다.
-    ③ [명단 추출 →] 버튼을 클릭합니다.
+  [ 방법 A ]  파일 열기
+    1. [엑셀 파일 열기] 나 [한글 파일 열기] 를 누릅니다.
+    2. 파일을 고르면 입력창에 내용이 들어옵니다.
+    3. [명단 추출] 을 누릅니다.
 
-  [ 방법 B ]  복사·붙여넣기
-    ① 엑셀·한글에서 소속기관(A열)과 이름(B열)을 선택합니다.
-    ② Ctrl+C 로 복사합니다.
-    ③ 입력창을 클릭하고 Ctrl+V 로 붙여넣습니다.
-    ④ [명단 추출 →] 버튼을 클릭합니다.
+  [ 방법 B ]  복사해서 붙여넣기
+    1. 엑셀이나 한글에서 소속기관과 이름이 있는 칸을 고르고 Ctrl+C 로 복사합니다.
+    2. 입력창을 누르고 Ctrl+V 로 붙여넣습니다.
+    3. [명단 추출] 을 누릅니다.
 
   [ 방법 C ]  직접 넣기
     목록 맨 아래 '직접 넣기' 칸에 적고 Enter 를 누르면 명단에 더해집니다.
-    소통픽은 '학성초 송동석', 수신픽은 '청주교육지원청 행정과' 처럼 적고,
-    쉼표로 여럿을 한꺼번에 넣을 수 있습니다. 이미 있는 것은 다시 넣지 않습니다.
+    소통픽은 '학성초 송동석', 수신픽은 '청주교육지원청 행정과' 처럼 적습니다.
+    쉼표로 나누면 여럿을 한 번에 넣을 수 있고, 이미 있는 것은 다시 넣지 않습니다.
 
-  ▶ 소통픽과 수신픽 명단은 따로입니다
-    도구를 바꾸면 그 도구에서 쓰던 입력 글과 명단이 그대로 돌아옵니다.
+  소통픽과 수신픽의 명단은 따로 보관됩니다.
+    도구를 바꿔도 각자 넣어 둔 입력 글과 명단이 그대로 남습니다.
     앱을 닫으면 지워집니다. 사람 이름을 PC 에 남기지 않기 위해서입니다.
 
-  ▶ 추출 결과 목록 활용
-    · 항목 더블클릭:  소속기관·이름 직접 수정
-    · Delete 키 또는 [선택 항목 삭제 (Del)]:  선택 항목 제거
-    · 빨간색 항목:  자동 추가에 실패한 항목
+  추출 결과 목록은 이렇게 고칠 수 있습니다.
+    · 항목을 더블클릭하면 소속기관과 이름을 직접 고칩니다.
+    · Delete 키나 [선택 항목 삭제] 로 고른 항목을 지웁니다.
+    · 빨간 항목은 자동으로 담지 못했거나 확인이 필요한 항목입니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 탭 2 — 위치 설정  ※ 최초 1회만 설정
+■ 위치 설정 (처음 한 번만)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  소통메신저의 클릭 위치 3곳을 {APP_NAME}에 알려주는 과정입니다.
-  한 번만 설정하면 이후에는 자동으로 기억합니다.
+  소통메신저에서 클릭할 자리 세 곳을 {APP_NAME}에 알려 주는 단계입니다.
+  한 번 저장해 두면 다음에도 그대로 씁니다.
 
-  소통메신저에서 누르는 차례:
+  소통메신저에서 누르는 차례는 아래와 같습니다.
     1번  편지 버튼             오른쪽 위에 있습니다. 누르지 말고 마우스만 올리면
                               아래로 메뉴가 펼쳐집니다.
     2번  [쪽지작성]            펼쳐진 메뉴에서 누릅니다.
@@ -543,20 +535,19 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     5번  검색 결과 첫 줄        '검색 결과(1명)' 아래 첫 사람입니다.
     6번  오른쪽 화살표 버튼     결과를 [선택된 사용자] 로 옮기는 버튼입니다.
 
-  이 가운데 4·5·6 번 자리를 신통픽에 알려 주면 됩니다.
+  이 가운데 4번, 5번, 6번 자리를 신통픽에 알려 주면 됩니다.
 
-  공통 캡처 방법:
-    [📍 위치 설정] 을 누르고 [캡처 시작] 을 누른 뒤,
-    소통메신저에서 잡을 자리를 그대로 클릭하면 됩니다.
-    마우스를 옮긴 뒤 Enter 를 눌러도 확정되고, Esc 로 취소합니다.
-    클릭은 소통메신저에도 전달되니, 6번을 잡을 때는
-    그 사람이 실제로 추가됩니다. 캡처를 마친 뒤 받는 사람 목록을 확인하세요.
+  자리를 잡는 방법은 모두 같습니다.
+    [다시 잡기] 를 누르고 [캡처 시작] 을 누른 뒤, 소통메신저에서 그 자리를 클릭합니다.
+    클릭하는 대신 마우스를 옮기고 Enter 를 눌러도 확정되고, Esc 를 누르면 취소됩니다.
+    클릭은 소통메신저에도 전달되므로, 6번을 잡을 때는 그 사람이 실제로 추가됩니다.
+    캡처를 마친 뒤 받는 사람 목록을 확인하세요.
 
   [ 4번 ]  검색 입력칸
     '소속+이름 또는 이름 검색' 칸을 클릭합니다.
 
   [ 5번 ]  검색 결과 첫 줄
-    아무 이름(예: 홍길동)이나 검색한 뒤
+    아무 이름(예: 홍길동)이나 검색해 결과가 뜬 상태에서
     '검색 결과(1명)' 아래 첫 사람을 클릭합니다.
 
   [ 6번 ]  오른쪽 화살표 버튼
@@ -564,33 +555,26 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     결과 목록과 [선택된 사용자] 사이의 화살표 버튼을 클릭합니다.
 
   [ 검색 설정 ]
-    · 검색 후 대기 시간: 기본 0.5초.
-      인터넷이 느리면 1.0~2.0초로 높이세요.
-    · 수동 확인 모드: 동명이인이 있을 때 체크합니다.
-      (검색 결과를 직접 확인 후 [▶▶ 계속] 클릭)
+    · 검색 후 대기 시간: 기본값은 0.5초입니다. 화면이 느리면 1.0~2.0초로 늘립니다.
+    · 수동 확인 모드: 동명이인이 걱정될 때 켭니다.
+      사람마다 검색 결과를 직접 확인하고 [계속] 을 눌러야 다음으로 넘어갑니다.
 
-  ★ 반드시 [✅ 설정 저장] 버튼을 눌러 저장하세요!
+  마지막에 꼭 [설정 저장] 을 눌러 저장하세요.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 탭 3 — 자동 선택 실행
+■ 자동 선택
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  ① 소통메신저 [사용자 선택] 창 → [전체조직] 탭을 열어둡니다.
-  ② {APP_NAME}에서 [3. 자동 선택] 탭을 클릭합니다.
-  ③ [▶ 자동 선택 시작] 버튼을 클릭합니다.
-  ④ 명단의 각 이름마다 아래 3단계가 자동으로 실행됩니다.
-       1단계: 이름 검색
-       2단계: 결과 첫 번째 항목 클릭
-       3단계: [사용자 선택] 버튼 클릭
-     진행 상황은 로그창에서 확인할 수 있습니다.
-       ✓  → 추가 완료
-       ✗  → 검색 결과 없음
-  ⑤ 완료 시 성공·실패 건수가 표시됩니다.
+  1. 소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 열어 둡니다.
+  2. {APP_NAME}의 [자동 선택] 탭에서 [자동 선택 시작] 을 누릅니다.
+  3. 명단의 이름마다 검색, 결과 첫 줄 클릭, 화살표 버튼 클릭이 차례로 실행됩니다.
+     진행 상황은 로그에 한 줄씩 올라옵니다.
+       ✓  추가됨
+       이유가 적힌 줄  담지 못함 (검색 결과 없음 등)
+  4. 끝나면 담긴 사람 수와 빠진 사람 수가 나옵니다.
 
-  ⚠ 긴급 중지
-    · 마우스를 화면 왼쪽 위 모서리(0, 0)로 빠르게 이동
-    · 또는 [■ 중지] 버튼 클릭
+  급히 멈추려면 마우스를 화면 왼쪽 위 모서리로 빠르게 옮기거나 [중지] 를 누릅니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -598,171 +582,169 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Q. 소속기관이 '소속없음'으로 표시돼요.
-  A. 소속기관명을 인식하지 못한 경우입니다.
-     목록에서 해당 항목을 더블클릭하여 직접 수정하세요.
+  A. 소속기관 이름을 알아보지 못한 경우입니다.
+     목록에서 그 항목을 더블클릭해 직접 고치세요.
 
   Q. 프로그램이 엉뚱한 위치를 클릭해요.
-  A. 소통메신저 창 위치가 바뀌었을 수 있습니다.
-     [2. 위치 설정] 탭에서 3곳을 다시 설정하고 저장하세요.
+  A. 소통메신저 창을 옮기셨을 수 있습니다.
+     [위치 설정] 탭에서 세 곳을 다시 잡고 저장하세요.
 
   Q. 검색은 됐는데 추가가 안 돼요.
-  A. [사용자 선택] 버튼 위치(STEP 3)가 잘못 설정되었을 수 있습니다.
-     위치를 다시 캡처하고 저장하세요.
+  A. 6번 자리(오른쪽 화살표 버튼)가 잘못 잡혔을 수 있습니다.
+     그 자리를 다시 잡고 저장하세요.
 
   Q. 검색 결과가 아예 없어요.
   A. 소통메신저에 등록되지 않은 사용자입니다.
-     해당 항목은 자동으로 ✗ 처리됩니다.
+     그 항목은 로그에 '사용자 없음' 으로 남고 목록에서 빨간색이 됩니다.
 
-  Q. 너무 빠르게 진행돼서 오류가 생겨요.
-  A. [2. 위치 설정] 탭의 '검색 후 대기 시간'을 늘리세요.
-     느린 환경: 1.0~2.0초 권장
+  Q. 너무 빨라서 오류가 나요.
+  A. [위치 설정] 탭에서 '검색 후 대기 시간'을 늘리세요.
+     화면이 느린 컴퓨터는 1.0~2.0초를 권합니다.
 
   Q. 동명이인이 있어서 걱정돼요.
-  A. 검색 결과가 두 명 넘게 나오면 신통픽이 첫 사람을 누르지 않고 멈춥니다.
-     화면 왼쪽 위에 뜨는 작은 창을 보고, 맞는 분을 직접 골라 화살표를 누른 뒤
+  A. 검색 결과가 두 명을 넘으면 신통픽이 첫 사람을 누르지 않고 멈춥니다.
+     화면 왼쪽 위에 뜨는 작은 창을 보고 맞는 분을 직접 골라 화살표를 누른 뒤
      [계속] 을 누르세요. 아무도 담지 않으려면 [건너뛰기] 를 누릅니다.
-     모든 사람마다 멈추고 싶으면 '수동 확인 모드'를 체크하세요.
+     모든 사람마다 멈추고 싶으면 '수동 확인 모드'를 켜세요.
 
   Q. HWP 파일이 안 열려요.
   A. 한/글이 설치되어 있지 않으면 일부 파일이 열리지 않습니다.
-     한글에서 표를 Ctrl+C로 복사 후 입력창에 Ctrl+V로 붙여넣으세요.
+     한글에서 표를 Ctrl+C 로 복사해 입력창에 Ctrl+V 로 붙여넣으세요.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 에듀파인 — 수신그룹 일괄등록
+■ 수신픽: 에듀파인 수신그룹 일괄등록
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  공문 수신 기관이 30곳이면 조직도에서 검색 → 체크 → [>>] 를
-  30번 반복해야 합니다. 클릭 120번입니다.
+  공문 수신 기관이 30곳이면 조직도에서 검색하고, 체크하고, [>>] 를 누르는 일을
+  30번 반복해야 합니다. 타이핑 1800글자, 클릭 120번입니다.
 
-  에듀파인에는 [개인설정 > 개인수신그룹관리 > 일괄등록] 이 있습니다.
-  엑셀 한 장을 올리면 수신그룹이 통째로 만들어지고,
-  다음부터는 기안할 때 [수신자 지정 > 개인수신그룹] 에서
-  그룹 하나만 고르면 끝납니다. 클릭 120번이 2번이 됩니다.
+  에듀파인에는 [개인설정] 의 [개인수신그룹관리] 에 [일괄등록] 이 있습니다.
+  엑셀 한 장을 올리면 수신그룹이 한꺼번에 만들어지고,
+  다음부터는 기안할 때 [수신자 지정] 의 [개인수신그룹] 에서 그룹 하나만 고르면 됩니다.
+  클릭 120번이 2번으로 줄어듭니다.
 
   {APP_NAME}은 그 엑셀을 만들어 줍니다.
 
 
-  ① 내 정보 넣기  (처음 한 번만)
+  1. 내 정보 넣기 (처음 한 번만)
   ──────────────────────────────────────────────────────
-    [2. 수신그룹 엑셀] 탭 → STEP 1
+    [수신그룹 엑셀] 탭의 '내 정보'에 적습니다.
 
-      사용자ID   : 에듀파인 로그인 ID
-      사용자명   : 결재선에 뜨는 이름
+      사용자ID   에듀파인 로그인 ID
+      사용자명   결재선에 나오는 이름
 
     등록교육청은 충청북도교육청으로 자동 적용됩니다.
-    한 번 넣으면 저장되니 다음부터는 건너뜁니다.
+    한 번 넣으면 저장되어 다음부터는 적지 않아도 됩니다.
 
 
-  ② 기관 명단 넣기
+  2. 기관 명단 넣기
   ──────────────────────────────────────────────────────
-    [1. 명단 입력] 탭에서 '수신픽' 을 고르고
-    기관 명단을 붙여넣습니다.
-    줄바꿈·쉼표·탭 아무거나 되고, 글머리기호와 번호는 알아서 뗍니다.
+    [명단 입력] 탭에 기관 명단을 붙여넣습니다.
+    줄바꿈, 쉼표, 탭 어느 것으로 나눠도 되고 글머리기호와 번호는 떼고 읽습니다.
     몇 곳뿐이면 목록 아래 '직접 넣기' 칸에 기관명을 적고 Enter 를 눌러도 됩니다.
 
       학성초
       한천초, 백곡초
       1. 충북외고
 
-    [명단 추출 →] 를 누르면 네 갈래로 나뉩니다.
+    [명단 추출] 을 누르면 기관이 네 가지로 나뉩니다.
 
-      확정              그대로 씁니다
-      같은 이름이 여럿  '행정과' 처럼 실재하는 곳이 여러 곳
-      추정              짐작만 된 것
-      찾지 못함         사전에 없는 것
+      확정              그대로 씁니다.
+      같은 이름이 여럿  '행정과' 처럼 같은 이름이 여러 곳에 있는 경우입니다.
+      추정              이름이 비슷해서 짐작만 한 경우입니다.
+      찾지 못함         사전에 없는 이름입니다.
 
-    확정이 아닌 것은 더블클릭해서 후보 중에 고릅니다.
-    추정 상태로는 엑셀에 실리지 않습니다.
-    엑셀은 그대로 등록되므로, 틀린 기관이 조용히 들어가지 않게 막습니다.
+    확정이 아닌 것은 더블클릭해서 후보 중에서 고릅니다.
+    추정 상태로는 엑셀에 들어가지 않습니다.
+    엑셀은 올리면 그대로 등록되므로, 틀린 기관이 들어가지 않게 막아 둡니다.
 
     확인이 필요한 기관은 붉은색으로 표시됩니다.
-    [확인 필요 기관 일괄 수정]을 누르면 한 창에서 차례로 고칠 수 있습니다.
+    [확인 필요 기관 일괄 수정] 을 누르면 한 창에서 차례로 고칠 수 있습니다.
     같은 기관을 여러 번 넣으면 기관명과 입력 횟수를 알려 주고 한 번만 남깁니다.
-    [추출 기록 보기]에서는 최근 30회의 추출 결과를 다시 확인할 수 있습니다.
+    [추출 기록 보기] 에서는 최근 30회의 추출 결과를 다시 볼 수 있습니다.
 
 
-  ③ 부서에 보내려면
+  3. 부서에 보내려면
   ──────────────────────────────────────────────────────
-    교육청·교육지원청·직속기관의 부서도 수신자가 됩니다.
-    다만 학교와 달리 이름 하나로는 안 될 때가 있습니다.
+    교육청, 교육지원청, 직속기관의 부서도 수신자로 고를 수 있습니다.
+    다만 학교와 달리 이름 하나로는 한 곳을 정하지 못할 때가 있습니다.
 
-      정책기획과              한 곳뿐이라 바로 확정
-      행정과                  11곳에 있어 확정하지 않음 → 후보에서 고름
-      청주교육지원청 행정과    상위조직과 맞물려 한 곳으로 좁혀짐
-      단재교육연수원 교육연수부  3단계도 됩니다
+      정책기획과              한 곳뿐이라 바로 확정됩니다.
+      행정과                  11곳에 있어서 확정하지 않고 후보에서 고르게 합니다.
+      청주교육지원청 행정과    상위 기관을 같이 적어서 한 곳으로 좁혀집니다.
+      단재교육연수원 교육연수부  세 단계로 적어도 됩니다.
 
-    전체경로를 외울 필요는 없습니다.
-    [기관 찾아보기…] 버튼을 누르면 770곳을 검색해서 고를 수 있습니다.
-    찾을 말을 띄어쓰기로 나눠 적으면 모두 포함된 것만 걸러집니다.
+    전체 경로를 외울 필요는 없습니다.
+    [기관 찾아보기] 를 누르면 770곳을 검색해서 고를 수 있습니다.
+    찾을 말을 띄어쓰기로 나눠 적으면 모두 포함된 곳만 보입니다.
 
       예)  청주 초등학교   ·   행정과   ·   단재 연수부
 
-    ※ 부서는 엑셀 경로를 쓰는 편이 안전합니다.
-      좌표 자동선택은 조직명 칸에 '행정과' 를 쳐서 첫 결과를 고르는
-      방식이라, 여러 곳에 겹치는 부서명에서는 엉뚱한 곳이 잡힐 수 있습니다.
+    부서는 엑셀로 올리는 쪽이 안전합니다.
+    좌표로 자동 선택하는 방식은 조직명 칸에 '행정과' 를 쳐서 첫 결과를 고르기 때문에,
+    여러 곳에 있는 부서 이름에서는 엉뚱한 곳이 잡힐 수 있습니다.
 
 
-  ④ 엑셀 만들어 올리기
+  4. 엑셀 만들어 올리기
   ──────────────────────────────────────────────────────
-    [2. 수신그룹 엑셀] 탭 STEP 2 에 수신그룹명을 적고
+    [수신그룹 엑셀] 탭의 '수신그룹 만들기'에 그룹명을 적고
     [수신그룹 엑셀 만들기] 를 누릅니다.
 
     그룹명은 에듀파인에서 나중에 찾기 쉬운 이름으로 적습니다.
     예) 2026 진천 초등학교, 2학기 업무담당자
-    그룹기호는 선택 사항이므로 필요 없으면 비워 둡니다.
+    그룹기호는 선택 사항이라 필요 없으면 비워 둡니다.
 
-    코드가 없는 기관이 있으면 목록으로 알려 줍니다. 조용히 빠지지 않습니다.
+    코드가 없는 기관이 있으면 목록으로 알려 줍니다. 말없이 빠지는 기관은 없습니다.
     그런 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.
 
-    엑셀을 만들면 파일을 다시 열어서, 추출한 기관 수와 실제로 써진
-    줄 수를 대조해 보여 줍니다. 빠진 기관은 사유와 함께 나옵니다.
-    에듀파인에 올린 뒤 수신그룹에 보이는 기관 수를 적으면 모자란지도
-    알려 줍니다. 창을 닫았다면 [결과 대조] 로 다시 엽니다.
+    엑셀을 만들면 파일을 다시 열어서, 추출한 기관 수와 실제로 써진 줄 수를
+    맞춰 보여 줍니다. 빠진 기관은 사유와 함께 나옵니다.
+    에듀파인에 올린 뒤 수신그룹에 보이는 기관 수를 적으면 모자란지도 알려 줍니다.
+    창을 닫았다면 [결과 대조] 로 다시 엽니다.
 
-    만들어진 엑셀은 에듀파인에 올립니다. 누르는 차례는 이렇습니다.
+    만든 엑셀은 에듀파인에 올립니다. 누르는 차례는 아래와 같습니다.
 
-      1) [개인설정]            에듀파인 오른쪽 위에 있습니다
-      2) [개인수신그룹관리]    개인설정 화면의 왼쪽 메뉴입니다
-      3) [일괄등록]            수신그룹 목록 위에 있습니다
-      4) [찾아보기 ...]        신통픽이 만든 엑셀을 골라 올립니다
+      1) [개인설정]            에듀파인 오른쪽 위에 있습니다.
+      2) [개인수신그룹관리]    개인설정 화면의 왼쪽 메뉴입니다.
+      3) [일괄등록]            수신그룹 목록 위에 있습니다.
+      4) [찾아보기 ...]        신통픽이 만든 엑셀을 골라 올립니다.
 
-    각 버튼이 어떻게 생겼는지는 [2. 수신그룹 엑셀] 탭의
-    STEP 3 에 그림으로 붙여 두었습니다.
+    각 버튼의 모양은 [수신그룹 엑셀] 탭 아래쪽에 그림으로 붙여 두었습니다.
 
-    ※ 처음에는 기관 2~3곳짜리 시험 그룹으로 한 번 확인해 보세요.
+    처음에는 기관 두세 곳으로 시험 그룹을 하나 만들어 올려 보세요.
 
-  ⑤ 코드 없는 기관 순차 복사
+  5. 코드 없는 기관 순차 복사
   ──────────────────────────────────────────────────────
     기관명을 한 건씩 클립보드에 넣어 줍니다.
     조직명 칸에 Ctrl+V 로 붙여넣고 Enter, 체크, [>>] 를 차례로 누르는 일만 반복하면 됩니다.
-    Enter 키로 다음으로 넘어갑니다.
+    Enter 키로 다음 기관으로 넘어갑니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 개발자 정보
+■ 만든 사람
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Developed by  송동석(Dustin)
   Teacher / App developer / Data analyst
-  협업 및 피드백:  dungst.me@gmail.com
+  문의와 의견:  dungst.me@gmail.com
 
   {APP_NAME}  |  버전 v{APP_VERSION}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
 
 _HELP_EDUFINE_MARKER = """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 에듀파인 — 수신그룹 일괄등록
+■ 수신픽: 에듀파인 수신그룹 일괄등록
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 _sotong_help, _susin_help = _HELP_TEXT.split(_HELP_EDUFINE_MARKER, 1)
 _SOTONG_HELP_TEXT = _sotong_help.replace(
-    f'{APP_NAME}  v{APP_VERSION}  —  소통메신저·에듀파인 수신자 한 번에',
-    f'소통픽 사용법  v{APP_VERSION}  —  소통메신저 수신자 자동 선택',
+    f'{APP_NAME}  v{APP_VERSION}  (소통메신저와 에듀파인 수신자 선택)',
+    f'소통픽 사용법  v{APP_VERSION}  (소통메신저 수신자 자동 선택)',
     1,
 ).rstrip()
 _SUSIN_HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  수신픽 사용법  v{APP_VERSION}  —  에듀파인 수신그룹 엑셀 만들기
-  처음 사용자도 따라할 수 있도록 작성되었습니다.
+  수신픽 사용법  v{APP_VERSION}  (에듀파인 수신그룹 엑셀 만들기)
+  처음 쓰시는 분도 따라 할 수 있게 순서대로 적었습니다.
 {_HELP_EDUFINE_MARKER}
 {_susin_help.lstrip()}"""
 
@@ -875,41 +857,41 @@ class ResultReport(tk.Toplevel):
         self.base_count = base_count or 0
         self.on_retry = on_retry
         self.title(title)
-        self.geometry('560x560')
+        self.geometry(f'{ui.px(560)}x{ui.px(560)}')
         ok = tally.short == 0
         bg = PANEL_BG
         self.configure(bg=bg)
 
         head = (f'✓  {tally.total}{unit}이 {into} 모두 들어갔습니다' if ok else
-                f'⚠  {tally.total}{unit} 중 {tally.short}{unit}이 {into} 들어가지 않았습니다')
+                f'{tally.total}{unit} 중 {tally.short}{unit}이 {into} 들어가지 않았습니다')
         tk.Label(
             self, text=head, bg=COLORS['ok_container'] if ok else COLORS['error_container'],
             fg=COLORS['on_ok_container'] if ok else COLORS['on_error_container'],
-            font=(FONT, 12, 'bold'), pady=10
+            font=ui.font(12, 'bold'), pady=10
         ).pack(fill='x')
 
         tk.Label(
             self, text=reconcile.summary_line(tally, unit), bg=bg, fg=COLORS['on_surface'],
-            font=(FONT, 10, 'bold'), justify='left'
+            font=ui.font(10, 'bold'), justify='left'
         ).pack(anchor='w', padx=12, pady=(10, 2))
         if note:
-            tk.Label(self, text=note, bg=bg, fg='#555', font=(FONT, 9),
-                     justify='left', wraplength=520).pack(anchor='w', padx=12)
+            tk.Label(self, text=note, bg=bg, fg='#555', font=ui.font(9),
+                     justify='left', wraplength=ui.px(520)).pack(anchor='w', padx=12)
 
         # 받는 쪽 화면의 수와 대조
         check = tk.Frame(self, bg=bg)
         check.pack(fill='x', padx=12, pady=(10, 2))
-        tk.Label(check, text=count_label, bg=bg, font=(FONT, 9)).pack(side='left')
+        tk.Label(check, text=count_label, bg=bg, font=ui.font(9)).pack(side='left')
         self.count_var = tk.StringVar(
             value='' if shown_count is None else str(shown_count))
         entry = tk.Entry(check, textvariable=self.count_var, width=6,
-                         font=(FONT, 10), justify='center')
+                         font=ui.font(10), justify='center')
         entry.pack(side='left', padx=6)
         entry.bind('<Return>', lambda _e: self.check_count())
         M3Button(check, text='대조', command=self.check_count).pack(side='left')
         self.verdict = tk.Label(self, text='', bg=bg, fg='#555',
-                                font=(FONT, 9), justify='left',
-                                wraplength=520)
+                                font=ui.font(9), justify='left',
+                                wraplength=ui.px(520))
         self.verdict.pack(anchor='w', padx=12, pady=(2, 6))
 
         box, self.text = ui.text_field(self, height=12, wrap='word')
@@ -931,7 +913,7 @@ class ResultReport(tk.Toplevel):
             M3Button(row, text='빠진 것만 다시 실행', command=self._retry, variant='tonal').pack(side='left', padx=4)
         M3Button(row, text='닫기', command=self.destroy, variant='text').pack(side='right', padx=4)
 
-        self.status = tk.Label(self, text='', bg=bg, fg=COLORS['ok'], font=(FONT, 9))
+        self.status = tk.Label(self, text='', bg=bg, fg=COLORS['ok'], font=ui.font(9))
         self.status.pack(pady=(0, 8))
 
         if shown_count is not None:
@@ -984,7 +966,7 @@ class MessengerCompareReport(tk.Toplevel):
         self.addable = list(result.missing) + [
             item for _name, people, _have in result.unsure for item in people]
         self.title('소통메신저와 비교')
-        self.geometry('560x560')
+        self.geometry(f'{ui.px(560)}x{ui.px(560)}')
         unsure = sum(len(people) for _n, people, _h in result.unsure)
         short = len(result.missing) + unsure
         ok = short == 0 and not result.no_name
@@ -995,22 +977,22 @@ class MessengerCompareReport(tk.Toplevel):
                 f'X  소통픽 명단 {total}명 중 {short}명이 소통메신저에 없거나 확인이 필요합니다')
         tk.Label(self, text=head, bg=COLORS['ok_container'] if ok else COLORS['error_container'],
             fg=COLORS['on_ok_container'] if ok else COLORS['on_error_container'],
-                 font=(FONT, 12, 'bold'), pady=10, wraplength=540).pack(fill='x')
+                 font=ui.font(12, 'bold'), pady=10, wraplength=ui.px(540)).pack(fill='x')
         summary = (f'소통메신저에서 읽은 사람 {result.rows}명  ·  들어감 {len(result.inside)}명  ·  '
                    f'빠짐 {len(result.missing)}명  ·  확인 필요 {unsure}명  ·  '
                    f'소통메신저에만 있음 {len(result.extra)}명')
-        tk.Label(self, text=summary, bg=bg, fg=COLORS['on_surface'], font=(FONT, 9, 'bold'),
-                 wraplength=530, justify='left').pack(anchor='w', padx=12, pady=(10, 2))
+        tk.Label(self, text=summary, bg=bg, fg=COLORS['on_surface'], font=ui.font(9, 'bold'),
+                 wraplength=ui.px(530), justify='left').pack(anchor='w', padx=12, pady=(10, 2))
         tk.Label(
             self,
             text=('소통메신저 목록에는 학교 이름이 나오지 않아 이름으로 맞췄습니다. '
                   '같은 이름이 명단에 여럿이면 누가 들어갔는지 가릴 수 없어 확인 필요로 둡니다. '
                   '읽은 사람 수가 소통메신저에 보이는 수와 다르면 결과를 믿지 마세요.'),
-            bg=bg, fg='#555', font=(FONT, 9), wraplength=530, justify='left'
+            bg=bg, fg='#555', font=ui.font(9), wraplength=ui.px(530), justify='left'
         ).pack(anchor='w', padx=12)
         if note:
-            tk.Label(self, text=note, bg=bg, fg=COLORS['warn'], font=(FONT, 9, 'bold'),
-                     wraplength=530, justify='left').pack(anchor='w', padx=12, pady=(4, 0))
+            tk.Label(self, text=note, bg=bg, fg=COLORS['warn'], font=ui.font(9, 'bold'),
+                     wraplength=ui.px(530), justify='left').pack(anchor='w', padx=12, pady=(4, 0))
 
         box, self.text = ui.text_field(self, height=14, wrap='word')
         box.pack(fill='both', expand=True, padx=12, pady=8)
@@ -1022,11 +1004,11 @@ class MessengerCompareReport(tk.Toplevel):
         if self.addable and on_add:
             M3Button(
                 row,
-                text=f'▶  누락된 {len(self.addable)}명 소통메신저에 추가',
+                text=f'누락된 {len(self.addable)}명 소통메신저에 추가',
                 command=self._add
             ).pack(side='left', padx=4)
         M3Button(row, text='닫기', command=self.destroy, variant='text').pack(side='right', padx=4)
-        self.status = tk.Label(self, text='', bg=bg, fg=COLORS['ok'], font=(FONT, 9))
+        self.status = tk.Label(self, text='', bg=bg, fg=COLORS['ok'], font=ui.font(9))
         self.status.pack(pady=(0, 8))
 
     def _add(self):
@@ -1048,25 +1030,25 @@ class ClipboardWalker(tk.Toplevel):
         self.items = list(items)
         self.idx = 0
         self.title('클립보드 순차 복사')
-        self.geometry('520x230')
+        self.geometry(f'{ui.px(520)}x{ui.px(230)}')
         self.resizable(False, False)
         self.configure(bg=PANEL_BG)
         self.transient(parent)
 
         tk.Label(
             self, text='에듀파인 조직명 칸에 붙여넣고(Ctrl+V) Enter 를 누른 뒤,\n체크하고 [>>] 를 누르는 일을 반복하세요.',
-            bg=PANEL_BG, fg=COLORS['on_surface_variant'], font=(FONT, 9), justify='center'
+            bg=PANEL_BG, fg=COLORS['on_surface_variant'], font=ui.font(9), justify='center'
         ).pack(pady=(14, 6))
 
         self.name_var = tk.StringVar()
         tk.Label(
             self, textvariable=self.name_var, bg=PANEL_BG, fg=ui.acc()[0],
-            font=(FONT, 18, 'bold'), wraplength=480
+            font=ui.font(18, 'bold'), wraplength=ui.px(480)
         ).pack(pady=6)
 
         self.progress_var = tk.StringVar()
         tk.Label(self, textvariable=self.progress_var, bg=PANEL_BG,
-                 fg='#555', font=(FONT, 9)).pack()
+                 fg='#555', font=ui.font(9)).pack()
 
         row = tk.Frame(self, bg=PANEL_BG)
         row.pack(pady=14)
@@ -1079,7 +1061,7 @@ class ClipboardWalker(tk.Toplevel):
         M3Button(row, text='닫기', command=self.destroy, variant='text').pack(side='left', padx=4)
 
         self.note = tk.Label(self, text='', bg=PANEL_BG, fg=COLORS['error'],
-                             font=(FONT, 8))
+                             font=ui.font(8))
         self.note.pack()
 
         self.bind('<Return>', lambda e: self.advance())
@@ -1136,11 +1118,43 @@ class ClipboardWalker(tk.Toplevel):
         self._copy_current()
 
 
-class WalkthroughDialog(tk.Toplevel):
-    """실제 조작할 위젯을 강조하며 순서대로 안내하는 따라하기 창."""
+def _grab_window(win):
+    """창 안쪽을 그대로 찍는다 (PIL 이미지). 못 찍으면 None. 화면에 남기지 않고 메모리에서만 쓴다."""
+    try:
+        win.update_idletasks()
+        x, y = win.winfo_rootx(), win.winfo_rooty()
+        w, h = win.winfo_width(), win.winfo_height()
+        if w < 50 or h < 50:
+            return None
+        try:
+            import pyautogui
+            shot = pyautogui.screenshot(region=(x, y, w, h))
+        except Exception:
+            from PIL import ImageGrab
+            shot = ImageGrab.grab(bbox=(x, y, x + w, y + h))
+        shot = shot.convert('RGB')
+        if shot.size != (w, h):
+            shot = shot.resize((w, h))
+        return shot
+    except Exception as exc:
+        logging.info('가이드용 화면을 찍지 못했습니다: %s', exc)
+        return None
+
+
+class WalkthroughDialog:
+    """Iorad 처럼 화면을 어둡게 하고 조작할 자리만 밝게 비춘 채 한 단계씩 안내한다.
+
+    창 안쪽을 한 번 찍어 어둡게 만든 그림을 덮고, 조작할 곳만 원래 화면으로 오려 낸다.
+    말풍선은 그 곁에 놓는다. 화면을 못 찍으면 어둡게 하지 않고 테두리 네 줄로만 가리킨다.
+    덮개가 클릭을 막으므로 안내 중에는 말풍선의 단추로만 넘어간다.
+    """
+
+    DIM = 0.58
+    PAD = 7                  # 밝게 비출 자리가 대상보다 넉넉한 만큼
+    INSET = 14               # 말풍선 안쪽 여백
+    EDGE = 9                 # 말풍선 틀을 바탕 그림보다 이만큼 들여 올린다 (둥근 모서리가 보이도록)
 
     def __init__(self, parent, title, steps, on_step, on_close):
-        super().__init__(parent)
         self.parent = parent
         self.guide_title = title
         self.steps = list(steps)
@@ -1149,133 +1163,231 @@ class WalkthroughDialog(tk.Toplevel):
         self.idx = 0
         self._closed = False
         self.highlight_target = None
-        self.highlight_frames = [
-            tk.Frame(parent, bg=ui.acc()[0]) for _ in range(4)
-        ]
+        self.highlight_frames = []      # 화면을 못 찍을 때만 만든다
+        self._snap = None
+        self._snap_key = None
+        self._photo = None
+        self._resize_after = None
 
-        self.title(title)
-        self.geometry('460x290')
-        self.resizable(False, False)
-        self.transient(parent)
-        self.configure(bg=PANEL_BG)
-        self.protocol('WM_DELETE_WINDOW', self.finish)
+        self.overlay = tk.Canvas(parent, highlightthickness=0, bd=0, bg='#10122A', cursor='arrow',
+                                 takefocus=1)
+        self.overlay.bind('<Button-1>', lambda _e: 'break')
+
+        # 말풍선 바탕(둥근 모서리, 그림자)은 덮개 그림에 그리고, 이 틀은 그 안쪽에 올린다.
+        self.bubble = tk.Frame(parent, bg='#FFFFFF', highlightthickness=0,
+                               highlightbackground=ui.EDGE)
+        self.bubble.fill = '#FFFFFF'
+        body = tk.Frame(self.bubble, bg='#FFFFFF')
+        body.pack(fill='both', expand=True, padx=self.INSET, pady=self.INSET)
+        fill = '#FFFFFF'
+        head = tk.Frame(body, bg=fill)
+        head.pack(fill='x')
+        self.progress_chip = Chip(head, text='', kind='info')
+        self.progress_chip.pack(side='left')
+        self.heading_var = tk.StringVar()
+        tk.Label(head, textvariable=self.heading_var, bg=fill, fg=COLORS['on_surface'],
+                 font=ui.font(13, 'bold'), anchor='w', justify='left',
+                 wraplength=ui.px(300)).pack(side='left', padx=(10, 0))
+        self.body_var = tk.StringVar()
+        tk.Label(body, textvariable=self.body_var, bg=fill, fg=COLORS['on_surface_variant'],
+                 font=ui.font(11), justify='left', anchor='nw',
+                 wraplength=ui.px(360)).pack(fill='x', pady=(12, 8))
+        tk.Label(body, text='밝게 보이는 곳에서 이 단계를 진행하세요.', bg=fill, fg=ui.acc()[0],
+                 font=ui.font(9, 'bold'), anchor='w').pack(fill='x')
+        buttons = tk.Frame(body, bg=fill)
+        buttons.pack(fill='x', pady=(14, 0))
+        self.next_btn = M3Button(buttons, text='다음', command=self.next, size='sm')
+        self.next_btn.pack(side='right')
+        self.prev_btn = M3Button(buttons, text='이전', command=self.prev, variant='text',
+                                 size='sm')
+        self.prev_btn.pack(side='right', padx=(0, 6))
+        M3Button(buttons, text='건너뛰기', command=self.finish, variant='text', size='sm').pack(
+            side='left')
+
+        for widget in (self.overlay, self.bubble):
+            widget.bind('<Left>', lambda _e: self.prev())
+            widget.bind('<Right>', lambda _e: self.next())
+            widget.bind('<Escape>', lambda _e: self.finish())
+        self._render()
         try:
-            self.attributes('-topmost', True)
+            self.overlay.focus_set()
         except tk.TclError:
             pass
 
-        self.progress_var = tk.StringVar()
-        tk.Label(self, textvariable=self.progress_var, bg=ui.acc()[2], fg=ui.acc()[3],
-                 font=(FONT, 10, 'bold'), anchor='w', padx=16, pady=10).pack(fill='x')
+    # ── 창 관리 (예전 대화상자와 같은 이름) ──
+    def winfo_exists(self):
+        return 0 if self._closed else 1
 
-        self.heading_var = tk.StringVar()
-        tk.Label(self, textvariable=self.heading_var, bg=PANEL_BG, fg=COLORS['on_surface'],
-                 font=(FONT, 16, 'bold'), anchor='w').pack(
-                     fill='x', padx=24, pady=(24, 10))
+    def lift(self):
+        for widget in (self.overlay, self.bubble):
+            try:
+                widget.lift()
+            except tk.TclError:
+                pass
 
-        self.body_var = tk.StringVar()
-        tk.Label(self, textvariable=self.body_var, bg=PANEL_BG, fg=COLORS['on_surface_variant'],
-                 font=(FONT, 11), justify='left', anchor='nw',
-                 wraplength=410).pack(fill='both', expand=True, padx=24)
-
-        tk.Label(
-            self, text='노란색 테두리로 표시된 부분에서 이 단계를 진행하세요.',
-            bg=COLORS['warn_container'], fg=COLORS['on_warn_container'], font=(FONT, 9, 'bold'),
-            anchor='w', padx=10, pady=6
-        ).pack(fill='x', padx=20, pady=(8, 0))
-
-        buttons = tk.Frame(self, bg=PANEL_BG)
-        buttons.pack(fill='x', padx=20, pady=18)
-        self.prev_btn = M3Button(buttons, text='이전', command=self.prev, variant='text')
-        self.prev_btn.pack(side='left')
-        M3Button(buttons, text='건너뛰기', command=self.finish, variant='text').pack(
-                side='right', padx=(8, 0))
-        self.next_btn = M3Button(buttons, text='다음', command=self.next)
-        self.next_btn.pack(side='right')
-
-        self.bind('<Left>', lambda _e: self.prev())
-        self.bind('<Right>', lambda _e: self.next())
-        self.bind('<Escape>', lambda _e: self.finish())
-        self._render()
-
-    def _render(self):
+    # ── 한 단계 그리기 ──
+    def _render(self, same_tab=False):
         tab_key, widget_key, heading, body = self.steps[self.idx]
         total = len(self.steps)
-        self.progress_var.set(f'{self.idx + 1} / {total}  {self.guide_title}')
+        self.progress_chip.set(f'{self.idx + 1} / {total}', 'info')
         self.heading_var.set(heading)
         self.body_var.set(body)
         self.prev_btn.config(state='normal' if self.idx else 'disabled')
         self.next_btn.config(text='끝내기' if self.idx == total - 1 else '다음')
         target = self.on_step(tab_key, widget_key)
-        self.parent.update_idletasks()
-        self.update_idletasks()
-        self._highlight(target)
-        self._move_next_to(target)
-        self.lift()
-
-    def _highlight(self, target):
-        """대상을 가리지 않도록 네 개의 얇은 프레임으로 테두리만 그린다."""
-        self._clear_highlight()
         self.highlight_target = target
+        self.parent.update_idletasks()
+        self._draw(tab_key, target)
+
+    def _target_box(self, target):
+        """대상의 자리 (x0, y0, x1, y1), 창 안쪽 기준. 알 수 없으면 None."""
         if target is None:
-            return
+            return None
         try:
             x = target.winfo_rootx() - self.parent.winfo_rootx()
             y = target.winfo_rooty() - self.parent.winfo_rooty()
-            width = target.winfo_width()
-            height = target.winfo_height()
+            width, height = target.winfo_width(), target.winfo_height()
         except tk.TclError:
-            self.highlight_target = None
-            return
+            return None
         if width <= 1 or height <= 1:
-            return
+            return None
+        pad = self.PAD
+        return (x - pad, y - pad, x + width + pad, y + height + pad)
 
-        pad = 4
+    def _snapshot(self, key):
+        """덮개와 말풍선이 없는 깨끗한 화면. 같은 탭이면 다시 찍지 않는다."""
+        if self._snap is not None and self._snap_key == key:
+            return self._snap
+        for widget in (self.overlay, self.bubble):
+            widget.place_forget()
+        self._clear_frames()
+        self.parent.update()
+        ui.flush_stale()                      # 방금 열린 탭의 단추와 카드를 그려 둔다
+        end = time.time() + 0.08              # 카드 바탕이 다시 그려지고 화면에 반영될 틈
+        while time.time() < end:
+            self.parent.update()
+            time.sleep(0.01)
+        self._snap = _grab_window(self.parent) if glass is not None else None
+        self._snap_key = key
+        return self._snap
+
+    def _draw(self, tab_key, target):
+        width, height = self.parent.winfo_width(), self.parent.winfo_height()
+        box = self._target_box(target)
+        snap = self._snapshot((tab_key, width, height, ui.zoom(), ui.current_tool()))
+        self.bubble.place_forget()
+        dim = snap is not None and snap.size == (width, height)
+        # 말풍선 크기와 자리를 먼저 정한다 (그림에 바탕과 꼬리를 그려야 해서)
+        self.bubble.configure(highlightthickness=0 if dim else 1)
+        self.bubble.update_idletasks()
+        edge = self.EDGE if dim else 0
+        bw = self.bubble.winfo_reqwidth() + 2 * edge
+        bh = self.bubble.winfo_reqheight() + 2 * edge
+        bx, by, side = self._bubble_position(box, width, height, bw, bh)
+        if dim:
+            image = glass.spotlight(snap, box, radius=ui.px(14), dim=self.DIM, ring=ui.acc()[0])
+            arrow = self._arrow_points(box, side, bx, by, bw, bh) if box is not None else None
+            image = glass.callout(image, (bx, by, bx + bw, by + bh), radius=ui.px(18),
+                                  arrow=arrow)
+            try:
+                self._photo = tk.PhotoImage(master=self.overlay, data=glass.ppm_bytes(image),
+                                            format='ppm')
+            except Exception:
+                self._photo = tk.PhotoImage(master=self.overlay,
+                                            data=glass.png_base64(image, level=1))
+            self.overlay.place(x=0, y=0, relwidth=1, relheight=1)
+            self.overlay.delete('all')
+            self.overlay.create_image(0, 0, image=self._photo, anchor='nw')
+            self._clear_frames()
+        else:
+            self.overlay.place_forget()
+            self._draw_frames(box)
+        self.bubble.place(x=bx + edge, y=by + edge, width=bw - 2 * edge, height=bh - 2 * edge)
+        self.lift()
+
+    def _bubble_position(self, box, width, height, bw, bh):
+        """말풍선 자리 (x, y, 놓인 쪽). 대상을 가리지 않도록 오른쪽, 왼쪽, 아래, 위 순으로 찾는다."""
+        gap = ui.px(24)
+        margin = ui.px(16)
+        side = None
+        if box is None:
+            x, y = (width - bw) // 2, (height - bh) // 2
+        else:
+            x0, y0, x1, y1 = box
+            cy, cx = (y0 + y1) // 2, (x0 + x1) // 2
+            if x1 + gap + bw + margin <= width:
+                side, x, y = 'right', x1 + gap, cy - bh // 2
+            elif x0 - gap - bw - margin >= 0:
+                side, x, y = 'left', x0 - gap - bw, cy - bh // 2
+            elif y1 + gap + bh + margin <= height:
+                side, x, y = 'below', cx - bw // 2, y1 + gap
+            elif y0 - gap - bh - margin >= 0:
+                side, x, y = 'above', cx - bw // 2, y0 - gap - bh
+            else:
+                x, y = (width - bw) // 2, margin
+        x = max(margin, min(x, width - bw - margin))
+        y = max(margin, min(y, height - bh - margin))
+        return x, y, side
+
+    def _arrow_points(self, box, side, x, y, bw, bh):
+        """말풍선에서 대상 쪽으로 뻗는 꼬리 삼각형. 놓인 쪽이 없으면 꼬리를 그리지 않는다."""
+        if side is None:
+            return None
+        half, length, keep = ui.px(11), ui.px(15), ui.px(30)
+        x0, y0, x1, y1 = box
+        if side in ('right', 'left'):
+            py = max(y + keep, min((y0 + y1) // 2, y + bh - keep))
+            if side == 'right':
+                return [(x + 2, py - half), (x - length, py), (x + 2, py + half)]
+            return [(x + bw - 2, py - half), (x + bw + length, py), (x + bw - 2, py + half)]
+        px_ = max(x + keep, min((x0 + x1) // 2, x + bw - keep))
+        if side == 'below':
+            return [(px_ - half, y + 2), (px_, y - length), (px_ + half, y + 2)]
+        return [(px_ - half, y + bh - 2), (px_, y + bh + length), (px_ + half, y + bh - 2)]
+
+    # ── 화면을 못 찍을 때의 테두리 ──
+    def _draw_frames(self, box):
+        self._clear_frames()
+        if box is None:
+            return
+        x0, y0, x1, y1 = box
         thickness = 4
+        self.highlight_frames = [tk.Frame(self.parent, bg=ui.acc()[0]) for _ in range(4)]
         top, bottom, left, right = self.highlight_frames
-        top.place(x=x - pad, y=y - pad,
-                  width=width + pad * 2, height=thickness)
-        bottom.place(x=x - pad, y=y + height + pad - thickness,
-                     width=width + pad * 2, height=thickness)
-        left.place(x=x - pad, y=y - pad,
-                   width=thickness, height=height + pad * 2)
-        right.place(x=x + width + pad - thickness, y=y - pad,
-                    width=thickness, height=height + pad * 2)
+        top.place(x=x0, y=y0, width=x1 - x0, height=thickness)
+        bottom.place(x=x0, y=y1 - thickness, width=x1 - x0, height=thickness)
+        left.place(x=x0, y=y0, width=thickness, height=y1 - y0)
+        right.place(x=x1 - thickness, y=y0, width=thickness, height=y1 - y0)
         for border in self.highlight_frames:
             border.lift()
 
-    def _clear_highlight(self):
+    def _clear_frames(self):
         for border in self.highlight_frames:
-            border.place_forget()
+            try:
+                border.place_forget()
+                border.destroy()
+            except tk.TclError:
+                pass
+        self.highlight_frames = []
 
-    def _move_next_to(self, target):
-        """안내창을 강조 대상 옆에 배치해 대상이 가려지지 않게 한다."""
-        if target is None:
+    # ── 창 크기가 바뀌면 다시 찍어서 맞춘다 ──
+    def parent_resized(self):
+        """앱이 창 크기가 바뀔 때마다 알려 준다."""
+        if self._closed:
             return
-        try:
-            target_x = target.winfo_rootx()
-            target_y = target.winfo_rooty()
-            target_width = target.winfo_width()
-            target_height = target.winfo_height()
-            screen_width = self.winfo_screenwidth()
-            screen_height = self.winfo_screenheight()
-        except tk.TclError:
+        if self._resize_after is not None:
+            try:
+                self.parent.after_cancel(self._resize_after)
+            except tk.TclError:
+                pass
+        self._resize_after = self.parent.after(120, self._after_resize)
+
+    def _after_resize(self):
+        self._resize_after = None
+        if self._closed:
             return
-
-        width, height, gap = 460, 290, 14
-        if target_x + target_width + gap + width <= screen_width:
-            x = target_x + target_width + gap
-        elif target_x - gap - width >= 0:
-            x = target_x - gap - width
-        else:
-            x = target_x
-
-        y = target_y
-        if y + height > screen_height:
-            y = target_y + target_height - height
-        x = max(0, min(x, screen_width - width))
-        y = max(0, min(y, screen_height - height))
-        self.geometry(f'{width}x{height}+{x}+{y}')
+        self._snap = None
+        self._render()
 
     def next(self):
         if self.idx >= len(self.steps) - 1:
@@ -1294,19 +1406,30 @@ class WalkthroughDialog(tk.Toplevel):
         if self._closed:
             return
         self._closed = True
-        self._clear_highlight()
-        for border in self.highlight_frames:
-            border.destroy()
+        if self._resize_after is not None:
+            try:
+                self.parent.after_cancel(self._resize_after)
+            except tk.TclError:
+                pass
+        self._clear_frames()
+        for widget in (self.bubble, self.overlay):
+            try:
+                widget.place_forget()
+                widget.destroy()
+            except tk.TclError:
+                pass
         self.on_close()
-        self.destroy()
 
 
 class App:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(f'{APP_NAME}  v{APP_VERSION}')
-        self.root.geometry('1120x720')
-        self.root.minsize(960, 640)
+        # 글자를 키웠으므로 창도 키운다. 작은 화면(1366x768)에서는 화면에 맞춘다.
+        width = min(1280, max(960, self.root.winfo_screenwidth() - 40))
+        height = min(820, max(640, self.root.winfo_screenheight() - 90))
+        self.root.geometry(f'{width}x{height}')
+        self.root.minsize(ui.px(960), ui.px(640))
 
         self.config = Config()
         self.codes = edufine.load_codes()
@@ -1349,6 +1472,14 @@ class App:
                                ('*Checkbutton.foreground', COLORS['on_surface']),
                                ('*Radiobutton.foreground', COLORS['on_surface'])):
             self.root.option_add(pattern, value)
+        # 이름을 따로 안 준 글자(체크 상자, 메뉴 등)도 같은 글꼴과 크기로
+        try:
+            import tkinter.font as tkfont
+            for name in ('TkDefaultFont', 'TkTextFont', 'TkMenuFont', 'TkHeadingFont',
+                         'TkCaptionFont', 'TkSmallCaptionFont', 'TkTooltipFont', 'TkIconFont'):
+                tkfont.nametofont(name).configure(family=FONT, size=fs(9))
+        except Exception as exc:
+            logging.info('기본 글꼴 지정 실패: %s', exc)
         style = ttk.Style()
         try:
             style.theme_use('clam')
@@ -1362,7 +1493,7 @@ class App:
         style.configure('TFrame', background=PANEL_BG)
         style.configure('TLabelframe', background=PANEL_BG)
         style.configure('TLabelframe.Label', background=PANEL_BG,
-                        font=(FONT, 10, 'bold'), foreground=COLORS['on_surface'])
+                        font=ui.font(10, 'bold'), foreground=COLORS['on_surface'])
         thumb = '#C9CBDD'
         style.configure('Accent.Horizontal.TProgressbar', background=ui.acc()[0],
                         troughcolor='#E4E5F0', borderwidth=0, thickness=12,
@@ -1399,7 +1530,7 @@ class App:
         # 탭 노트북. 탭 줄은 숨겨져 있고 왼쪽 레일이 같은 탭을 고른다.
         nb = ttk.Notebook(self.body_frame, style='Hidden.TNotebook')
         nb.pack(fill='both', expand=True, padx=14, pady=(12, 8))
-        nb.bind('<<NotebookTabChanged>>', lambda _e: self._sync_rail())
+        nb.bind('<<NotebookTabChanged>>', lambda _e: self._on_tab_changed())
 
         self.nb = nb
         f1 = ttk.Frame(nb)
@@ -1436,9 +1567,9 @@ class App:
         """상단바. 신통픽 이름, 소통픽/수신픽 고르기, 사용 가이드."""
         bar = self.top_frame
         bar.columnconfigure(1, weight=1)
-        tk.Label(bar, text=APP_NAME, font=(FONT, 15, 'bold'),
+        tk.Label(bar, text=APP_NAME, font=ui.font(15, 'bold'),
                  fg=COLORS['on_surface']).grid(row=0, column=0, sticky='w', padx=(4, 8))
-        tk.Label(bar, text='수신픽 + 소통픽', font=(FONT, 9),
+        tk.Label(bar, text='수신픽 + 소통픽', font=ui.font(9),
                  fg=COLORS['on_surface_variant']).grid(row=0, column=1, sticky='w')
 
         self.target_var = tk.StringVar(value=self.config.target)
@@ -1464,28 +1595,41 @@ class App:
         bar = self.status_frame
         bar.columnconfigure(1, weight=1)
         self.status_var = tk.StringVar(value='준비')
-        self.status_dot = tk.Label(bar, text='●', font=(FONT, 8), fg=COLORS['ok'])
+        self.status_dot = tk.Label(bar, text='●', font=ui.font(8), fg=COLORS['ok'])
         self.status_dot.grid(row=0, column=0, sticky='w', padx=(2, 6))
-        tk.Label(bar, textvariable=self.status_var, anchor='w', font=(FONT, 9),
+        tk.Label(bar, textvariable=self.status_var, anchor='w', font=ui.font(9),
                  fg=COLORS['on_surface_variant']).grid(row=0, column=1, sticky='ew')
         self.target_hint = tk.Label(
-            bar, text='', anchor='e', font=(FONT, 9), fg=COLORS['on_surface_variant'])
+            bar, text='', anchor='e', font=ui.font(9), fg=COLORS['on_surface_variant'])
         self.target_hint.grid(row=0, column=2, sticky='e', padx=(8, 4))
 
     # ── 창 틀 그리기 ───────────────────────────
+    BASE_SIZE = (1280, 820)         # 이 크기에서 글자 배율이 1이다
+
     def _on_shell_resize(self, event):
         if event.widget is not self.canvas:
             return
         self._shell['size'] = (event.width, event.height)
+        self._apply_zoom(event.width, event.height)
         self._place_shell()
         self._schedule_backdrop()
+        if self.guide_dialog is not None:
+            self.guide_dialog.parent_resized()
+
+    def _apply_zoom(self, width, height):
+        """창 크기에 맞춰 글자와 부품을 키우거나 줄인다. 글꼴은 곧바로 바뀐다."""
+        base_w, base_h = self.BASE_SIZE
+        raw = min(width / base_w, height / base_h)
+        zoom = round(raw / 0.04) * 0.04
+        if ui.set_zoom(zoom):
+            self._shell['drawn'] = None
 
     def _place_shell(self):
         """판 자리에 틀을 놓는다. 크기를 바꾸는 동안에도 바로 따라가야 한다."""
         width, height = self._shell['size']
         if width < 50 or height < 50:
             return
-        layout = shell_layout(max(width, 320), max(height, 240))
+        layout = shell_layout(max(width, 320), max(height, 240), zoom=ui.zoom())
         for name, box in layout.items():
             left, top, right, bottom = SHELL_INSET[name]
             self.canvas.coords(self._shell_windows[name], box[0] + left, box[1] + top)
@@ -1494,15 +1638,10 @@ class App:
                 width=max(box[2] - box[0] - left - right, 10),
                 height=max(box[3] - box[1] - top - bottom, 10))
 
-    def _schedule_backdrop(self, delay=150):
-        """창 바탕 그림은 크기가 멈춘 뒤에 다시 그린다 (끌어서 키우는 동안 버벅이지 않게)."""
-        if glass is None:
+    def _schedule_backdrop(self, delay=10):
+        """창 바탕 그림을 다시 그린다. 이미 예약돼 있으면 그대로 두어도 된다 (그릴 때 최신 크기를 쓴다)."""
+        if glass is None or self._shell['after'] is not None:
             return
-        if self._shell['after'] is not None:
-            try:
-                self.root.after_cancel(self._shell['after'])
-            except Exception:
-                pass
         self._shell['after'] = self.root.after(delay, self._render_backdrop)
 
     def _render_backdrop(self):
@@ -1510,17 +1649,24 @@ class App:
         width, height = self._shell['size']
         if glass is None or width < 50 or height < 50:
             return
-        key = (width, height, ui.current_tool())
+        key = (width, height, ui.current_tool(), ui.zoom())
         if self._shell['drawn'] == key:
             return
         try:
-            image = glass.compose_shell(width, height, ui.current_tool())
-            self._shell['photo'] = tk.PhotoImage(master=self.canvas,
-                                                 data=glass.png_base64(image, level=1))
-            self.canvas.itemconfigure(self._bg_item, image=self._shell['photo'])
+            image = glass.compose_shell(width, height, ui.current_tool(), zoom=ui.zoom())
+            try:
+                photo = tk.PhotoImage(master=self.canvas, data=glass.ppm_bytes(image), format='ppm')
+            except Exception:
+                photo = tk.PhotoImage(master=self.canvas, data=glass.png_base64(image, level=1))
+            self._shell['photo'] = photo
+            self.canvas.itemconfigure(self._bg_item, image=photo)
             self._shell['drawn'] = key
         except Exception as exc:
             logging.warning('창 바탕을 그리지 못했습니다: %s', exc)
+            return
+        # 그리는 동안 창 크기가 또 바뀌었으면 한 번 더
+        if self._shell['size'] != (width, height):
+            self._schedule_backdrop(1)
 
     # ── 레일 ───────────────────────────────────
     def _rebuild_rail(self, order):
@@ -1547,6 +1693,16 @@ class App:
     def _help_tab(self):
         return self.help_tabs[self.config.target][0]
 
+    def _on_tab_changed(self):
+        self._sync_rail()
+        # 가려져 있어서 못 그린 단추와 카드를 지금 그린다 (도구 색, 창 배율이 바뀐 뒤에 열린 탭)
+        try:
+            # 탭이 실제로 열린 다음에 그려야 하므로 한 박자 늦춰서 두 번 부른다
+            self.root.after(15, ui.flush_stale)
+            self.root.after(120, ui.flush_stale)
+        except Exception as exc:
+            logging.debug('가려진 부품 그리기 예약 실패: %s', exc)
+
     def _sync_rail(self):
         try:
             current = str(self.nb.select())
@@ -1566,10 +1722,10 @@ class App:
         head = tk.Frame(frame, bg=PANEL_BG)
         head.grid(row=0, column=0, columnspan=2, sticky='ew', padx=14, pady=(10, 2))
         head.columnconfigure(0, weight=1)
-        self.guide_title = tk.Label(head, text='', font=(FONT, 18, 'bold'),
+        self.guide_title = tk.Label(head, text='', font=ui.font(18, 'bold'),
                                     fg=COLORS['on_surface'], anchor='w')
         self.guide_title.grid(row=0, column=0, sticky='w')
-        self.guide_body = tk.Label(head, text='', font=(FONT, 9), justify='left',
+        self.guide_body = tk.Label(head, text='', font=ui.font(9), justify='left',
                                    fg=COLORS['on_surface_variant'], anchor='w', wraplength=560)
         self.guide_body.grid(row=1, column=0, sticky='w', pady=(2, 0))
         files = tk.Frame(head, bg=PANEL_BG)
@@ -1588,7 +1744,7 @@ class App:
             variant='outlined',
             size='sm'
         ).pack(side='left', padx=3)
-        self.ready_status = tk.Label(frame, text='', font=(FONT, 9),
+        self.ready_status = tk.Label(frame, text='', font=ui.font(9),
                                      fg=COLORS['on_surface_variant'], anchor='w')
         self.ready_status.grid(row=1, column=0, columnspan=2, sticky='w', padx=16, pady=(0, 6))
 
@@ -1597,13 +1753,13 @@ class App:
         left.grid(row=2, column=0, sticky='nsew', padx=(14, 8), pady=(0, 6))
         left.columnconfigure(0, weight=1)
         left.rowconfigure(1, weight=1)
-        tk.Label(left, text='명단 붙여넣기', font=(FONT, 12, 'bold'),
+        tk.Label(left, text='명단 붙여넣기', font=ui.font(12, 'bold'),
                  fg=COLORS['on_surface'], anchor='w').grid(row=0, column=0, sticky='w', pady=(0, 6))
         input_card, self.input_text = ui.text_field(left, height=7, wrap='none')
         input_card.grid(row=1, column=0, sticky='nsew')
         self.input_card = input_card
         tk.Label(left, text='한 줄에 한 사람(기관), 줄 순서대로 들어갑니다.',
-                 font=(FONT, 8), fg=COLORS['on_surface_variant'], anchor='w'
+                 font=ui.font(8), fg=COLORS['on_surface_variant'], anchor='w'
                  ).grid(row=2, column=0, sticky='w', padx=6, pady=(4, 6))
         action_frame = tk.Frame(left, bg=PANEL_BG)
         action_frame.grid(row=3, column=0, sticky='w')
@@ -1618,12 +1774,12 @@ class App:
         right.rowconfigure(3, weight=1)
         title_row = tk.Frame(right, bg=PANEL_BG)
         title_row.grid(row=0, column=0, sticky='ew', pady=(0, 6))
-        tk.Label(title_row, text='추출 결과', font=(FONT, 12, 'bold'),
+        tk.Label(title_row, text='추출 결과', font=ui.font(12, 'bold'),
                  fg=COLORS['on_surface']).pack(side='left', padx=(0, 10))
         self.summary_row = tk.Frame(title_row, bg=PANEL_BG)
         self.summary_row.pack(side='left')
         self.parse_status = tk.Label(right, text='', fg=COLORS['on_surface_variant'],
-                                     font=(FONT, 9), anchor='w')
+                                     font=ui.font(9), anchor='w')
         self.parse_status.grid(row=1, column=0, sticky='w', padx=2, pady=(0, 4))
 
         # 확인이 필요한 것을 알리는 배너. 있을 때만 보인다.
@@ -1631,13 +1787,13 @@ class App:
         self.org_issue_card.grid(row=2, column=0, sticky='ew', pady=(0, 6))
         self.org_issue_summary = tk.Label(
             self.org_issue_card.body, text='', fg=COLORS['on_warn_container'],
-            bg=self.org_issue_card.fill, font=(FONT, 9, 'bold'), justify='left',
+            bg=self.org_issue_card.fill, font=ui.font(9, 'bold'), justify='left',
             anchor='w', wraplength=520)
         self.org_issue_summary.pack(anchor='w')
         self.org_issue_card.grid_remove()
 
         list_card, self.parsed_list = ui.list_card(
-            right, font=(FONT, 10), selectmode='extended', height=6)
+            right, font=ui.font(10), selectmode='extended', height=6)
         list_card.grid(row=3, column=0, sticky='nsew')
         self.list_card = list_card
 
@@ -1676,14 +1832,14 @@ class App:
         self.input_tools = tools
         self.delete_btn.grid(row=1, column=0, sticky='w', pady=(6, 0))
         tk.Label(right, text='더블클릭으로 수정  ·  Delete 키로 삭제  ·  붉은 줄은 확인이나 선택이 필요합니다',
-                 font=(FONT, 8), fg=COLORS['on_surface_variant'], anchor='w'
+                 font=ui.font(8), fg=COLORS['on_surface_variant'], anchor='w'
                  ).grid(row=5, column=0, sticky='w', padx=4, pady=(4, 0))
 
         # ④ 직접 넣기. 파일을 열거나 붙여넣지 않고 한 사람(한 기관)씩 넣는다.
         direct = tk.Frame(frame, bg=PANEL_BG)
         direct.grid(row=3, column=0, columnspan=2, sticky='ew', padx=14, pady=(2, 10))
         direct.columnconfigure(1, weight=1)
-        tk.Label(direct, text='직접 넣기', font=(FONT, 10, 'bold'),
+        tk.Label(direct, text='직접 넣기', font=ui.font(10, 'bold'),
                  fg=COLORS['on_surface']).grid(row=0, column=0, sticky='w', padx=(2, 10))
         self.direct_var = tk.StringVar()
         direct_card, self.direct_entry = ui.entry_field(direct, textvariable=self.direct_var)
@@ -1697,7 +1853,7 @@ class App:
             size='sm'
         ).grid(row=0, column=2, padx=(8, 0))
         self.direct_hint = tk.Label(direct, text='', fg=COLORS['on_surface_variant'],
-                                    font=(FONT, 8), anchor='w')
+                                    font=ui.font(8), anchor='w')
         self.direct_hint.grid(row=1, column=0, columnspan=3, sticky='w', padx=4, pady=(3, 0))
 
         ctx = tk.Menu(self.root, tearoff=0)
@@ -1746,7 +1902,7 @@ class App:
     # ── 탭 2: 위치 설정 ────────────────────────
     def _section_title(self, parent, text, bg=None):
         """카드나 화면 안 작은 제목."""
-        return tk.Label(parent, text=text, font=(FONT, 12, 'bold'),
+        return tk.Label(parent, text=text, font=ui.font(12, 'bold'),
                         fg=COLORS['on_surface'], bg=bg or PANEL_BG, anchor='w')
 
     def _screen_header(self, frame, title, columnspan=1):
@@ -1754,12 +1910,13 @@ class App:
         head = tk.Frame(frame, bg=PANEL_BG)
         head.grid(row=0, column=0, columnspan=columnspan, sticky='ew', padx=14, pady=(10, 8))
         head.columnconfigure(0, weight=1)
-        title_label = tk.Label(head, text=title, font=(FONT, 18, 'bold'),
+        title_label = tk.Label(head, text=title, font=ui.font(18, 'bold'),
                                fg=COLORS['on_surface'], anchor='w')
         title_label.grid(row=0, column=0, sticky='w')
-        sub = tk.Label(head, text='', font=(FONT, 9), fg=COLORS['on_surface_variant'],
+        sub = tk.Label(head, text='', font=ui.font(9), fg=COLORS['on_surface_variant'],
                        justify='left', anchor='w', wraplength=780)
         sub.grid(row=1, column=0, sticky='w', pady=(2, 0))
+        ui.autowrap(sub, margin=260)           # 오른쪽 단추 자리를 비워 둔다
         return title_label, sub
 
     def _tab_calib(self, frame: ttk.Frame):
@@ -1784,7 +1941,7 @@ class App:
             tail = '  아래에서 이 자리를 잡습니다' if mine else ''
             tk.Label(
                 cell, text=f'{title}\n{desc}{tail}', bg=order.fill,
-                font=(FONT, 9), fg=COLORS['on_surface_variant'], justify='left',
+                font=ui.font(9), fg=COLORS['on_surface_variant'], justify='left',
                 anchor='w', wraplength=330
             ).pack(anchor='w')
             picture = guide_image(number)
@@ -1808,9 +1965,9 @@ class App:
             ('5번  검색 결과 첫 줄', 'result_first'),
             ('6번  오른쪽 화살표 버튼', 'add_button'),
         ], start=1):
-            tk.Label(pos.body, text=label_text, bg=pos.fill, font=(FONT, 10, 'bold'),
+            tk.Label(pos.body, text=label_text, bg=pos.fill, font=ui.font(10, 'bold'),
                      fg=COLORS['on_surface']).grid(row=row_i, column=0, sticky='w', pady=6)
-            lbl = tk.Label(pos.body, text='', bg=pos.fill, font=(FONT, 9),
+            lbl = tk.Label(pos.body, text='', bg=pos.fill, font=ui.font(9),
                            fg=COLORS['on_surface_variant'])
             lbl.grid(row=row_i, column=1, sticky='w', padx=10)
             setattr(self, f'lbl_{key}', lbl)
@@ -1833,42 +1990,30 @@ class App:
         self._section_title(setting.body, '검색 설정', setting.fill).grid(
             row=0, column=0, columnspan=3, sticky='w', pady=(0, 6))
         tk.Label(setting.body, text='검색 후 대기 시간(초)', bg=setting.fill,
-                 font=(FONT, 10), fg=COLORS['on_surface']).grid(
+                 font=ui.font(10), fg=COLORS['on_surface']).grid(
             row=1, column=0, sticky='w', pady=4)
         self.delay_var = tk.DoubleVar(value=self.config.data.get('search_delay', 0.5))
         ttk.Spinbox(setting.body, from_=0.3, to=5.0, increment=0.1,
-                    textvariable=self.delay_var, width=6, font=(FONT, 10)
+                    textvariable=self.delay_var, width=6, font=ui.font(10)
                     ).grid(row=1, column=1, padx=8, sticky='w')
         tk.Label(setting.body, text='느리면 값을 높이세요', bg=setting.fill,
-                 fg=COLORS['on_surface_variant'], font=(FONT, 9)).grid(
+                 fg=COLORS['on_surface_variant'], font=ui.font(9)).grid(
             row=1, column=2, sticky='w')
         self.manual_var = tk.BooleanVar(value=self.config.data.get('manual_confirm', False))
         tk.Checkbutton(
             setting.body, variable=self.manual_var, bg=setting.fill, activebackground=setting.fill,
             text='수동 확인 모드 (권장)\n검색한 뒤 [계속] 을 눌러야 다음으로 넘어갑니다. 동명이인이나 '
                  '검색 오탐이\n걱정될 때 안전합니다. 모든 사람마다 멈추므로 느립니다.',
-            font=(FONT, 9), fg=COLORS['on_surface'], justify='left', anchor='w'
+            font=ui.font(9), fg=COLORS['on_surface'], justify='left', anchor='w'
         ).grid(row=2, column=0, columnspan=3, sticky='w', pady=(8, 0))
 
-        # 아래: 목록 읽기 확인과 저장
+        # 아래: 저장
         bottom = tk.Frame(frame, bg=PANEL_BG)
-        bottom.grid(row=2, column=0, columnspan=2, sticky='ew', padx=14, pady=(2, 4))
-        bottom.columnconfigure(1, weight=1)
-        probe_btn = M3Button(
-            bottom,
-            text='소통메신저 목록 읽기 확인',
-            variant='outlined',
-            command=self._probe_messenger_lists
-        )
-        probe_btn.grid(row=0, column=0, sticky='w')
-        self.calib_msg = tk.Label(bottom, text='', fg=COLORS['ok'], font=(FONT, 9))
-        self.calib_msg.grid(row=0, column=1, sticky='e', padx=8)
-        M3Button(bottom, text='설정 저장', command=self._save_calib).grid(row=0, column=2, sticky='e')
-        tk.Label(
-            bottom, text='[받는사람 추가] 창을 연 채로 [소통메신저 목록 읽기 확인] 을 누르면, '
-                         '담긴 사람을 신통픽이 읽을 수 있는지 O, X 로 알려 드립니다.',
-            fg=COLORS['on_surface_variant'], font=(FONT, 8), anchor='w'
-        ).grid(row=1, column=0, columnspan=3, sticky='w', pady=(4, 8))
+        bottom.grid(row=2, column=0, columnspan=2, sticky='ew', padx=14, pady=(2, 8))
+        bottom.columnconfigure(0, weight=1)
+        self.calib_msg = tk.Label(bottom, text='', fg=COLORS['ok'], font=ui.font(9))
+        self.calib_msg.grid(row=0, column=0, sticky='e', padx=8)
+        M3Button(bottom, text='설정 저장', command=self._save_calib).grid(row=0, column=1, sticky='e')
 
     # ── 탭 4: 수신그룹 엑셀 (에듀파인 전용) ────
     def _field_row(self, parent, bg, items, row=1):
@@ -1879,7 +2024,7 @@ class App:
                       pady=(0, 4))
             cell.columnconfigure(0, weight=1)
             parent.columnconfigure(column, weight=1)
-            tk.Label(cell, text=label, bg=bg, font=(FONT, 9, 'bold'),
+            tk.Label(cell, text=label, bg=bg, font=ui.font(9, 'bold'),
                      fg=COLORS['on_surface_variant'], anchor='w').grid(row=0, column=0, sticky='w')
             var = tk.StringVar(value=self.config.edufine.get(key, ''))
             self.edufine_vars[key] = var
@@ -1895,7 +2040,7 @@ class App:
         sub.config(text='에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록] 에 올릴 엑셀을 만듭니다.\n'
                         '한 번 등록해 두면 다음부터는 기안할 때 [수신자 지정 > 개인수신그룹] 에서 '
                         '그룹만 고르면 됩니다.')
-        self.codes_status = tk.Label(frame, text='', anchor='w', font=(FONT, 9, 'bold'),
+        self.codes_status = tk.Label(frame, text='', anchor='w', font=ui.font(9, 'bold'),
                                      fg=COLORS['ok'])
         self.codes_status.grid(row=1, column=0, columnspan=2, sticky='w', padx=16, pady=(0, 6))
 
@@ -1917,7 +2062,7 @@ class App:
         self._section_title(head, '내 정보 (한 번만 입력)', me.fill).pack(side='left')
         self._field_row(me.body, me.fill, [('사용자ID', '사용자 ID', ''), ('사용자명', '사용자명', '')])
         tk.Label(me.body, text='등록교육청은 충청북도교육청으로 자동 적용됩니다.', bg=me.fill,
-                 fg=COLORS['on_surface_variant'], font=(FONT, 8), anchor='w'
+                 fg=COLORS['on_surface_variant'], font=ui.font(8), anchor='w'
                  ).grid(row=2, column=0, columnspan=2, sticky='w', pady=(4, 0))
 
         group = Card(left, tone='inner', pad=(18, 14))
@@ -1930,7 +2075,7 @@ class App:
         self._field_row(group.body, group.fill,
                         [('그룹명', '그룹명', ''), ('그룹기호', '그룹기호 (선택)', '')])
         tk.Label(group.body, bg=group.fill, fg=COLORS['on_surface_variant'],
-                 font=(FONT, 8), anchor='w', justify='left',
+                 font=ui.font(8), anchor='w', justify='left',
                  text='그룹명은 에듀파인에서 찾기 쉬운 이름으로 적으세요. 예) 2026 진천 초등학교\n'
                       '그룹기호는 선택 사항이니 필요 없으면 비워 두세요.'
                  ).grid(row=2, column=0, columnspan=2, sticky='w', pady=(4, 8))
@@ -1964,7 +2109,7 @@ class App:
         self.edufine_chips.pack(side='right')
         self.edufine_msg = tk.Label(
             result.body, text='명단을 추출하면 여기에 엑셀에 들어갈 기관이 나옵니다.',
-            bg=result.fill, fg=COLORS['on_surface_variant'], font=(FONT, 9),
+            bg=result.fill, fg=COLORS['on_surface_variant'], font=ui.font(9),
             justify='left', anchor='w', wraplength=380)
         self.edufine_msg.grid(row=1, column=0, sticky='ew')
         # 엑셀에서 빠지는 기관은 반드시 사유와 함께 보여 준다
@@ -1972,7 +2117,7 @@ class App:
         self.edufine_left_out.grid(row=2, column=0, sticky='ew', pady=(8, 0))
         self.edufine_left_out_text = tk.Label(
             self.edufine_left_out.body, text='', bg=self.edufine_left_out.fill,
-            fg=COLORS['on_error_container'], font=(FONT, 9), justify='left', anchor='w',
+            fg=COLORS['on_error_container'], font=ui.font(9), justify='left', anchor='w',
             wraplength=360)
         self.edufine_left_out_text.pack(anchor='w')
         self.edufine_left_out.grid_remove()
@@ -1985,7 +2130,7 @@ class App:
         )
         self.walker_btn.grid(row=3, column=0, sticky='w', pady=(8, 0))
         tk.Label(result.body, text='코드가 없는 기관은 순차 복사로 조직도에 직접 붙여넣으세요.',
-                 bg=result.fill, fg=COLORS['on_surface_variant'], font=(FONT, 8),
+                 bg=result.fill, fg=COLORS['on_surface_variant'], font=ui.font(8),
                  anchor='w').grid(row=4, column=0, sticky='w', pady=(3, 0))
 
         # 아래: 3 에듀파인에 올리기. 어디를 누르는지 그림으로 보여 준다.
@@ -2002,9 +2147,9 @@ class App:
             cell = tk.Frame(upload.body, bg=upload.fill)
             cell.grid(row=1, column=col, sticky='nw', padx=(0 if col == 0 else 8, 0))
             Chip(cell, text=number, kind='neutral').pack(anchor='w')
-            tk.Label(cell, text=title, bg=upload.fill, font=(FONT, 10, 'bold'),
+            tk.Label(cell, text=title, bg=upload.fill, font=ui.font(10, 'bold'),
                      fg=COLORS['on_surface'], anchor='w').pack(anchor='w', pady=(4, 0))
-            tk.Label(cell, text=desc, bg=upload.fill, font=(FONT, 8),
+            tk.Label(cell, text=desc, bg=upload.fill, font=ui.font(8),
                      fg=COLORS['on_surface_variant'], justify='left', anchor='w',
                      wraplength=190).pack(anchor='w')
             picture = edufine_guide_image(number)
@@ -2012,7 +2157,7 @@ class App:
                 self.edufine_step_images.append(picture)
                 tk.Label(cell, image=picture, bg=upload.fill).pack(anchor='w', pady=(4, 0))
         tk.Label(
-            upload.body, bg=upload.fill, fg=COLORS['on_surface_variant'], font=(FONT, 9),
+            upload.body, bg=upload.fill, fg=COLORS['on_surface_variant'], font=ui.font(9),
             justify='left', anchor='w', wraplength=860,
             text='처음에는 기관 2~3곳짜리 시험 그룹으로 한 번 올려 보세요. '
                  '등록된 곳이 생각한 기관과 맞는지 확인하고 나서 실제 공문에 쓰시면 됩니다.'
@@ -2026,23 +2171,23 @@ class App:
         if not self.codes.get('기관'):
             messagebox.showwarning(
                 '기관코드가 없습니다',
-                '[수신그룹 엑셀] 탭에서 기관코드를 먼저 가져오세요.')
+                '앱에 기관코드 파일이 없습니다. 프로그램을 다시 받아 주세요.')
             return
 
         dlg = tk.Toplevel(self.root)
         dlg.title('기관 찾아보기')
-        dlg.geometry('680x600')
+        dlg.geometry(f'{ui.px(680)}x{ui.px(600)}')
         dlg.grab_set()
         dlg.transient(self.root)
         dlg.configure(bg=PANEL_BG)
 
         tk.Label(dlg, text='찾을 말을 띄어쓰기로 나눠 적으면 모두 포함된 기관만 보입니다.\n'
                            '예)  청주 초등학교   ·   행정과   ·   단재 연수부',
-                 bg=PANEL_BG, fg=COLORS['on_surface_variant'], font=(FONT, 9),
+                 bg=PANEL_BG, fg=COLORS['on_surface_variant'], font=ui.font(9),
                  justify='left').pack(anchor='w', padx=16, pady=(14, 6))
 
         query = tk.StringVar()
-        entry = ttk.Entry(dlg, textvariable=query, font=(FONT, 11))
+        entry = ttk.Entry(dlg, textvariable=query, font=ui.font(11))
         entry.pack(fill='x', padx=16)
         entry.focus_set()
 
@@ -2074,12 +2219,12 @@ class App:
             cat_buttons[name] = btn
 
         count_label = tk.Label(dlg, text='', bg=PANEL_BG, fg='#555',
-                               font=(FONT, 9), anchor='w')
+                               font=ui.font(9), anchor='w')
         count_label.pack(fill='x', padx=16, pady=(6, 2))
 
         list_wrap = tk.Frame(dlg)
         list_wrap.pack(fill='both', expand=True, padx=16)
-        box = tk.Listbox(list_wrap, font=(FONT, 10), selectmode='extended',
+        box = tk.Listbox(list_wrap, font=ui.font(10), selectmode='extended',
                          activestyle='none', exportselection=False,
                          selectbackground=ui.acc()[2], selectforeground=ui.acc()[3])
         box.pack(side='left', fill='both', expand=True)
@@ -2254,12 +2399,12 @@ class App:
         if not self.config.edufine_ready():
             messagebox.showwarning(
                 '내 정보가 비었습니다',
-                'STEP 1 의 사용자ID와 사용자명을 채워주세요.')
+                "[수신그룹 엑셀] 탭의 '내 정보'에 사용자 ID와 사용자명을 적어 주세요.")
             return
 
         group_name = self.config.edufine.get('그룹명', '').strip()
         if not group_name:
-            messagebox.showwarning('그룹명이 필요합니다', 'STEP 2 에 수신그룹명을 적어주세요.')
+            messagebox.showwarning('그룹명이 필요합니다', "[수신그룹 엑셀] 탭의 '수신그룹 만들기'에 그룹명을 적어 주세요.")
             return
 
         pending = [i for i in self.names_list if i.get('grade') not in AUTO_GRADES]
@@ -2281,7 +2426,7 @@ class App:
             return
         if missing:
             lines = '\n'.join(
-                f"· {r.get('name') or r.get('raw')} — {r.get('reason', '코드 없음')}"
+                f"· {r.get('name') or r.get('raw')} ({r.get('reason', '코드 없음')})"
                 for r in missing[:10])
             more = f'\n… 외 {len(missing) - 10}곳' if len(missing) > 10 else ''
             if not messagebox.askyesno(
@@ -2377,7 +2522,7 @@ class App:
         panel.body.columnconfigure(0, weight=1)
         top = tk.Frame(panel.body, bg=panel.fill)
         top.grid(row=0, column=0, sticky='ew')
-        self.prog_label = tk.Label(top, text='0 / 0', font=(FONT, 20, 'bold'),
+        self.prog_label = tk.Label(top, text='0 / 0', font=ui.font(20, 'bold'),
                                    bg=panel.fill, fg=COLORS['on_surface'])
         self.prog_label.pack(side='left')
         self.auto_chips = tk.Frame(top, bg=panel.fill)
@@ -2432,7 +2577,7 @@ class App:
 
         # 진행 기록
         log_card, self.log = ui.text_field(frame, height=12, wrap='none',
-                                           font=(FONT, 9))
+                                           font=ui.font(9))
         self.log.configure(state='disabled')
         self.log.tag_config('ok', foreground=COLORS['ok'])
         self.log.tag_config('fail', foreground=COLORS['error'])
@@ -2461,7 +2606,7 @@ class App:
         head = tk.Frame(frame, bg=PANEL_BG)
         head.grid(row=0, column=0, sticky='ew', padx=14, pady=(10, 4))
         head.columnconfigure(0, weight=1)
-        tk.Label(head, text=f'{label} 사용법', font=(FONT, 18, 'bold'),
+        tk.Label(head, text=f'{label} 사용법', font=ui.font(18, 'bold'),
                  fg=COLORS['on_surface'], anchor='w').grid(row=0, column=0, sticky='w')
         video_btn = M3Button(
             head,
@@ -2484,7 +2629,7 @@ class App:
     @staticmethod
     def _fill_help(txt, content):
         """도움말 글을 넣는다. 글 모양 장식선(━ ─)은 빼고, ■ 로 시작하는 큰 제목은 굵게 한다."""
-        txt.tag_config('h', font=(FONT, 12, 'bold'), foreground=COLORS['on_surface'],
+        txt.tag_config('h', font=ui.font(12, 'bold'), foreground=COLORS['on_surface'],
                        spacing1=8, spacing3=4)
         previous_blank = True
         for line in content.split('\n'):
@@ -2672,17 +2817,17 @@ class App:
 
         dlg = tk.Toplevel(self.root)
         dlg.title('수신픽 추출 기록')
-        dlg.geometry('720x560')
+        dlg.geometry(f'{ui.px(720)}x{ui.px(560)}')
         dlg.transient(self.root)
         dlg.configure(bg=PANEL_BG)
 
         tk.Label(
             dlg,
             text=f'최근 {len(history)}회 기록 · 기관명과 상태만 저장하며 원문과 파일 경로는 저장하지 않습니다.',
-            bg=ui.acc()[2], fg=ui.acc()[3], font=(FONT, 9, 'bold'),
+            bg=ui.acc()[2], fg=ui.acc()[3], font=ui.font(9, 'bold'),
             anchor='w', padx=12, pady=8
         ).pack(fill='x')
-        text_card, text = ui.text_field(dlg, height=14, wrap='word', font=(FONT, 9))
+        text_card, text = ui.text_field(dlg, height=14, wrap='word', font=ui.font(9))
         text_card.pack(fill='both', expand=True, padx=12, pady=10)
 
         status_names = {
@@ -2709,9 +2854,9 @@ class App:
                     status = '기관코드 없음'
                 count = int(item.get('source_count') or 1)
                 repeat = f' · 입력 {count}회' if count > 1 else ''
-                text.insert('end', f"  · {item.get('name', '')} — {status}{repeat}\n")
+                text.insert('end', f"  · {item.get('name', '')} ({status}{repeat})\n")
             text.insert('end', '\n')
-        text.tag_config('heading', foreground=ui.acc()[0], font=(FONT, 10, 'bold'))
+        text.tag_config('heading', foreground=ui.acc()[0], font=ui.font(10, 'bold'))
         text.config(state='disabled')
         M3Button(dlg, text='닫기', command=dlg.destroy, variant='tonal').pack(pady=(0, 12))
 
@@ -2742,8 +2887,8 @@ class App:
 
         dlg = tk.Toplevel(self.root)
         dlg.title('확인 필요 기관 일괄 수정')
-        dlg.geometry('820x560')
-        dlg.minsize(760, 520)
+        dlg.geometry(f'{ui.px(820)}x{ui.px(560)}')
+        dlg.minsize(ui.px(760), ui.px(520))
         dlg.grab_set()
         dlg.transient(self.root)
         dlg.configure(bg=PANEL_BG)
@@ -2758,23 +2903,23 @@ class App:
                  '1. 왼쪽에서 기관을 하나 고릅니다   2. 오른쪽 목록에서 맞는 기관을 고릅니다   '
                  '3. [선택 기관으로 확정] 을 누릅니다',
             bg=COLORS['warn_container'], fg=COLORS['on_warn_container'],
-            font=(FONT, 9, 'bold'), justify='left', wraplength=780,
+            font=ui.font(9, 'bold'), justify='left', wraplength=ui.px(780),
             anchor='w', padx=14, pady=10
         ).grid(row=0, column=0, columnspan=2, sticky='ew')
 
         tk.Label(dlg, text='확인 필요 기관', bg=PANEL_BG, fg=COLORS['on_surface_variant'],
-                 font=(FONT, 10, 'bold')).grid(
+                 font=ui.font(10, 'bold')).grid(
                      row=1, column=0, sticky='w', padx=12, pady=(10, 4))
         detail_var = tk.StringVar(value='기관을 선택하세요.')
         tk.Label(dlg, textvariable=detail_var, bg=PANEL_BG, fg=COLORS['on_surface_variant'],
-                 font=(FONT, 10, 'bold'), anchor='w').grid(
+                 font=ui.font(10, 'bold'), anchor='w').grid(
                      row=1, column=1, sticky='ew', padx=12, pady=(10, 4))
 
         # exportselection 을 끄지 않으면, 오른쪽 검색창에 글자를 넣는 순간
         # 이 목록의 선택이 풀린다. 그러면 어느 기관을 고치는 중인지 잃어버려
         # 검색 결과가 비고 [선택 기관으로 확정] 도 듣지 않는다.
         pending_box = tk.Listbox(
-            dlg, font=(FONT, 9), activestyle='none', exportselection=False,
+            dlg, font=ui.font(9), activestyle='none', exportselection=False,
             fg=COLORS['error'], selectbackground=COLORS['error'], selectforeground='white')
         pending_box.grid(row=2, column=0, sticky='nsew', padx=(12, 6), pady=(0, 8))
 
@@ -2783,16 +2928,16 @@ class App:
         right.columnconfigure(0, weight=1)
         right.rowconfigure(3, weight=1)
         tk.Label(right, text='기관 검색', bg=PANEL_BG, fg='#555',
-                 font=(FONT, 9)).grid(row=0, column=0, sticky='w')
+                 font=ui.font(9)).grid(row=0, column=0, sticky='w')
         query = tk.StringVar()
         hint_var = tk.StringVar(value='')
-        search_entry = ttk.Entry(right, textvariable=query, font=(FONT, 10))
+        search_entry = ttk.Entry(right, textvariable=query, font=ui.font(10))
         search_entry.grid(row=1, column=0, sticky='ew', pady=(2, 2))
         tk.Label(right, textvariable=hint_var, bg=PANEL_BG, fg=ui.acc()[0],
-                 font=(FONT, 9), anchor='w').grid(
+                 font=ui.font(9), anchor='w').grid(
                      row=2, column=0, sticky='ew', pady=(0, 4))
         result_box = tk.Listbox(
-            right, font=(FONT, 9), activestyle='none', exportselection=False,
+            right, font=ui.font(9), activestyle='none', exportselection=False,
             selectbackground=ui.acc()[2], selectforeground=ui.acc()[3])
         result_box.grid(row=3, column=0, sticky='nsew')
 
@@ -3000,10 +3145,10 @@ class App:
             messagebox.showwarning(
                 'HWP 읽기 실패',
                 'HWP 파일을 자동으로 읽지 못했습니다.\n\n'
-                'HWP에서 해당 표/목록을 직접 복사(Ctrl+C)하여\n'
-                '텍스트 입력창에 붙여넣기 해주세요.'
+                '한글에서 표를 직접 복사(Ctrl+C)해서\n'
+                '입력창에 붙여넣어 주세요.'
             )
-            self.status_var.set('HWP 읽기 실패 — 직접 복사·붙여넣기 필요')
+            self.status_var.set('HWP 읽기 실패. 직접 복사해서 붙여넣어 주세요')
 
     # ── 명단 추출 ──────────────────────────────
     # ── 도구 전환 ──────────────────────────────
@@ -3197,9 +3342,8 @@ class App:
             if edufine_on:
                 title.config(text='기관 명단을 넣으세요')
                 body.config(text=(
-                    '엑셀이나 한글에서 기관명을 복사해 붙여넣거나 파일을 바로 여세요. '
-                    '줄바꿈, 쉼표, 탭 아무거나 됩니다.\n'
-                    '예) 학성초, 충북외고, 청주교육지원청 행정과'
+                    '엑셀이나 한글에서 기관명을 복사해 붙여넣거나 파일을 바로 여세요.\n'
+                    '줄바꿈, 쉼표, 탭 어느 것으로 나눠도 됩니다.   예) 학성초, 충북외고, 청주교육지원청 행정과'
                 ))
             else:
                 title.config(text='소속기관과 이름을 넣으세요')
@@ -3311,7 +3455,7 @@ class App:
 
         parts = [f'기관 {confirmed}곳 확정']
         if pending:
-            parts.append(f'확인 필요 {pending}곳 — 일괄 수정 버튼에서 확인하세요')
+            parts.append(f'확인 필요 {pending}곳')
         if duplicates:
             parts.append(f'중복 입력 {len(duplicates)}종 제거')
         self.parse_status.config(
@@ -3405,7 +3549,7 @@ class App:
             pending = sum(1 for i in self.names_list if self._org_needs_review(i))
             parts = [f'기관 {total - pending}곳 확정']
             if pending:
-                parts.append(f'확인 필요 {pending}곳 (일괄 수정 버튼에서 확인하세요)')
+                parts.append(f'확인 필요 {pending}곳')
             self.parse_status.config(
                 text='  /  '.join(parts),
                 fg=COLORS['ok'] if not pending else COLORS['error'])
@@ -3429,21 +3573,21 @@ class App:
 
         dlg = tk.Toplevel(self.root)
         dlg.title('항목 수정')
-        dlg.geometry('360x190')
+        dlg.geometry(f'{ui.px(360)}x{ui.px(190)}')
         dlg.resizable(False, False)
         dlg.grab_set()
         dlg.transient(self.root)
 
-        tk.Label(dlg, text='소속기관:', font=(FONT, 10)).grid(
+        tk.Label(dlg, text='소속기관:', font=ui.font(10)).grid(
             row=0, column=0, padx=14, pady=(18, 6), sticky='e')
         org_var = tk.StringVar(value=item.get('org', ''))
-        org_entry = tk.Entry(dlg, textvariable=org_var, font=(FONT, 10), width=22)
+        org_entry = tk.Entry(dlg, textvariable=org_var, font=ui.font(10), width=22)
         org_entry.grid(row=0, column=1, padx=8, pady=(18, 6), sticky='w')
 
-        tk.Label(dlg, text='이름:', font=(FONT, 10)).grid(
+        tk.Label(dlg, text='이름:', font=ui.font(10)).grid(
             row=1, column=0, padx=14, pady=6, sticky='e')
         name_var = tk.StringVar(value=item.get('name', ''))
-        tk.Entry(dlg, textvariable=name_var, font=(FONT, 10), width=22).grid(
+        tk.Entry(dlg, textvariable=name_var, font=ui.font(10), width=22).grid(
             row=1, column=1, padx=8, pady=6, sticky='w')
 
         def apply():
@@ -3497,7 +3641,7 @@ class App:
         self.config.data['search_delay'] = round(self.delay_var.get(), 1)
         self.config.data['manual_confirm'] = self.manual_var.get()
         self.config.save()
-        self.calib_msg.config(text='✅ 설정 저장 완료')
+        self.calib_msg.config(text='설정을 저장했습니다')
         self.root.after(2000, lambda: self.calib_msg.config(text=''))
         self._refresh_ready_status()
 
@@ -3505,18 +3649,18 @@ class App:
         """에듀파인 기관 항목 고치기 — 후보에서 고르거나 직접 적는다."""
         dlg = tk.Toplevel(self.root)
         dlg.title('기관 확인')
-        dlg.geometry('420x380')
+        dlg.geometry(f'{ui.px(420)}x{ui.px(380)}')
         dlg.resizable(False, False)
         dlg.grab_set()
         dlg.transient(self.root)
         dlg.configure(bg=PANEL_BG)
 
         tk.Label(dlg, text=f"입력한 값:  {item.get('raw', '')}", bg=PANEL_BG,
-                 fg=COLORS['on_surface_variant'], font=(FONT, 10, 'bold')).pack(pady=(16, 2))
+                 fg=COLORS['on_surface_variant'], font=ui.font(10, 'bold')).pack(pady=(16, 2))
         tk.Label(dlg, text='아래 후보에서 고르거나, 정확한 기관명을 직접 적으세요.',
-                 bg=PANEL_BG, fg='#555', font=(FONT, 9)).pack(pady=(0, 8))
+                 bg=PANEL_BG, fg='#555', font=ui.font(9)).pack(pady=(0, 8))
 
-        box = tk.Listbox(dlg, font=(FONT, 10), height=9,
+        box = tk.Listbox(dlg, font=ui.font(10), height=9,
                          activestyle='none', exportselection=False,
                          selectbackground=ui.acc()[2], selectforeground=ui.acc()[3])
         box.pack(fill='both', expand=True, padx=16)
@@ -3533,7 +3677,7 @@ class App:
         entry_row = tk.Frame(dlg, bg=PANEL_BG)
         entry_row.pack(fill='x', padx=16, pady=(10, 4))
         tk.Label(entry_row, text='직접 입력', bg=PANEL_BG,
-                 font=(FONT, 9)).pack(side='left', padx=(0, 6))
+                 font=ui.font(9)).pack(side='left', padx=(0, 6))
         entry = ttk.Entry(entry_row, textvariable=typed)
         entry.pack(side='left', fill='x', expand=True)
 
@@ -3638,7 +3782,7 @@ class App:
             f'위치를 잡을 때 화면은 {saved_w}×{saved_h} 였고, 지금은 '
             f'{current[0]}×{current[1]} 입니다.\n\n'
             f'해상도나 확대 배율이 바뀌면 저장해 둔 위치가 어긋나서 엉뚱한 곳을 '
-            f'누를 수 있습니다. [2. 위치 설정] 탭에서 세 곳을 다시 잡는 것이 '
+            f'누를 수 있습니다. [위치 설정] 탭에서 세 곳을 다시 잡는 것이 '
             f'안전합니다.\n\n'
             f'그래도 지금 이대로 시작할까요?'
         )
@@ -3660,7 +3804,7 @@ class App:
             '[사용자 선택] 창이 옮겨졌습니다',
             '위치를 잡을 때와 [사용자 선택] 창의 자리가 다릅니다.\n\n'
             '이대로 시작하면 저장해 둔 자리가 창 밖을 가리켜 엉뚱한 곳을 누릅니다. '
-            '창을 처음 자리로 옮기거나, [2. 위치 설정] 탭에서 4, 5, 6번을 다시 잡는 것이 '
+            '창을 처음 자리로 옮기거나, [위치 설정] 탭에서 4, 5, 6번을 다시 잡는 것이 '
             '안전합니다.\n\n'
             '그래도 지금 이대로 시작할까요?'
         )
@@ -3938,14 +4082,14 @@ class App:
         except tk.TclError as exc:
             logging.debug('동명이인 창 위치 설정 실패: %s', exc)
         tk.Label(win, text=f'⏸  {name}  ·  검색 결과 {count}명',
-                 bg=COLORS['warn_container'], fg=COLORS['on_warn_container'], font=(FONT, 11, 'bold'),
+                 bg=COLORS['warn_container'], fg=COLORS['on_warn_container'], font=ui.font(11, 'bold'),
                  padx=12, pady=8).pack(fill='x')
         tk.Label(
             win,
             text=('같은 이름이 여럿이라 신통픽이 고르지 않았습니다.\n'
                   '소통메신저 검색 결과에서 맞는 분을 누르고 오른쪽 화살표를 누른 뒤\n'
                   '[계속] 을 누르세요. 아무도 담지 않으려면 [건너뛰기] 를 누르세요.'),
-            font=(FONT, 9), justify='left', padx=12, pady=8
+            font=ui.font(9), justify='left', padx=12, pady=8
         ).pack(anchor='w')
         row = tk.Frame(win)
         row.pack(fill='x', padx=12, pady=(0, 10))
@@ -3971,7 +4115,7 @@ class App:
             return None, '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
         point = self._arrow_point()
         if point is None:
-            return None, '[2. 위치 설정] 에서 6번 화살표 버튼 위치를 먼저 잡아 주세요.'
+            return None, '[위치 설정] 에서 6번 화살표 버튼 위치를 먼저 잡아 주세요.'
         dialogs = self._messenger_dialogs()
         if not dialogs:
             return None, ('소통메신저 [사용자 선택] 창이 열려 있지 않습니다. '
@@ -3979,7 +4123,7 @@ class App:
         inside = [w for w in dialogs if self._window_contains(w, point)]
         if not inside:
             return None, ('[사용자 선택] 창이 위치를 잡을 때와 다른 곳에 있습니다. '
-                          '창을 옮기셨다면 [2. 위치 설정] 에서 4, 5, 6번을 다시 잡아 주세요.')
+                          '창을 옮기셨다면 [위치 설정] 에서 4, 5, 6번을 다시 잡아 주세요.')
         uia, why = self._uia()
         if uia is None:
             return None, (f'화면 읽어 주기를 쓸 수 없습니다 ({why}). '
@@ -3989,8 +4133,8 @@ class App:
         guess = guess_selected_list(nodes, point[0])
         if not guess:
             return None, ('[선택된 사용자] 목록을 찾지 못했습니다. 담긴 사람이 한 명뿐이면 '
-                          '목록을 알아보지 못합니다. 그렇지 않다면 [2. 위치 설정] 탭의 '
-                          '[소통메신저 목록 읽기 확인] 결과를 복사해 보내 주세요.')
+                          '목록을 알아보지 못합니다. 그렇지 않다면 [위치 설정] 탭에서 '
+                          '6번 자리를 다시 확인해 주세요.')
         self.compare_note = ''
         if len(inside) > 1:
             self.compare_note = (f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 맨 위 창을 '
@@ -4020,7 +4164,7 @@ class App:
             if quiet:
                 self.status_var.set(
                     self.status_var.get()
-                    + '  ·  소통메신저 명단은 읽지 못했습니다 ([🔍 소통메신저와 비교] 로 다시 시도)')
+                    + '  ·  소통메신저 명단은 읽지 못했습니다 ([소통메신저와 비교] 로 다시 시도)')
                 return None
             self.status_var.set('소통메신저 명단을 읽지 못했습니다')
             if self._offer_comtypes_install(why, self._compare_with_messenger):
@@ -4253,7 +4397,7 @@ class App:
                 advice = '소통메신저에서 [받는사람 추가] 를 눌러 창을 연 채로 다시 눌러 주세요.'
             elif not inside:
                 headline = '[사용자 선택] 창이 위치를 잡을 때와 다른 곳에 있습니다.'
-                advice = ('창을 옮기셨다면 [2. 위치 설정] 에서 4, 5, 6번을 다시 잡고 다시 눌러 '
+                advice = ('창을 옮기셨다면 [위치 설정] 에서 4, 5, 6번을 다시 잡고 다시 눌러 '
                           '주세요. 이대로 자동 선택을 시작하면 엉뚱한 곳을 누릅니다.')
             else:
                 # 창 안이 웹 화면이면 윈도우 목록 칸이 없다. 화면 읽어 주기로 다시 본다.
@@ -4296,21 +4440,21 @@ class App:
 
         win = tk.Toplevel(self.root)
         win.title('소통메신저 목록 읽기 확인')
-        win.geometry('620x460')
+        win.geometry(f'{ui.px(620)}x{ui.px(460)}')
         color = COLORS['ok'] if mark == 'O' else COLORS['error']
-        tk.Label(win, text=mark, fg=color, font=(FONT, 48, 'bold')).pack(pady=(10, 0))
-        tk.Label(win, text=headline, fg=color, font=(FONT, 11, 'bold'),
-                 wraplength=580, justify='center').pack(padx=10)
+        tk.Label(win, text=mark, fg=color, font=ui.font(48, 'bold')).pack(pady=(10, 0))
+        tk.Label(win, text=headline, fg=color, font=ui.font(11, 'bold'),
+                 wraplength=ui.px(580), justify='center').pack(padx=10)
         if advice:
-            tk.Label(win, text=advice, fg=COLORS['on_surface_variant'], font=(FONT, 9),
-                     wraplength=580, justify='center').pack(padx=10, pady=(2, 0))
-        box_card, box = ui.text_field(win, height=10, wrap='word', font=(FONT, 9))
+            tk.Label(win, text=advice, fg=COLORS['on_surface_variant'], font=ui.font(9),
+                     wraplength=ui.px(580), justify='center').pack(padx=10, pady=(2, 0))
+        box_card, box = ui.text_field(win, height=10, wrap='word', font=ui.font(9))
         box_card.pack(fill='both', expand=True, padx=10, pady=(10, 4))
         box.insert('1.0', text)
         box.config(state='disabled')
         row = tk.Frame(win)
         row.pack(fill='x', padx=10, pady=(0, 10))
-        status = tk.Label(row, text='', fg=COLORS['ok'], font=(FONT, 9))
+        status = tk.Label(row, text='', fg=COLORS['ok'], font=ui.font(9))
         M3Button(
             row,
             text='내용 복사',
@@ -4356,10 +4500,10 @@ class App:
                     fail += 1
                     no_result_streak += 1
                     if found == 'stale':
-                        self._log('—  (검색 결과가 바뀌지 않았습니다)\n')
+                        self._log('검색 결과가 바뀌지 않았습니다\n')
                         self._mark_failed(idx, FAIL_SEARCH_STALE, item)
                     else:
-                        self._log('—  (사용자 없음)\n')
+                        self._log('사용자 없음\n')
                         self._mark_failed(idx, FAIL_NO_USER, item)
                     if no_result_streak == 3:
                         self._log(
@@ -4393,7 +4537,7 @@ class App:
                             break
                         if getattr(self, 'pick_choice', None) == 'skip':
                             fail += 1
-                            self._log('—  (건너뜀)\n')
+                            self._log('건너뜀\n')
                             self._mark_failed(idx, FAIL_SAME_NAME_SKIPPED, item)
                             self._update_progress(idx + 1, total)
                             continue
@@ -4409,7 +4553,7 @@ class App:
                         break
                     if result == 'duplicate':
                         fail += 1
-                        self._log('⚠  (이미 선택된 사용자)\n')
+                        self._log('⚠  이미 선택된 사용자\n')
                         self._mark_failed(idx, FAIL_DUPLICATE, item)
                         self._update_progress(idx + 1, total)
                         continue
@@ -4756,7 +4900,7 @@ class App:
     def _show_continue(self, name: str):
         name = name or ''
         self.status_var.set(
-            f'수동 선택 대기: {name}  →  소통메신저에서 결과 클릭 → 선택 버튼 클릭 후 [계속] 버튼'
+            f'수동 선택 대기: {name}. 소통메신저에서 결과를 누르고 선택 버튼을 누른 뒤 [계속] 을 누르세요'
         )
         self.continue_btn.config(state='normal')
 

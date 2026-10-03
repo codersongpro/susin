@@ -96,6 +96,34 @@ def main():
         assert app._shell['drawn'] is not None, '창 바탕이 그려지지 않았습니다'
         print(f"창 바탕 ok - {app._shell['drawn']}")
 
+    # 창 크기를 바꾸면 글자 배율이 따라가고, 단추와 칩도 같이 다시 그려진다.
+    import time
+    import ui_kit
+    sizes = {}
+    for label, geometry in (('작게', '1000x660'), ('크게', '1700x1000'), ('원래', '1280x820')):
+        root.geometry(geometry)
+        end = time.time() + 0.5
+        while time.time() < end:
+            root.update()
+            time.sleep(0.01)
+        sizes[label] = ui_kit.zoom()
+    assert sizes['크게'] > sizes['작게'], sizes
+    print(f'창 크기에 따른 배율 ok - {sizes}')
+
+    # 사용 가이드: 화면을 어둡게 하고 대상만 비추는 덮개가 단계마다 그려지고, 끝내면 사라진다
+    app._choose_target(TARGET_MESSENGER)
+    app._show_onboarding(TARGET_MESSENGER)
+    guide = app.guide_dialog
+    assert guide is not None
+    seen = 0
+    while app.guide_dialog is not None and seen < 20:
+        root.update()
+        assert guide.highlight_target is not None, f'{guide.idx + 1}번째 단계에 비출 대상이 없습니다'
+        guide.next()
+        seen += 1
+    assert app.guide_dialog is None
+    print(f'사용 가이드 ok - {seen}단계')
+
     # 탭 내용이 스크롤 틀 안에 있어야 한다. 안내 그림이 들어가면서 [설정 저장]
     # 버튼이 창 밖으로 밀려난 적이 있다. 위젯에서 위로 거슬러 올라가 스크롤 캔버스를 찾는다
     # (창 틀 캔버스는 빼고).
