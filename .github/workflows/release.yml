@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: '3.11'
       # GUI 없이 도는 부분만 돈다. tkinter 가 없어도 통과해야 한다.
-      - run: pip install openpyxl
+      - run: pip install openpyxl pillow
       - run: python -m unittest discover -s tests -v
 
   build:

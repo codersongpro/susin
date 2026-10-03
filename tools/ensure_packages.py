@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 앱을 띄우는 데는 필요 없는 것
 SKIP = {'pyinstaller'}
 # 설치 이름과 불러오는 이름이 다른 것
-IMPORT_NAMES = {'pywin32': 'win32gui'}
+IMPORT_NAMES = {'pywin32': 'win32gui', 'pillow': 'PIL'}
 
 
 def requirements(path=None) -> list:

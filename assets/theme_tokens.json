@@ -1,0 +1,17 @@
+{
+  "seed": "#4A53C9",
+  "tools": {"sotong": "primary", "susin": "tertiary"},
+  "colors": {
+    "primary": "#4A53C9", "on_primary": "#FFFFFF",
+    "primary_container": "#E1E0FF", "on_primary_container": "#0A0F6E",
+    "tertiary": "#00695C", "on_tertiary": "#FFFFFF",
+    "tertiary_container": "#A7F0E0", "on_tertiary_container": "#00201B",
+    "error": "#B3261E", "error_container": "#F9DEDC", "on_error_container": "#410E0B",
+    "warn": "#8A5100", "warn_container": "#FFDDB3", "on_warn_container": "#2B1700",
+    "ok": "#1B6B3A", "ok_container": "#BDF0CB", "on_ok_container": "#00210D",
+    "on_surface": "#1A1B27", "on_surface_variant": "#464653", "outline": "#767684"
+  },
+  "radius": {"window": 32, "panel": 28, "inner": 20, "field": 14, "button": 20, "chip": 8},
+  "glass": {"fill": 0.56, "fill_strong": 0.74, "inner": 0.50, "edge": 0.78, "blur_px": 26},
+  "window": {"width": 1120, "height": 720, "min_width": 960, "min_height": 640, "padding": 16, "gap": 14, "rail": 92}
+}
