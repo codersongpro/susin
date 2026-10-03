@@ -192,7 +192,7 @@ def real_messenger_nodes():
             f'조직도{k}[교사(초등)]')
     add(doc, 50020, (x0 + 339, y0 + 60, x0 + 450, y0 + 78), '선택된 사용자')
     box = add(doc, 50025, (x0 + 339, y0 + 83, x0 + 615, y0 + 383))
-    names = ['문유리 [부장교사]', '이경숙 [교사(초등)]', '김다래 [교사(초등)]',
+    names = ['문유리 [부장교사]', '이경숙 [교사(초등)]', '김충북 [교사(초등)]',
              '나상연 [교사(초등)]', '함봉주 [교사(초등)]', '이정훈 [교사(초등)]',
              '송동석 [교사(초등)]']
     for k, name in enumerate(names):
@@ -230,7 +230,7 @@ class RealMessengerTest(unittest.TestCase):
         nodes = real_messenger_nodes()
         node, kid_type, _count, _off = guess_selected_list(nodes, 1284)
         names = [reconcile.person_name_from_row(t) for t in row_texts(nodes, node['id'], kid_type)]
-        self.assertEqual(names, ['문유리', '이경숙', '김다래', '나상연', '함봉주', '이정훈', '송동석'])
+        self.assertEqual(names, ['문유리', '이경숙', '김충북', '나상연', '함봉주', '이정훈', '송동석'])
 
 
 class SearchCountTest(unittest.TestCase):

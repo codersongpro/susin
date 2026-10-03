@@ -1128,7 +1128,7 @@ class AppFlowTest(unittest.TestCase):
     def _run_one(self, count, choice='continue'):
         """한 사람을 돌린다. 검색 결과가 count 명이고, 멈추면 choice 를 고른다."""
         m = self.app_module
-        item = {'org': '', 'name': '김다래'}
+        item = {'org': '', 'name': '김충북'}
         self.app.names_list = [item]
         self.app.stop_flag.clear()
         manual = self.app.config.data.get('manual_confirm')
@@ -1162,7 +1162,7 @@ class AppFlowTest(unittest.TestCase):
     def test_several_results_pause_instead_of_clicking_the_first(self):
         """검색 결과가 둘이면 첫 사람을 누르지 않는다. 엉뚱한 사람이 들어갈 수 있다."""
         item, asked, clicked = self._run_one(2)
-        self.assertEqual(asked, [('김다래', 2)])
+        self.assertEqual(asked, [('김충북', 2)])
         clicked.assert_not_called()
         self.assertTrue(item.get('added'))
 
@@ -1202,13 +1202,13 @@ class AppFlowTest(unittest.TestCase):
         m = self.app_module
         items = [{'org': '학성초등학교', 'name': '이경숙'},
                  {'org': '학성초등학교', 'name': '나상연'},
-                 {'org': '가초', 'name': '김다래'}, {'org': '나초', 'name': '김다래'}]
+                 {'org': '가초', 'name': '김충북'}, {'org': '나초', 'name': '김충북'}]
         result = reconcile.compare_with_messenger(
-            items, ['이경숙 [교사(초등)]', '김다래 [교사(초등)]'])
+            items, ['이경숙 [교사(초등)]', '김충북 [교사(초등)]'])
         added = []
         window = m.MessengerCompareReport(_Widget(), result, 4, on_add=added.append)
-        # 빠진 나상연 + 누가 들어갔는지 모르는 김다래 둘
-        self.assertEqual([i['name'] for i in window.addable], ['나상연', '김다래', '김다래'])
+        # 빠진 나상연 + 누가 들어갔는지 모르는 김충북 둘
+        self.assertEqual([i['name'] for i in window.addable], ['나상연', '김충북', '김충북'])
         window._add()
         self.assertEqual(added, [window.addable])
 
@@ -1510,18 +1510,18 @@ class AppFlowTest(unittest.TestCase):
         """명단에도 이름 옆에 '동명이인 N명 중 X명만 들어감, 확인 필요' 가 붙는다."""
         from ui_helpers import format_item_label
         m = self.app_module
-        items = [{'org': '가초등학교', 'name': '김다래', 'added': True},
-                 {'org': '나초등학교', 'name': '김다래', 'added': True}]
+        items = [{'org': '가초등학교', 'name': '김충북', 'added': True},
+                 {'org': '나초등학교', 'name': '김충북', 'added': True}]
         self.app.names_list = items
         try:
             with patch.object(self.app, '_read_messenger_selected',
-                              return_value=(['김다래 [교사(초등)] [3학년]'], '')), \
+                              return_value=(['김충북 [교사(초등)] [3학년]'], '')), \
                     patch.object(m, 'MessengerCompareReport'):
                 self.app._compare_with_messenger()
             note = '동명이인 2명 중 1명만 들어감, 확인 필요'
             self.assertEqual([i['failure_reason'] for i in items], [note, note])
             self.assertFalse(any(i.get('added') for i in items))
-            self.assertEqual(format_item_label(items[0]), f'[가초등학교]  김다래  ({note})')
+            self.assertEqual(format_item_label(items[0]), f'[가초등학교]  김충북  ({note})')
         finally:
             self.app.names_list = []
 

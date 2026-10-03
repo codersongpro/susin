@@ -149,7 +149,7 @@ def main():
     print('소통메신저 비교 창 ok')
 
     # 동명이인 고르기 창
-    app._ask_pick('김다래', 2)
+    app._ask_pick('김충북', 2)
     assert app.pick_window.winfo_exists()
     app.pick_window.destroy()
     print('동명이인 고르기 창 ok')
