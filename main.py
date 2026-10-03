@@ -45,6 +45,8 @@ from automation import (
     repeated_containers,
     row_texts,
     find_label,
+    has_selected_label,
+    selected_person_rows,
     uia_type_name,
     SELECTED_LABEL,
     FAIL_MANUAL_STOP,
@@ -4168,18 +4170,31 @@ class App:
         if uia is None:
             return None, (f'화면 읽어 주기를 쓸 수 없습니다 ({why}). '
                           '개발용 실행.bat 을 다시 누르면 필요한 것을 깝니다.')
-        # 여럿이 겹쳐 있으면 맨 위 창을 읽는다. 자동 선택도 그 창을 누른다.
-        nodes, _tries = self._read_uia_nodes(uia, inside[0])
-        guess = guess_selected_list(nodes, point[0])
-        if not guess:
-            return None, ('[선택된 사용자] 목록을 찾지 못했습니다. 담긴 사람이 한 명뿐이면 '
-                          '목록을 알아보지 못합니다. 그렇지 않다면 [위치 설정] 탭에서 '
+        # 여럿이 겹쳐 있으면 맨 위 창부터 읽는다. 자동 선택도 맨 위 창을 누른다.
+        # 맨 위 창에서 담긴 사람을 못 읽으면(아직 안 뜬 화면, 빈 목록 따위) 다음 창을 본다.
+        rows, seen_label, used = None, False, 0
+        for index, window in enumerate(inside):
+            nodes, _tries = self._read_uia_nodes(uia, window)
+            found = selected_person_rows(nodes, point[0])
+            logging.info('[선택된 사용자] 읽기: %d번째 창, 요소 %d개, 사람 줄 %d개',
+                         index + 1, len(nodes), len(found))
+            if found:
+                rows, used = found, index
+                break
+            if has_selected_label(nodes):
+                seen_label = True
+                if rows is None:
+                    rows, used = [], index           # 목록이 비어 있는 창일 수 있다
+        if not rows and not seen_label:
+            return None, ('[선택된 사용자] 목록을 찾지 못했습니다. [사용자 선택] 창이 완전히 '
+                          '뜬 다음에 다시 눌러 주세요. 계속 안 되면 [위치 설정] 탭에서 '
                           '6번 자리를 다시 확인해 주세요.')
         self.compare_note = ''
         if len(inside) > 1:
-            self.compare_note = (f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 맨 위 창을 '
+            which = '맨 위 창' if used == 0 else f'위에서 {used + 1}번째 창'
+            self.compare_note = (f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 {which}을 '
                                  '읽었습니다. 쓰지 않는 창은 닫아 두는 편이 안전합니다.')
-        return row_texts(nodes, guess[0]['id'], guess[1]), ''
+        return rows, ''
 
     def _compare_with_messenger(self, quiet: bool = False):
         """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 누가 들어가고 빠졌는지 보여 준다.

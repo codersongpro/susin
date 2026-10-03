@@ -238,6 +238,100 @@ def person_rows(nodes, container_id: int, row_type: int) -> int:
                if PERSON_ROW.search(text))
 
 
+def _joined_texts(nodes):
+    """요소마다 자기와 안쪽 요소의 이름을 차례로 이은 글. {id: 글}."""
+    children = {}
+    for node in nodes:
+        children.setdefault(node.get('parent'), []).append(node)
+    memo = {}
+
+    def pieces(node):
+        found = memo.get(node['id'])
+        if found is not None:
+            return found
+        out = []
+        name = (node.get('name') or '').strip()
+        if name:
+            out.append(name)
+        for kid in children.get(node['id'], []):
+            for piece in pieces(kid):
+                if piece not in out:
+                    out.append(piece)
+        memo[node['id']] = out
+        return out
+
+    return {node['id']: ' '.join(pieces(node)) for node in nodes}, children
+
+
+def selected_person_rows(nodes, split_x: int) -> list:
+    """[선택된 사용자] 에 담긴 사람의 줄 글. '이름 [직위]' 가 있는 줄만 모은다.
+
+    목록 요소를 먼저 고르면, 담긴 사람이 한두 명일 때 '그룹단위 선택추가' 같은 제목 두 줄을
+    목록으로 잘못 고른다. 그래서 사람 줄을 먼저 찾는다. 오른쪽 화살표 버튼보다 오른쪽에 있는
+    '이름 [직위]' 모양의 가장 작은 요소를 찾고, 그 줄의 사진과 소속까지 한 줄로 묶는다.
+    조직도와 검색 결과(버튼 왼쪽)는 들어오지 않는다. 한 명만 담겨 있어도 찾는다.
+    """
+    if not nodes:
+        return []
+    texts, children = _joined_texts(nodes)
+    by_id = {node['id']: node for node in nodes}
+    label = find_label(nodes, SELECTED_LABEL)
+    label_top = label['rect'][1] - 2 if label is not None else None
+
+    def on_right(node):
+        left, top, right, _bottom = node['rect']
+        if (left + right) / 2 < split_x:
+            return False
+        return label_top is None or top >= label_top
+
+    def matches(node):
+        return bool(PERSON_ROW.search(texts.get(node['id'], '')))
+
+    minimal = []
+    for node in nodes:
+        if not on_right(node) or not matches(node):
+            continue
+        if any(matches(kid) for kid in children.get(node['id'], [])):
+            continue
+        minimal.append(node)
+    if not minimal:
+        return []
+
+    minimal_ids = {node['id'] for node in minimal}
+
+    def below_count(node):
+        """이 요소 안에 든 사람 줄 수."""
+        total, stack = 0, [node]
+        while stack:
+            cur = stack.pop()
+            if cur['id'] in minimal_ids:
+                total += 1
+            stack.extend(children.get(cur['id'], []))
+        return total
+
+    rows = {}
+    for node in minimal:
+        height = max(node['rect'][3] - node['rect'][1], 1)
+        row = node
+        while True:
+            parent = by_id.get(row.get('parent'))
+            if parent is None or below_count(parent) != 1:
+                break
+            if parent['rect'][3] - parent['rect'][1] > max(120, height * 2.6):
+                break
+            row = parent
+        rows[row['id']] = row
+    ordered = sorted(rows.values(), key=lambda n: (n['rect'][1], n['rect'][0]))
+    return [texts[row['id']] for row in ordered]
+
+
+def has_selected_label(nodes) -> bool:
+    """화면에 보이는 '선택된 사용자' 제목이 읽혔는가. 목록이 비어 있는 것과 못 읽은 것을 가른다."""
+    label = find_label(nodes, SELECTED_LABEL)
+    return label is not None and (label.get('name') or '').strip() == SELECTED_LABEL \
+        and not label.get('offscreen')
+
+
 # ── 동명이인: 검색 결과가 여럿이면 멈춘다 ──────
 # 소속 없이 이름만 있거나 같은 학교에 같은 이름이 있으면 검색 결과가 여럿 나온다.
 # 첫 사람을 그대로 누르면 엉뚱한 사람이 받는 사람에 들어간다. 그래서 결과가

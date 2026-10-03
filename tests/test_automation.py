@@ -233,6 +233,92 @@ class RealMessengerTest(unittest.TestCase):
         self.assertEqual(names, ['정수신', '박소통', '김충북', '최신통', '한충주', '오청주', '송동석'])
 
 
+def photo_rows_nodes(people=2, with_label=True, hint_group=True):
+    """2026-10-03 실제 화면의 짜임새. 담긴 사람이 두 명이고 줄마다 사진이 있다.
+
+    오른쪽에 '선택된 사용자' 제목, 사람 줄(사진, '이름 [직위]', 소속과 내선), 그 아래
+    '그룹단위 선택추가' 제목 두 줄(Text 둘)과 빈 상자가 있다. 왼쪽 조직도에도 '이름 [직위]'
+    모양의 글이 많다. 담긴 사람이 두 명일 때 제목 두 줄을 목록으로 잘못 읽어
+    '권성희' 와 '강명희' 를 가져오지 못했다.
+    """
+    nodes = []
+
+    def add(parent, kind, rect, name='', off=False):
+        nodes.append({'id': len(nodes), 'parent': parent, 'type': kind,
+                      'rect': rect, 'name': name, 'offscreen': off})
+        return len(nodes) - 1
+
+    x0, y0 = 970, 120
+    doc = add(-1, 50030, (x0, y0, x0 + 630, y0 + 600))
+    tree = add(doc, 50023, (x0 + 10, y0 + 150, x0 + 290, y0 + 530))
+    for k in range(18):
+        add(tree, 50024, (x0 + 10, y0 + 150 + k * 20, x0 + 290, y0 + 170 + k * 20),
+            f'조직도{k}[교사(초등)] [{k + 1}학년]')
+    if with_label:
+        add(doc, 50020, (x0 + 339, y0 + 60, x0 + 450, y0 + 78), '선택된 사용자')
+    box = add(doc, 50025, (x0 + 339, y0 + 83, x0 + 615, y0 + 383))
+    names = [('권성희', '[교사(유치원)]', '해님반(208)'), ('강명희', '[교사(보건)]', '보건 내선 222')]
+    for k, (name, role, dept) in enumerate(names[:people]):
+        top = y0 + 83 + k * 49
+        row = add(box, 50026, (x0 + 339, top, x0 + 600, top + 49))
+        add(row, 50006, (x0 + 339, top, x0 + 380, top + 49))
+        add(row, 50020, (x0 + 385, top, x0 + 520, top + 24), f'{name} {role}')
+        add(row, 50020, (x0 + 385, top + 24, x0 + 520, top + 48), dept)
+        add(row, 50000, (x0 + 570, top + 10, x0 + 590, top + 30), '빼기')
+    if hint_group:
+        group = add(doc, 50025, (x0 + 339, y0 + 400, x0 + 615, y0 + 417))
+        add(group, 50020, (x0 + 339, y0 + 400, x0 + 450, y0 + 417), '그룹단위 선택추가')
+        add(group, 50020, (x0 + 450, y0 + 400, x0 + 600, y0 + 417), '(내그룹/조직도 더블클릭)')
+        add(doc, 50025, (x0 + 339, y0 + 420, x0 + 615, y0 + 560))
+    return nodes
+
+
+class TwoSelectedPeopleTest(unittest.TestCase):
+    """담긴 사람이 두 명일 때 그 두 사람을 가져와야 한다."""
+
+    def test_two_people_are_read_with_their_lines(self):
+        from automation import selected_person_rows
+        rows = selected_person_rows(photo_rows_nodes(2), 1284)
+        self.assertEqual(len(rows), 2)
+        self.assertIn('권성희 [교사(유치원)]', rows[0])
+        self.assertIn('해님반(208)', rows[0])
+        self.assertIn('강명희 [교사(보건)]', rows[1])
+
+    def test_names_come_out_for_the_comparison(self):
+        import reconcile
+        from automation import selected_person_rows
+        names = [reconcile.person_name_from_row(t)
+                 for t in selected_person_rows(photo_rows_nodes(2), 1284)]
+        self.assertEqual(names, ['권성희', '강명희'])
+
+    def test_group_hint_lines_are_never_taken_for_people(self):
+        from automation import selected_person_rows
+        rows = selected_person_rows(photo_rows_nodes(2), 1284)
+        self.assertFalse(any('그룹단위' in row or '더블클릭' in row for row in rows))
+
+    def test_tree_on_the_left_is_left_out(self):
+        from automation import selected_person_rows
+        rows = selected_person_rows(photo_rows_nodes(2), 1284)
+        self.assertFalse(any(row.startswith('조직도') for row in rows))
+
+    def test_a_single_person_is_found_too(self):
+        from automation import selected_person_rows
+        rows = selected_person_rows(photo_rows_nodes(1), 1284)
+        self.assertEqual(len(rows), 1)
+        self.assertIn('권성희', rows[0])
+
+    def test_an_empty_list_gives_nothing_but_the_label_is_still_seen(self):
+        from automation import has_selected_label, selected_person_rows
+        nodes = photo_rows_nodes(0)
+        self.assertEqual(selected_person_rows(nodes, 1284), [])
+        self.assertTrue(has_selected_label(nodes))
+        self.assertFalse(has_selected_label(photo_rows_nodes(0, with_label=False)))
+
+    def test_the_seven_person_window_still_reads_seven(self):
+        from automation import selected_person_rows
+        self.assertEqual(len(selected_person_rows(real_messenger_nodes(), 1284)), 7)
+
+
 class SearchCountTest(unittest.TestCase):
     def test_visible_label_first(self):
         import re

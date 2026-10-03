@@ -1632,6 +1632,59 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual(set(read), {30}, '맨 위 창이 아닌 것을 읽었습니다')
         self.assertIn('2개 겹쳐 열려 있어 맨 위 창을 읽었습니다', self.app.compare_note)
 
+    def test_compare_brings_the_two_people_already_selected(self):
+        """담긴 사람이 두 명이면 그 두 사람의 명단을 가져와야 한다 (그룹단위 제목 두 줄이 아니라)."""
+        from test_automation import photo_rows_nodes
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (10,)]
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', return_value=photo_rows_nodes(2) * 1):
+            got, why = self.app._read_messenger_selected()
+        self.assertEqual(why, '')
+        self.assertEqual(len(got), 2, got)
+        self.assertIn('권성희', got[0])
+        self.assertIn('강명희', got[1])
+        self.assertFalse(any('그룹단위' in row for row in got))
+
+    def test_compare_looks_at_the_next_window_when_the_top_one_has_no_people(self):
+        """맨 위 창이 안 뜬 화면(제목 줄만 읽힘)이면 아래 창에서 담긴 사람을 읽는다."""
+        from test_automation import photo_rows_nodes
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (30, 10)]
+        blank = photo_rows_nodes(0, with_label=False)
+
+        def nodes_of(uia, hwnd, limit=3000):
+            return blank if hwnd == 30 else photo_rows_nodes(2)
+
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 30}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', side_effect=nodes_of):
+            got, why = self.app._read_messenger_selected()
+        self.assertEqual(why, '')
+        self.assertEqual(len(got), 2)
+        self.assertIn('위에서 2번째 창', self.app.compare_note)
+
+    def test_compare_says_so_when_the_list_cannot_be_found_at_all(self):
+        from test_automation import photo_rows_nodes
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (10,)]
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', return_value=photo_rows_nodes(0, with_label=False)):
+            got, why = self.app._read_messenger_selected()
+        self.assertIsNone(got)
+        self.assertIn('목록을 찾지 못했습니다', why)
+
     def test_probe_notices_the_dialog_was_moved(self):
         """위치를 잡은 뒤 [사용자 선택] 창을 옮기면 화살표 자리에 바탕화면이 있다."""
         gui, _sent = self._fake_messenger(dialog_rect=(900, 0, 1700, 600))
