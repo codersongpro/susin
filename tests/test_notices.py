@@ -1,4 +1,4 @@
-"""라이선스, 이용약관, 오픈소스 고지가 서로 어긋나지 않는지 본다."""
+"""사용 허가서, 이용약관, 오픈소스 고지가 서로 어긋나지 않는지 본다."""
 import os
 import re
 import sys
@@ -15,12 +15,12 @@ def read(*parts):
         return f.read()
 
 
-class NoticesTest(unittest.TestCase):
-    def test_generated_notices_are_up_to_date(self):
-        """licenses/ 나 목록을 고치고 build_notices.py --apply 를 안 돌리면 여기서 걸린다."""
-        page = read('index.html')
-        self.assertEqual(build_notices.apply_html(page), page)
+class GeneratedFilesTest(unittest.TestCase):
+    def test_generated_files_are_up_to_date(self):
+        """licenses/ 나 목록, 약관을 고치고 build_notices.py --apply 를 안 돌리면 여기서 걸린다."""
         self.assertEqual(build_notices.build_markdown(), read('THIRD_PARTY_NOTICES.md'))
+        self.assertEqual(build_notices.build_license_page(), read('license.html'))
+        self.assertEqual(build_notices.build_terms_page(), read('terms.html'))
 
     def test_every_requirement_has_a_notice(self):
         names = {c[0].lower() for c in build_notices.COMPONENTS}
@@ -37,39 +37,70 @@ class NoticesTest(unittest.TestCase):
             self.assertTrue(url.startswith('https://'), name)
             self.assertTrue(kind, name)
 
-    def test_app_license_is_mit_and_matches_the_page(self):
+    def test_pages_share_the_landing_page_look(self):
+        """두 페이지의 색과 틀은 랜딩페이지에서 그대로 가져온다."""
+        shared = build_notices.shared_css()
+        self.assertIn('--primary: #4A53C9', shared)
+        for name in ('license.html', 'terms.html'):
+            self.assertIn(shared, read(name))
+        self.assertNotIn('—', read('license.html'))
+        self.assertNotIn('—', read('terms.html'))
+
+
+class LicenseTermsTest(unittest.TestCase):
+    def test_license_is_free_use_but_no_sale_and_no_modification(self):
         text = read('LICENSE')
-        self.assertTrue(text.startswith('MIT License'))
-        self.assertIn('Copyright (c) 2026 송동석 (Dustin)', text)
-        body = text.split('\n\n이 라이선스는')[0].strip()
-        self.assertIn(body, read('index.html'))
+        self.assertIn('Copyright (c) 2026 송동석 (Dustin). All rights reserved.', text)
+        self.assertIn('무료로 내려받아 쓸 수 있습니다', text)
+        self.assertIn('가. 판매', text)
+        self.assertIn('나. 수정', text)
+        self.assertNotIn('MIT', text)
+        self.assertNotIn('Permission is hereby granted', text)
 
-    def test_page_has_terms_license_and_notice_sections(self):
+    def test_license_page_shows_the_license_file_as_is(self):
+        body = read('LICENSE').rstrip('\n')
+        self.assertIn(body, read('license.html'))
+
+    def test_terms_say_the_same_thing_as_the_license(self):
+        terms = read('terms.html')
+        self.assertIn('판매와 수정은 제작자의 허락 없이 할 수 없습니다', terms)
+        self.assertIn('시행일은 2026년 10월 3일', terms)
+        for clause in ('제1조 목적', '제4조 이용자의 확인 책임', '제5조 정보 처리',
+                       '제7조 책임의 한계', '제10조 문의'):
+            self.assertIn(clause, terms)
+
+    def test_landing_page_links_to_both_pages_and_says_no_sale_no_edit(self):
         page = read('index.html')
-        for anchor in ('id="terms"', 'id="license"', 'id="oss"'):
-            self.assertIn(anchor, page)
-        self.assertIn('시행일', page)
-        for clause in ('제1조', '제5조 정보 처리', '제7조 책임의 한계', '제10조 문의'):
-            self.assertIn(clause, page)
+        self.assertIn('href="terms.html"', page)
+        self.assertIn('href="license.html"', page)
+        self.assertIn('판매와 수정은 할 수 없습니다', page)
+        self.assertNotIn('MIT', re.sub(r'data:[^"]+', '', page))
 
-    def test_gpl_part_is_disclosed_with_full_text_and_source(self):
-        notice = read('THIRD_PARTY_NOTICES.md')
-        self.assertIn('MouseInfo', notice)
-        self.assertIn('https://github.com/asweigart/mouseinfo', notice)
-        self.assertTrue(os.path.exists(os.path.join(ROOT, 'licenses', 'MouseInfo-GPL-3.0-full.txt')))
+    def test_privacy_statement_matches_what_the_app_stores(self):
+        """약관에 적은 저장 위치와 기록 수가 코드와 같다."""
+        import app_config
+        terms = read('terms.html')
+        self.assertIn(f'최근 {app_config.MAX_ORG_EXTRACT_HISTORY}회', terms)
+        self.assertEqual(os.path.basename(app_config.APP_DATA_DIR), 'SintongPick')
+        self.assertIn('%LOCALAPPDATA%', terms)
 
+
+class BundlingTest(unittest.TestCase):
     def test_notices_ship_with_the_exe(self):
         spec = read('sintongpick.spec')
         for item in ("'LICENSE'", "'THIRD_PARTY_NOTICES.md'", "'licenses'"):
             self.assertIn(item, spec)
 
-    def test_privacy_statement_matches_what_the_app_stores(self):
-        """약관에 적은 저장 위치와 기록 수가 코드와 같다."""
-        import app_config
-        page = read('index.html')
-        self.assertIn(f'최근 {app_config.MAX_ORG_EXTRACT_HISTORY}회', page)
-        self.assertEqual(os.path.basename(app_config.APP_DATA_DIR), 'SintongPick')
-        self.assertIn('%LOCALAPPDATA%', page)
+    def test_gpl_part_is_not_bundled(self):
+        """MouseInfo(GPL-3.0) 는 신통픽 사용 허가서와 맞지 않으므로 exe 에서 뺀다."""
+        self.assertIn("excludes=['mouseinfo']", read('sintongpick.spec'))
+        self.assertIn('mouseinfo', read('.github', 'workflows', 'release.yml').lower())
+        self.assertNotIn('mouseinfo', read('THIRD_PARTY_NOTICES.md').lower())
+
+    def test_site_files_are_deployed(self):
+        ignore = read('.vercelignore')
+        for name in ('index.html', 'terms.html', 'license.html', 'vercel.json'):
+            self.assertIn('!' + name, ignore)
 
 
 if __name__ == '__main__':

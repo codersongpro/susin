@@ -16,7 +16,9 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # MouseInfo(GPL-3.0) 는 PyAutoGUI 가 딸고 오지만 쓰지 않는다. GPL 부품이 exe 에 묶이면
+    # 신통픽 사용 허가서와 맞지 않으므로 뺀다. pyautogui 는 없어도 import 된다.
+    excludes=['mouseinfo'],
     noarchive=False,
     optimize=0,
 )

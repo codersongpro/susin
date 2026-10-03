@@ -117,6 +117,13 @@ jobs:
           test -f dist-onefile/sintongpick.exe
           test -f dist-onedir/sintongpick/sintongpick.exe
           test -f sintongpick-windows.zip
+          # 사용 허가서와 오픈소스 고지가 폴더형 빌드에 들어갔는지, GPL 부품이 빠졌는지 본다
+          test -f dist-onedir/sintongpick/_internal/LICENSE
+          test -f dist-onedir/sintongpick/_internal/THIRD_PARTY_NOTICES.md
+          test -d dist-onedir/sintongpick/_internal/licenses
+          if grep -aqi mouseinfo dist-onefile/sintongpick.exe; then
+            echo "MouseInfo(GPL) 가 exe 에 묶여 있습니다"; exit 1
+          fi
           echo "--- SHA256"
           sha256sum dist-onefile/sintongpick.exe sintongpick-windows.zip
 

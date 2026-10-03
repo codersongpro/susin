@@ -243,7 +243,7 @@ python3 -m unittest discover -s tests
 
 ### 랜딩페이지 배포 (Vercel)
 
-`index.html` 한 장이 전부입니다. 인라인 CSS 와 외부 링크만 쓰므로 다른 파일이 필요 없습니다.
+`index.html`, `terms.html`, `license.html` 세 장입니다. 인라인 CSS 와 외부 링크만 쓰므로 다른 파일이 필요 없습니다. 뒤의 두 장은 `tools/build_notices.py` 가 만듭니다.
 
 **Git 연동 (권장)**: [vercel.com/new](https://vercel.com/new) 에서 이 저장소를 고르고
 Framework Preset 을 `Other`, Build Command 를 비워 두면 끝납니다. 이후 `main` 에 push 할
@@ -257,7 +257,7 @@ vercel          # 미리보기
 vercel --prod   # 운영 배포
 ```
 
-`.vercelignore` 가 `index.html` 과 `vercel.json` 만 남기고 나머지를 제외합니다.
+`.vercelignore` 가 HTML 세 장과 `vercel.json` 만 남기고 나머지를 제외합니다.
 빼지 않으면 `outputDirectory` 가 저장소 루트라 앱 소스와 `data/` 의 4MB CSV 까지
 공개 URL 로 나갑니다.
 
@@ -277,16 +277,20 @@ GUI 없이도 핵심 로직은 모두 테스트합니다. 파싱, 매칭 등급,
 
 ## 라이선스
 
-신통픽의 소스 코드와 문서는 [MIT 라이선스](LICENSE) 입니다. 함께 묶인 소프트웨어와 글꼴은
-각자의 라이선스를 따르며, 저작권 표시와 전문은 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-와 `licenses/` 폴더에 있습니다. 실행 파일과 zip 에도 같은 파일이 들어갑니다. 이용 조건은
-랜딩페이지의 이용약관에 있습니다.
+신통픽은 **무료로 쓸 수 있고, 판매와 수정은 허락 없이 할 수 없습니다.** 원본 그대로 무료로
+나눠 주는 것은 됩니다. 조건 전문은 [LICENSE](LICENSE)(신통픽 사용 허가서)에 있고,
+소스 코드는 내용을 확인하라고 공개한 것입니다. 이용 조건은 랜딩페이지의 이용약관과
+라이선스 페이지(`terms.html`, `license.html`)에 있습니다.
 
-PyAutoGUI 가 딸고 오는 MouseInfo 는 GPL-3.0 이며 실행 파일에 함께 묶여 있습니다.
-신통픽은 이 부품의 기능을 쓰지 않습니다.
+함께 묶인 소프트웨어와 글꼴은 사용 허가서가 아니라 각자의 라이선스를 따릅니다. 저작권 표시와
+전문은 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)와 `licenses/` 폴더에 있고, 실행 파일과
+zip 에도 같은 파일이 들어갑니다.
+
+PyAutoGUI 를 설치하면 GPL-3.0 인 MouseInfo 가 함께 깔리지만, 신통픽은 쓰지 않으므로 실행 파일에서
+뺍니다(`sintongpick.spec` 의 `excludes`). 릴리즈 빌드는 exe 에 MouseInfo 가 남아 있으면 멈춥니다.
 
 사용하는 라이브러리를 바꾸면 `tools/build_notices.py` 의 목록을 고치고 `--apply` 로 돌립니다.
-고지문과 랜딩페이지의 오픈소스 고지가 한꺼번에 다시 만들어지고, 어긋나면 테스트가 잡습니다.
+고지문과 약관, 라이선스 페이지가 한꺼번에 다시 만들어지고, 어긋나면 테스트가 잡습니다.
 
 ---
 

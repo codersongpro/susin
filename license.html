@@ -1,40 +1,260 @@
-# 오픈소스 고지
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>라이선스 | 신통픽</title>
+  <meta name="description" content="신통픽 사용 허가서와 함께 묶인 오픈소스의 저작권, 라이선스 전문입니다." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <style>
+    /* 앱과 같은 Material 3 + 글래스 토큰 (assets/theme_tokens.json) */
+    :root {
+      --primary: #4A53C9;            --on-primary: #FFFFFF;
+      --primary-c: #E1E0FF;          --on-primary-c: #0A0F6E;
+      --tertiary: #00695C;           --on-tertiary: #FFFFFF;
+      --tertiary-c: #A7F0E0;         --on-tertiary-c: #00201B;
+      --error: #B3261E;              --error-c: #F9DEDC;   --on-error-c: #410E0B;
+      --warn: #8A5100;               --warn-c: #FFDDB3;    --on-warn-c: #2B1700;
+      --ok: #1B6B3A;                 --ok-c: #BDF0CB;     --on-ok-c: #00210D;
+      --ink: #1A1B27;                --ink-2: #464653;     --outline: #767684;
+      --line: rgba(70, 70, 83, .22);
 
-신통픽(sintongpick)은 아래 소프트웨어와 글꼴을 쓰거나 함께 묶어 배포합니다.
-각 라이선스가 요구하는 저작권 표시와 사용 조건을 여기에 모았습니다.
-이 파일은 `python3 tools/build_notices.py --apply` 로 만들며, 손으로 고치지 않습니다.
+      /* 지금 보는 도구의 색. 기본은 소통픽 */
+      --acc: var(--primary);   --on-acc: var(--on-primary);
+      --acc-c: var(--primary-c); --on-acc-c: var(--on-primary-c);
 
-신통픽 자체의 사용 조건은 `LICENSE` (신통픽 사용 허가서) 에 있습니다.
+      --glass: rgba(255, 255, 255, .56);
+      --glass-strong: rgba(255, 255, 255, .74);
+      --glass-edge: rgba(255, 255, 255, .78);
+      --glass-blur: blur(26px) saturate(170%);
+      --glass-shadow: 0 10px 36px rgba(48, 52, 120, .14), inset 0 1px 0 rgba(255, 255, 255, .8);
+    }
+    .t-susin {
+      --acc: var(--tertiary);   --on-acc: var(--on-tertiary);
+      --acc-c: var(--tertiary-c); --on-acc-c: var(--on-tertiary-c);
+    }
 
-| 이름 | 쓰임 | 라이선스 |
-|---|---|---|
-| [Pretendard](https://github.com/orioncactus/pretendard) | 앱 화면과 이 페이지의 글꼴 | SIL Open Font License 1.1 |
-| [Python](https://docs.python.org/3/license.html) | 프로그램을 돌리는 바탕 | PSF License |
-| [Tcl/Tk (tkinter)](https://www.tcl.tk/software/tcltk/license.html) | 앱 화면을 그리는 부분 | Tcl/Tk License (BSD 계열) |
-| [PyAutoGUI](https://github.com/asweigart/pyautogui) | 마우스와 키보드를 대신 움직임 | BSD 3-Clause |
-| [PyMsgBox](https://github.com/asweigart/pymsgbox) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyGetWindow](https://github.com/asweigart/PyGetWindow) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyRect](https://github.com/asweigart/pyrect) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyScreeze](https://github.com/asweigart/pyscreeze) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyTweening](https://github.com/asweigart/pytweening) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [Pyperclip](https://github.com/asweigart/pyperclip) | 클립보드 복사 | BSD 3-Clause |
-| [openpyxl](https://openpyxl.readthedocs.io) | 엑셀 파일 읽기와 쓰기 | MIT |
-| [et-xmlfile](https://foss.heptapod.net/openpyxl/et_xmlfile) | openpyxl 이 함께 쓰는 부품 | MIT |
-| [Pillow](https://python-pillow.org) | 유리 같은 바탕과 화면 이미지 | MIT-CMU (HPND) |
-| [pywin32](https://github.com/mhammond/pywin32) | 윈도우 기능 호출 | BSD 3-Clause |
-| [comtypes](https://github.com/enthought/comtypes) | 소통메신저 목록 읽기 | MIT |
-| [olefile](https://github.com/decalage2/olefile) | 한글(HWP) 파일 읽기 | BSD 2-Clause |
-| [PyInstaller](https://pyinstaller.org) | exe 파일로 묶는 도구 (부트로더가 exe 에 들어감) | GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항 |
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 88px; background: #EEF0FB; }
+    body {
+      font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', '맑은 고딕', system-ui, sans-serif;
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      word-break: keep-all;          /* 한글을 낱말 중간에서 끊지 않는다 */
+      overflow-wrap: break-word;
+      background:
+        radial-gradient(620px 520px at 6% 4%, rgba(122, 132, 255, .50), transparent 70%),
+        radial-gradient(640px 520px at 98% 10%, rgba(255, 170, 205, .45), transparent 70%),
+        radial-gradient(700px 560px at 90% 60%, rgba(120, 230, 210, .40), transparent 70%),
+        radial-gradient(560px 480px at 2% 82%, rgba(255, 214, 140, .40), transparent 70%),
+        #EEF0FB;
+      background-attachment: fixed;
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    h1, h2, h3, .step-title, .how-name, summary { text-wrap: balance; }
+    p, .step-desc, .faq-body, .how-desc, .shot figcaption, .notice, .pic .d { text-wrap: pretty; }
+    svg.ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9;
+              stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
----
+    /* ── 글래스 ── */
+    .glass {
+      background: var(--glass);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-edge);
+      box-shadow: var(--glass-shadow);
+      border-radius: 28px;
+    }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .glass { background: var(--glass-strong); }
+    }
+    .glass-inner {
+      background: rgba(255, 255, 255, .5);
+      border: 1px solid rgba(255, 255, 255, .7);
+      border-radius: 20px;
+    }
 
-## Pretendard
+    /* ── 버튼 ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      height: 44px; padding: 0 24px; border-radius: 22px;
+      font: 500 15px 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif; text-decoration: none;
+      border: 0; cursor: pointer; white-space: nowrap;
+      transition: filter .15s, transform .15s;
+    }
+    .btn:hover { filter: brightness(.95); }
+    .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+    .btn-filled { background: var(--acc); color: var(--on-acc); box-shadow: 0 2px 8px rgba(40, 40, 120, .25); }
+    .btn-tonal  { background: var(--acc-c); color: var(--on-acc-c); }
+    .btn-text   { background: none; color: var(--acc); padding: 0 12px; }
+    .btn-sm { height: 36px; padding: 0 18px; font-size: 14px; }
 
-SIL Open Font License 1.1  
-https://github.com/orioncactus/pretendard
+    /* ── 위쪽 바 ── */
+    nav {
+      position: sticky; top: 12px; z-index: 100;
+      max-width: 1120px; margin: 12px auto 0; padding: 0 12px 0 24px;
+      height: 64px; border-radius: 32px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .brand { font-size: 20px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); text-decoration: none; }
+    .brand small { font-size: 12px; font-weight: 500; color: var(--ink-2); margin-left: 8px; }
+    .nav-links { display: flex; gap: 4px; margin-left: auto; }
+    .nav-links a {
+      padding: 8px 14px; border-radius: 16px; font-size: 14px; font-weight: 500;
+      color: var(--ink-2); text-decoration: none;
+    }
+    .nav-links a:hover { background: rgba(255, 255, 255, .6); color: var(--ink); }
 
-```text
-Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard),
+    /* ── 틀 ── */
+    main { max-width: 1120px; margin: 0 auto; padding: 0 12px 24px; }
+    section { margin-top: 16px; padding: 56px 48px; }
+    .label {
+      display: inline-block; padding: 4px 12px; border-radius: 8px;
+      background: var(--acc-c); color: var(--on-acc-c);
+      font-size: 12px; font-weight: 700; margin-bottom: 14px;
+    }
+    h1.display { font-size: 56px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+    h2.title { font-size: 30px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; margin-bottom: 10px; }
+    .lead { color: var(--ink-2); font-size: 16px; max-width: 640px; }
+    
+
+    .page-title { font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin-bottom: 10px; }
+    .doc { padding: 40px 48px; }
+    .doc h2 { font-size: 22px; font-weight: 700; margin: 36px 0 8px; }
+    .doc h2:first-of-type { margin-top: 8px; }
+    .doc h3 { font-size: 16px; font-weight: 700; margin: 22px 0 4px; }
+    .doc p, .doc li { font-size: 15px; color: var(--ink-2); line-height: 1.85; max-width: 780px; }
+    .doc ol { margin: 4px 0 0 22px; }
+    .doc li + li { margin-top: 4px; }
+    .doc code { font-size: 13px; background: rgba(0, 0, 0, .05); padding: 1px 6px; border-radius: 6px; }
+    .doc .meta { font-size: 13px; }
+    .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .toc a { padding: 6px 14px; border-radius: 14px; font-size: 14px; font-weight: 500; text-decoration: none;
+             background: var(--acc-c); color: var(--on-acc-c); }
+    .plain {
+      margin-top: 14px; padding: 22px 24px; border-radius: 16px; background: rgba(255, 255, 255, .6);
+      border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere;
+      font: 15px/1.85 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif; color: var(--ink);
+    }
+    .oss-head, .oss-item summary {
+      display: grid; grid-template-columns: minmax(130px, 1fr) 1.6fr 1.3fr 22px; gap: 6px 20px;
+      align-items: center; font-size: 14px; line-height: 1.6;
+    }
+    .oss-head { margin-top: 14px; padding: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+    .oss-item { border-top: 1px solid var(--line); }
+    .oss-item summary { padding: 11px 0; cursor: pointer; list-style: none; }
+    .oss-item summary::-webkit-details-marker { display: none; }
+    .oss-item summary::after { content: '+'; color: var(--acc); font-size: 22px; line-height: 1; }
+    .oss-item[open] summary::after { content: '\2212'; }
+    .oss-item summary .n { font-weight: 700; }
+    .oss-item summary .u { color: var(--ink-2); }
+    .oss-item summary .l { font-weight: 600; }
+    .oss-item summary:hover .n { text-decoration: underline; }
+    .oss-item .oss-link { margin: 0 0 8px; font-size: 13px; }
+    .oss-item pre {
+      margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: rgba(255, 255, 255, .65);
+      border: 1px solid var(--line); font: 12px/1.6 ui-monospace, Consolas, 'Courier New', monospace;
+      color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto;
+    }
+    footer { max-width: 1120px; margin: 0 auto 24px; padding: 0 12px; }
+    .foot { height: 48px; border-radius: 20px; display: flex; align-items: center; justify-content: center;
+            gap: 8px; font-size: 13px; color: var(--ink-2); }
+    .foot strong { color: var(--ink); }
+    @media (max-width: 960px) { .nav-links { display: none; } nav { justify-content: space-between; } }
+    @media (max-width: 640px) {
+      nav { margin: 8px 8px 0; padding: 0 8px 0 18px; top: 8px; }
+      main { padding: 0 8px 16px; }
+      section, .doc { padding: 30px 20px; }
+      .page-title { font-size: 30px; }
+      .oss-head { display: none; }
+      .oss-item summary { grid-template-columns: 1fr 22px; gap: 2px 12px; }
+      .oss-item summary::after { grid-column: 2; grid-row: 1 / span 3; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="glass">
+  <a class="brand" href="index.html">신통픽<small>수신픽 + 소통픽</small></a>
+  <div class="nav-links">
+    <a href="index.html">처음으로</a>
+    <a href="terms.html">이용약관</a>
+    <a href="license.html">라이선스</a>
+  </div>
+  <a class="btn btn-filled btn-sm" href="https://github.com/codersongpro/susin/releases/latest/download/sintongpick.exe" download>최신 버전 내려받기</a>
+</nav>
+
+<main>
+<section class="glass doc" id="license">
+  <span class="label">라이선스</span>
+  <h1 class="page-title">라이선스</h1>
+  <p class="lead">신통픽을 쓰는 조건과, 신통픽에 함께 묶인 소프트웨어의 저작권 표시를 모았습니다.</p>
+  <div class="toc"><a href="#app">신통픽 사용 허가서</a><a href="#oss">오픈소스 고지</a><a href="#data">기관 이름 자료</a></div>
+
+  <h2 id="app">신통픽 사용 허가서</h2>
+  <p>신통픽은 무료로 쓸 수 있습니다. 판매와 수정은 허락 없이 할 수 없습니다. 같은 내용이 저장소와 실행 파일에 들어 있는 <code>LICENSE</code> 파일입니다.</p>
+  <div class="plain">신통픽 사용 허가서 (Sintongpick License)
+
+Copyright (c) 2026 송동석 (Dustin). All rights reserved.
+
+이 허가서는 신통픽의 소스 코드, 실행 파일, 문서, 화면 사진에 적용됩니다.
+신통픽에 함께 묶인 다른 소프트웨어와 글꼴에는 적용되지 않으며, 각자의 라이선스를
+따릅니다. 자세한 내용은 THIRD_PARTY_NOTICES.md 를 보세요.
+
+1. 허락하는 것
+
+   가. 누구나 신통픽을 무료로 내려받아 쓸 수 있습니다. 학교와 기관의 업무에 써도 됩니다.
+   나. 고치지 않은 원본 그대로의 신통픽을 다른 사람에게 무료로 나눠 줄 수 있습니다.
+       이때 저작권 표시와 이 허가서를 함께 전해야 합니다.
+   다. 공개된 소스 코드를 읽고 공부할 수 있습니다.
+
+2. 허락하지 않는 것
+
+   아래는 송동석의 서면 허락 없이 할 수 없습니다.
+
+   가. 판매. 신통픽을 팔거나 빌려주거나, 대가를 받고 제공하거나, 유료 상품이나
+       서비스에 넣는 것
+   나. 수정. 소스 코드나 실행 파일을 고치거나 번역하거나 일부를 떼어 다른 프로그램에
+       쓰는 것, 그렇게 만든 것을 나누는 것. 법이 허용하는 범위를 벗어난 역컴파일과
+       분해도 포함합니다.
+   다. 저작권 표시와 이 허가서를 지우거나 바꾸는 것
+   라. 신통픽의 이름이나 만든 사람 표기를 써서 고친 프로그램이나 다른 프로그램을
+       신통픽인 것처럼 보이게 하는 것
+
+   소스 코드는 내용을 확인하라고 공개한 것입니다. 공개했다고 해서 위 제한이 풀리지
+   않습니다.
+
+3. 허락받는 방법
+
+   위 2번에 해당하는 일을 하려면 dungst.me@gmail.com 으로 먼저 문의해 메일로 허락을
+   받으세요.
+
+4. 보증 없음
+
+   신통픽은 있는 그대로 제공합니다. 쓰다가 생긴 손해에 대해 법이 허용하는 범위에서
+   책임지지 않습니다. 송동석의 고의 또는 중대한 과실로 생긴 손해는 제외합니다.
+   이용 조건은 이용약관을 따릅니다.
+
+5. 어겼을 때
+
+   이 허가서를 어기면 허락은 자동으로 끝납니다. 그때는 신통픽을 쓰는 것을 멈추고
+   지워야 합니다.
+
+6. 적용 시기
+
+   이 허가서는 v2.3.2 이후에 배포하는 신통픽에 적용합니다.</div>
+
+  <h2 id="oss">오픈소스 고지</h2>
+  <p>신통픽은 아래 소프트웨어와 글꼴을 바탕으로 만들었고, 대부분은 실행 파일(sintongpick.exe)에 함께 묶여 있습니다. 이 소프트웨어들은 위 사용 허가서가 아니라 각자의 라이선스를 따릅니다. 항목을 누르면 저작권과 라이선스 전문이 나옵니다. 같은 내용이 앱과 함께 받는 <code>THIRD_PARTY_NOTICES.md</code> 에도 있습니다.</p>
+  <div class="oss-head"><span>이름</span><span>쓰임</span><span>라이선스</span><span></span></div>
+    <details class="oss-item">
+      <summary><span class="n">Pretendard</span><span class="u">앱 화면과 이 페이지의 글꼴</span><span class="l">SIL Open Font License 1.1</span></summary>
+      <p class="oss-link"><a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noopener">https://github.com/orioncactus/pretendard</a></p>
+      <pre>Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard),
 with Reserved Font Name Pretendard.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
@@ -81,7 +301,7 @@ new environment.
 "Author" refers to any designer, engineer, programmer, technical
 writer or other person who contributed to the Font Software.
 
-PERMISSION & CONDITIONS
+PERMISSION &amp; CONDITIONS
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of the Font Software, to use, study, copy, merge, embed, modify,
 redistribute, and sell modified and unmodified copies of the Font
@@ -127,32 +347,20 @@ COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
-OTHER DEALINGS IN THE FONT SOFTWARE.
-```
-
----
-
-## Python
-
-PSF License  
-https://docs.python.org/3/license.html
-
-```text
-Python is licensed under the PSF License Agreement.
+OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Python</span><span class="u">프로그램을 돌리는 바탕</span><span class="l">PSF License</span></summary>
+      <p class="oss-link"><a href="https://docs.python.org/3/license.html" target="_blank" rel="noopener">https://docs.python.org/3/license.html</a></p>
+      <pre>Python is licensed under the PSF License Agreement.
 Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
 
-전문: https://docs.python.org/3/license.html
-```
-
----
-
-## Tcl/Tk (tkinter)
-
-Tcl/Tk License (BSD 계열)  
-https://www.tcl.tk/software/tcltk/license.html
-
-```text
-This software is copyrighted by the Regents of the University of
+전문: https://docs.python.org/3/license.html</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Tcl/Tk (tkinter)</span><span class="u">앱 화면을 그리는 부분</span><span class="l">Tcl/Tk License (BSD 계열)</span></summary>
+      <p class="oss-link"><a href="https://www.tcl.tk/software/tcltk/license.html" target="_blank" rel="noopener">https://www.tcl.tk/software/tcltk/license.html</a></p>
+      <pre>This software is copyrighted by the Regents of the University of
 California, Sun Microsystems, Inc., Scriptics Corporation, ActiveState
 Corporation, Apple Inc. and other parties.  The following terms apply to
 all files associated with the software unless explicitly disclaimed in
@@ -191,18 +399,12 @@ Government shall have only "Restricted Rights" as defined in Clause
 252.227-7013 (b) (3) of DFARs.  Notwithstanding the foregoing, the
 authors grant the U.S. Government and others acting in its behalf
 permission to use and distribute the software in accordance with the
-terms specified in this license.
-```
-
----
-
-## PyAutoGUI
-
-BSD 3-Clause  
-https://github.com/asweigart/pyautogui
-
-```text
-Copyright (c) 2014, Al Sweigart
+terms specified in this license.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyAutoGUI</span><span class="u">마우스와 키보드를 대신 움직임</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyautogui" target="_blank" rel="noopener">https://github.com/asweigart/pyautogui</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -228,18 +430,12 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## PyMsgBox
-
-BSD 3-Clause  
-https://github.com/asweigart/pymsgbox
-
-```text
-Copyright (c) 2014, Al Sweigart
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyMsgBox</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pymsgbox" target="_blank" rel="noopener">https://github.com/asweigart/pymsgbox</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -265,18 +461,12 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## PyGetWindow
-
-BSD 3-Clause  
-https://github.com/asweigart/PyGetWindow
-
-```text
-Copyright (c) 2015, Al Sweigart
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyGetWindow</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/PyGetWindow" target="_blank" rel="noopener">https://github.com/asweigart/PyGetWindow</a></p>
+      <pre>Copyright (c) 2015, Al Sweigart
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -302,18 +492,12 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## PyRect
-
-BSD 3-Clause  
-https://github.com/asweigart/pyrect
-
-```text
-Copyright (c) 2018, Al Sweigart
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyRect</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyrect" target="_blank" rel="noopener">https://github.com/asweigart/pyrect</a></p>
+      <pre>Copyright (c) 2018, Al Sweigart
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -339,18 +523,12 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## PyScreeze
-
-BSD 3-Clause  
-https://github.com/asweigart/pyscreeze
-
-```text
-Copyright (c) 2014, Al Sweigart
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyScreeze</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyscreeze" target="_blank" rel="noopener">https://github.com/asweigart/pyscreeze</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -376,18 +554,12 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## PyTweening
-
-BSD 3-Clause  
-https://github.com/asweigart/pytweening
-
-```text
-Copyright (c) 2014, Al Sweigart
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyTweening</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pytweening" target="_blank" rel="noopener">https://github.com/asweigart/pytweening</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -413,18 +585,12 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## Pyperclip
-
-BSD 3-Clause  
-https://github.com/asweigart/pyperclip
-
-```text
-Copyright (c) 2014, Al Sweigart
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Pyperclip</span><span class="u">클립보드 복사</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/asweigart/pyperclip" target="_blank" rel="noopener">https://github.com/asweigart/pyperclip</a></p>
+      <pre>Copyright (c) 2014, Al Sweigart
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -450,18 +616,12 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## openpyxl
-
-MIT  
-https://openpyxl.readthedocs.io
-
-```text
-This software is under the MIT Licence
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">openpyxl</span><span class="u">엑셀 파일 읽기와 쓰기</span><span class="l">MIT</span></summary>
+      <p class="oss-link"><a href="https://openpyxl.readthedocs.io" target="_blank" rel="noopener">https://openpyxl.readthedocs.io</a></p>
+      <pre>This software is under the MIT Licence
 ======================================
 
 Copyright (c) 2010 openpyxl
@@ -483,18 +643,12 @@ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
----
-
-## et-xmlfile
-
-MIT  
-https://foss.heptapod.net/openpyxl/et_xmlfile
-
-```text
-This software is under the MIT Licence
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">et-xmlfile</span><span class="u">openpyxl 이 함께 쓰는 부품</span><span class="l">MIT</span></summary>
+      <p class="oss-link"><a href="https://foss.heptapod.net/openpyxl/et_xmlfile" target="_blank" rel="noopener">https://foss.heptapod.net/openpyxl/et_xmlfile</a></p>
+      <pre>This software is under the MIT Licence
 ======================================
 
 Copyright (c) 2010 openpyxl
@@ -516,18 +670,12 @@ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
----
-
-## Pillow
-
-MIT-CMU (HPND)  
-https://python-pillow.org
-
-```text
-The Python Imaging Library (PIL) is
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">Pillow</span><span class="u">유리 같은 바탕과 화면 이미지</span><span class="l">MIT-CMU (HPND)</span></summary>
+      <p class="oss-link"><a href="https://python-pillow.org" target="_blank" rel="noopener">https://python-pillow.org</a></p>
+      <pre>The Python Imaging Library (PIL) is
 
     Copyright © 1997-2011 by Secret Labs AB
     Copyright © 1995-2011 by Fredrik Lundh and contributors
@@ -556,18 +704,12 @@ IN NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL,
 INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
 LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
 OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-```
-
----
-
-## pywin32
-
-BSD 3-Clause  
-https://github.com/mhammond/pywin32
-
-```text
-Unless stated in the specific source file, this work is
+PERFORMANCE OF THIS SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">pywin32</span><span class="u">윈도우 기능 호출</span><span class="l">BSD 3-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/mhammond/pywin32" target="_blank" rel="noopener">https://github.com/mhammond/pywin32</a></p>
+      <pre>Unless stated in the specific source file, this work is
 Copyright (c) 1994-2008, Mark Hammond
 All rights reserved.
 
@@ -596,18 +738,12 @@ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
 PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
----
-
-## comtypes
-
-MIT  
-https://github.com/enthought/comtypes
-
-```text
-This software is OSI Certified Open Source Software.
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">comtypes</span><span class="u">소통메신저 목록 읽기</span><span class="l">MIT</span></summary>
+      <p class="oss-link"><a href="https://github.com/enthought/comtypes" target="_blank" rel="noopener">https://github.com/enthought/comtypes</a></p>
+      <pre>This software is OSI Certified Open Source Software.
 OSI Certified is a certification mark of the Open Source Initiative.
 
 Copyright (c) 2006-2013, Thomas Heller.
@@ -630,18 +766,12 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```
-
----
-
-## olefile
-
-BSD 2-Clause  
-https://github.com/decalage2/olefile
-
-```text
-LICENSE for the olefile package:
+THE SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">olefile</span><span class="u">한글(HWP) 파일 읽기</span><span class="l">BSD 2-Clause</span></summary>
+      <p class="oss-link"><a href="https://github.com/decalage2/olefile" target="_blank" rel="noopener">https://github.com/decalage2/olefile</a></p>
+      <pre>LICENSE for the olefile package:
 
 olefile (formerly OleFileIO_PL) is copyright (c) 2005-2023 Philippe Lagadec
 (https://www.decalage.info)
@@ -696,23 +826,35 @@ NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL,
 INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
 LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-```
-
----
-
-## PyInstaller
-
-GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항  
-https://pyinstaller.org
-
-```text
-PyInstaller (https://pyinstaller.org).
+PERFORMANCE OF THIS SOFTWARE.</pre>
+    </details>
+    <details class="oss-item">
+      <summary><span class="n">PyInstaller</span><span class="u">exe 파일로 묶는 도구 (부트로더가 exe 에 들어감)</span><span class="l">GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항</span></summary>
+      <p class="oss-link"><a href="https://pyinstaller.org" target="_blank" rel="noopener">https://pyinstaller.org</a></p>
+      <pre>PyInstaller (https://pyinstaller.org).
 GPL-2.0 or later, with a special exception that allows the programs it builds
 to be distributed under any license.
 
 실행 파일을 만드는 도구입니다. 만들어진 실행 파일에는 PyInstaller 의 부트로더가
 들어가며, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.
 
-  - 라이선스 전문: licenses/PyInstaller-COPYING-full.txt
-```
+  - 라이선스 전문: licenses/PyInstaller-COPYING-full.txt</pre>
+    </details>
+
+  <h2 id="data">기관 이름 자료</h2>
+  <p>기관 이름 사전은 나이스에서 공개한 공공데이터인 학교기본정보(2026년 8월 31일 기준)와 에듀파인 조직도에 나온 기관 이름을 정리한 것입니다. 학교 이름, 학교급, 기관 이름 같은 사실 정보만 담고 있습니다.</p>
+  <p>소통메신저, 에듀파인, 나이스는 각 제공 기관의 서비스이며 신통픽과는 별개입니다. 사용 방법 화면 사진에는 설명을 위해 이 서비스의 화면 일부가 나오고, 사람 이름은 모두 지어낸 예시입니다.</p>
+  <p class="meta">문의: <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a></p>
+</section>
+</main>
+
+<footer>
+  <div class="foot glass">
+    <strong>신통픽</strong>
+    <span>&nbsp;·&nbsp; Developed by 송동석(Dustin)</span>
+    <span>&nbsp;·&nbsp; <a href="terms.html">이용약관</a> &nbsp;·&nbsp; <a href="license.html">라이선스</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
