@@ -1140,7 +1140,8 @@ class AppFlowTest(unittest.TestCase):
     def test_probe_says_x_when_the_list_cannot_be_counted(self):
         gui, _sent = self._fake_messenger(list_class='CustomGrid')
         with patch.object(self.app, '_win32gui', return_value=gui), \
-                patch.object(self.app, '_snapshot_dialogs', return_value={10}):
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(None, '윈도우가 아닙니다')):
             text = self.app._probe_messenger_lists()
         self.assertTrue(text.startswith('결과: X'), text)
         self.assertIn('목록을 셀 수 없습니다', text)
@@ -1165,13 +1166,53 @@ class AppFlowTest(unittest.TestCase):
         self.assertNotIn('조직도사람', text)
 
     def test_probe_says_when_ui_automation_is_missing(self):
+        m = self.app_module
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
-                patch.object(self.app, '_uia', return_value=(None, 'No module named comtypes')):
+                patch.object(self.app, '_uia', return_value=(None, 'No module named comtypes')), \
+                patch.object(m.messagebox, 'askyesno', return_value=False) as asked, \
+                patch.object(m.threading, 'Thread') as thread:
             text = self.app._probe_messenger_lists()
         self.assertTrue(text.startswith('결과: X'), text)
         self.assertIn('쓸 수 없습니다: No module named comtypes', text)
+        asked.assert_called_once()                  # 설치할지 물었고
+        thread.assert_not_called()                  # 마다했으니 깔지 않는다
+
+    def test_missing_comtypes_is_installed_on_request(self):
+        """예전에 받은 개발용 실행.bat 은 comtypes 를 깔지 않는다. 앱에서 바로 깐다."""
+        m = self.app_module
+        then = MagicMock()
+        ran = []
+
+        class DoneThread:
+            def __init__(self, target, daemon=True):
+                self.target = target
+
+            def start(self):
+                self.target()
+
+            def is_alive(self):
+                return False
+
+        def fake_run(cmd, **kwargs):
+            ran.append(cmd)
+            return types.SimpleNamespace(returncode=0, stdout='ok', stderr='')
+
+        import subprocess
+        with patch.object(m.messagebox, 'askyesno', return_value=True), \
+                patch.object(m.threading, 'Thread', DoneThread), \
+                patch.object(subprocess, 'run', fake_run):
+            self.assertTrue(self.app._offer_comtypes_install('No module named comtypes', then))
+        self.assertEqual(ran[0][-1], 'comtypes')
+        self.assertEqual(ran[0][1:4], ['-m', 'pip', 'install'])
+        then.assert_called_once()
+
+    def test_comtypes_offer_is_skipped_for_other_reasons(self):
+        m = self.app_module
+        with patch.object(m.messagebox, 'askyesno') as asked:
+            self.assertFalse(self.app._offer_comtypes_install('창이 없습니다', MagicMock()))
+        asked.assert_not_called()
 
     def _web_messenger_rows(self, names):
         """[사용자 선택] 창이 웹 화면이고 [선택된 사용자] 에 names 가 담긴 상황."""
@@ -1241,19 +1282,29 @@ class AppFlowTest(unittest.TestCase):
         finally:
             self.app.names_list = []
 
-    def test_compare_refuses_two_open_dialogs(self):
-        """[사용자 선택] 창이 두 개 겹쳐 있으면 어느 쪽인지 모른다."""
-        rows = self._web_messenger_rows(['이경숙'])
+    def test_compare_reads_the_top_dialog_when_several_are_open(self):
+        """받는사람 추가를 누를 때마다 창이 새로 생겨 셋이 겹쳐 있었다. 맨 위 창을 읽는다."""
+        rows = self._web_messenger_rows(['이경숙', '문유리'])
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         gui.GetWindowText = lambda h: '사용자 선택'
         gui.GetWindowRect = lambda h: (0, 0, 800, 600)
+        # 화면에 쌓인 순서: 30 이 맨 위, 그 아래 10
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (30, 10)]
+        read = []
+
+        def nodes_of(uia, hwnd, limit=3000):
+            read.append(hwnd)
+            return rows
+
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10, 30}), \
                 patch.object(self.app, '_uia', return_value=(object(), '')), \
-                patch.object(self.app, '_uia_nodes', return_value=rows):
+                patch.object(self.app, '_uia_nodes', side_effect=nodes_of):
             got, why = self.app._read_messenger_selected()
-        self.assertIsNone(got)
-        self.assertIn('두 개 열려 있습니다', why)
+        self.assertEqual(why, '')
+        self.assertEqual(len(got), 2)
+        self.assertEqual(set(read), {30}, '맨 위 창이 아닌 것을 읽었습니다')
+        self.assertIn('2개 겹쳐 열려 있어 맨 위 창을 읽었습니다', self.app.compare_note)
 
     def test_probe_notices_the_dialog_was_moved(self):
         """위치를 잡은 뒤 [사용자 선택] 창을 옮기면 화살표 자리에 바탕화면이 있다."""

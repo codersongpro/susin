@@ -1059,7 +1059,7 @@ class ResultReport(tk.Toplevel):
 class MessengerCompareReport(tk.Toplevel):
     """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 본 결과 창."""
 
-    def __init__(self, parent, result, total, on_retry=None):
+    def __init__(self, parent, result, total, on_retry=None, note=''):
         super().__init__(parent)
         self.result = result
         self.on_retry = on_retry
@@ -1087,6 +1087,9 @@ class MessengerCompareReport(tk.Toplevel):
                   '읽은 사람 수가 소통메신저에 보이는 수와 다르면 결과를 믿지 마세요.'),
             bg=bg, fg='#555', font=('맑은 고딕', 9), wraplength=530, justify='left'
         ).pack(anchor='w', padx=12)
+        if note:
+            tk.Label(self, text=note, bg=bg, fg='#E65100', font=('맑은 고딕', 9, 'bold'),
+                     wraplength=530, justify='left').pack(anchor='w', padx=12, pady=(4, 0))
 
         box = tk.Frame(self, bg=bg)
         box.pack(fill='both', expand=True, padx=12, pady=8)
@@ -1435,6 +1438,7 @@ class App:
         self.last_run = None
         self.run_selected_before = None
         self.last_excel_result = None
+        self.compare_note = ''
 
         self._apply_theme()
         self._build_ui()
@@ -3635,14 +3639,37 @@ class App:
         gui = self._win32gui()
         if gui is None:
             return []
+        # 받는사람 추가를 누를 때마다 창이 새로 생겨 여러 개가 겹쳐 있을 수 있다.
+        # 맨 위 창이 앞에 오도록 화면에 쌓인 순서대로 늘어놓는다.
+        visible = self._snapshot_dialogs()
+        order = [h for h in self._windows_in_z_order() if h in visible]
+        order += sorted(h for h in visible if h not in order)
         found = []
-        for hwnd in self._snapshot_dialogs():
+        for hwnd in order:
             try:
                 if MESSENGER_DIALOG_TITLE in (gui.GetWindowText(hwnd) or ''):
                     found.append(hwnd)
             except Exception:
                 continue
         return found
+
+    def _windows_in_z_order(self) -> list:
+        """최상위 창을 화면에 쌓인 순서(맨 위부터)로. 못 읽으면 빈 목록."""
+        gui = self._win32gui()
+        if gui is None:
+            return []
+        order = []
+
+        def collect(hwnd, _):
+            order.append(hwnd)
+            return True
+
+        try:
+            gui.EnumWindows(collect, None)
+        except Exception as exc:
+            logging.debug('창 순서 확인 실패: %s', exc)
+            return []
+        return order
 
     def _find_selected_list(self):
         """화살표 버튼 오른쪽의 목록 칸. 못 찾으면 None."""
@@ -3736,18 +3763,21 @@ class App:
         if not inside:
             return None, ('[사용자 선택] 창이 위치를 잡을 때와 다른 곳에 있습니다. '
                           '창을 옮기셨다면 [2. 위치 설정] 에서 4, 5, 6번을 다시 잡아 주세요.')
-        if len(inside) > 1:
-            return None, '[사용자 선택] 창이 두 개 열려 있습니다. 하나를 닫고 다시 눌러 주세요.'
         uia, why = self._uia()
         if uia is None:
             return None, (f'화면 읽어 주기를 쓸 수 없습니다 ({why}). '
                           '개발용 실행.bat 을 다시 누르면 필요한 것을 깝니다.')
+        # 여럿이 겹쳐 있으면 맨 위 창을 읽는다. 자동 선택도 그 창을 누른다.
         nodes, _tries = self._read_uia_nodes(uia, inside[0])
         guess = guess_selected_list(nodes, point[0])
         if not guess:
             return None, ('[선택된 사용자] 목록을 찾지 못했습니다. 담긴 사람이 한 명뿐이면 '
                           '목록을 알아보지 못합니다. 그렇지 않다면 [2. 위치 설정] 탭의 '
                           '[소통메신저 목록 읽기 확인] 결과를 복사해 보내 주세요.')
+        self.compare_note = ''
+        if len(inside) > 1:
+            self.compare_note = (f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 맨 위 창을 '
+                                 '읽었습니다. 쓰지 않는 창은 닫아 두는 편이 안전합니다.')
         return row_texts(nodes, guess[0]['id'], guess[1]), ''
 
     def _compare_with_messenger(self):
@@ -3763,9 +3793,12 @@ class App:
             self.root.update_idletasks()
         except Exception:
             pass
+        self.compare_note = ''
         rows, why = self._read_messenger_selected()
         if rows is None:
             self.status_var.set('소통메신저 명단을 읽지 못했습니다')
+            if self._offer_comtypes_install(why, self._compare_with_messenger):
+                return None
             messagebox.showwarning('소통메신저 명단을 읽지 못했습니다', why)
             return None
         result = reconcile.compare_with_messenger(self.names_list, rows)
@@ -3776,8 +3809,68 @@ class App:
                      sum(len(p) for _n, p, _h in result.unsure), len(result.extra))
         self.status_var.set(
             f'소통메신저 비교  ·  들어감 {len(result.inside)}명  ·  빠짐 {len(result.missing)}명')
-        MessengerCompareReport(self.root, result, len(self.names_list), self._retry_failed)
+        MessengerCompareReport(self.root, result, len(self.names_list), self._retry_failed,
+                               note=self.compare_note)
         return result
+
+    def _offer_comtypes_install(self, why: str, then) -> bool:
+        """화면 읽어 주기 부품(comtypes)이 없으면 지금 깔지 묻는다.
+
+        설치를 시작했으면 True 다. 다 깔리면 then 을 다시 부른다. 해당이 없거나
+        사용자가 마다하면 False 이고, 부른 쪽이 원래 안내를 그대로 보여 준다.
+
+        예전에 받은 개발용 실행.bat 은 이 부품을 깔지 않는다. bat 를 다시 받지 않아도
+        되게 여기서 깐다. exe 에는 이미 들어 있으므로 소스로 띄웠을 때만 묻는다.
+        """
+        if 'comtypes' not in (why or '') or getattr(sys, 'frozen', False):
+            return False
+        answer = messagebox.askyesno(
+            '부품을 설치할까요?',
+            '소통메신저 명단을 읽는 데 필요한 부품(comtypes)이 없습니다.\n\n'
+            '지금 설치할까요? 인터넷이 필요하고 1분 안쪽으로 걸립니다.')
+        # [예] 를 눌렀을 때만 깐다. 알 수 없는 값이면 깔지 않는다.
+        if answer is not True:
+            return False
+        self.status_var.set('comtypes 설치 중입니다. 잠시 기다려 주세요...')
+        done = {}
+
+        def work():
+            import subprocess
+            try:
+                proc = subprocess.run(
+                    [sys.executable, '-m', 'pip', 'install',
+                     '--disable-pip-version-check', 'comtypes'],
+                    capture_output=True, text=True, timeout=300)
+                done['ok'] = proc.returncode == 0
+                done['log'] = (proc.stdout or '')[-400:] + (proc.stderr or '')[-400:]
+            except Exception as exc:
+                done['ok'], done['log'] = False, str(exc)
+
+        def finished():
+            if done.get('ok'):
+                import importlib
+                importlib.invalidate_caches()
+                self.status_var.set('comtypes 설치를 마쳤습니다')
+                then()
+            else:
+                logging.warning('comtypes 설치 실패: %s', done.get('log'))
+                self.status_var.set('comtypes 설치에 실패했습니다')
+                messagebox.showwarning(
+                    '설치하지 못했습니다',
+                    '부품을 설치하지 못했습니다. 인터넷 연결을 확인하거나, '
+                    '개발용 실행.bat 을 새로 받아 실행해 주세요.\n\n'
+                    + (done.get('log') or '')[-300:])
+
+        def wait(thread):
+            if thread.is_alive():
+                self.root.after(300, lambda: wait(thread))
+            else:
+                finished()
+
+        thread = threading.Thread(target=work, daemon=True)
+        thread.start()
+        wait(thread)
+        return True
 
     def _mark_compare_result(self, result):
         """비교 결과를 명단에 남긴다. 빠진 사람은 빨갛게, 들어간 사람은 빨간 표시를 지운다.
@@ -3952,6 +4045,9 @@ class App:
                     lines.append(f'  화살표 자리의 창: {name}')
         text = '\n'.join(lines)
         logging.info('소통메신저 목록 확인:\n%s', text)
+        if any('comtypes' in line for line in extra_lines):
+            if self._offer_comtypes_install('comtypes', self._probe_messenger_lists):
+                return text
 
         win = tk.Toplevel(self.root)
         win.title('소통메신저 목록 읽기 확인')

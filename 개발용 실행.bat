@@ -65,13 +65,19 @@ if not defined PYTHON (
 )
 
 rem ---- 3. 빠진 패키지만 설치 ----
+rem 무엇을 깔지는 함께 받은 코드의 requirements.txt 가 정한다. 부품이 늘어도
+rem 이 파일을 새로 받을 필요가 없다.
 echo [2/3] 필요한 패키지 확인
-"%PYTHON%" -c "import pyautogui, pyperclip, openpyxl, win32gui, olefile, comtypes" >nul 2>&1
-if errorlevel 1 (
-    echo    빠진 것이 있어 설치합니다. 처음 한 번만 걸립니다.
-    "%PYTHON%" -m pip install --disable-pip-version-check pyautogui pyperclip openpyxl pywin32 olefile comtypes
+if exist "tools\ensure_packages.py" (
+    "%PYTHON%" tools\ensure_packages.py
 ) else (
-    echo    다 있습니다.
+    "%PYTHON%" -c "import pyautogui, pyperclip, openpyxl, win32gui, olefile, comtypes" >nul 2>&1
+    if errorlevel 1 (
+        echo    빠진 것이 있어 설치합니다. 처음 한 번만 걸립니다.
+        "%PYTHON%" -m pip install --disable-pip-version-check pyautogui pyperclip openpyxl pywin32 olefile comtypes
+    ) else (
+        echo    다 있습니다.
+    )
 )
 echo.
 
