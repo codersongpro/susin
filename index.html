@@ -269,6 +269,22 @@
     .version-pill { display: inline-block; padding: 2px 10px; border-radius: 8px; background: var(--primary-c); color: var(--on-primary-c); font-size: 12px; font-weight: 700; }
     .dev .note { margin-top: 16px; font-size: 13px; line-height: 1.7; }
 
+    /* ── 라이선스 ── */
+    .lic-group { margin-top: 24px; padding: 22px 28px; }
+    .lic-group h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .lic-group > p { font-size: 13px; color: var(--ink-2); line-height: 1.7; max-width: 720px; }
+    .lic-rows { margin-top: 10px; }
+    .lic-row { display: grid; grid-template-columns: minmax(150px, 1.1fr) 1.5fr 1.1fr; gap: 6px 20px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.6; }
+    .lic-row:first-child { border-top: 0; }
+    .lic-row .n { font-weight: 700; }
+    .lic-row .u { color: var(--ink-2); }
+    .lic-row .l { font-weight: 600; }
+    .lic-note { margin-top: 18px; font-size: 13px; color: var(--ink-2); line-height: 1.7; max-width: 760px; }
+    @media (max-width: 640px) {
+      .lic-group { padding: 18px 16px; }
+      .lic-row { grid-template-columns: 1fr; gap: 2px; }
+    }
+
     footer {
       max-width: 1120px; margin: 0 auto 24px; padding: 0 12px;
     }
@@ -332,6 +348,7 @@
     <a href="#howto">사용 방법</a>
     <a href="#faq">자주 묻는 질문</a>
     <a href="#developer">만든 사람</a>
+    <a href="#license">라이선스</a>
   </div>
   <a class="btn btn-filled btn-sm"
      href="https://github.com/codersongpro/susin/releases/latest/download/sintongpick.exe"
@@ -1035,12 +1052,71 @@
   </div>
 </section>
 
+
+<!-- ═══ 라이선스 ═══ -->
+<section class="glass" id="license">
+  <span class="label">라이선스</span>
+  <h2 class="title">쓰는 소프트웨어와 라이선스</h2>
+  <p class="lead">신통픽은 아래 오픈소스 소프트웨어와 글꼴을 바탕으로 만들었습니다. 각 라이선스가 요구하는 저작권 표시를 이곳에 모았습니다. 소스코드와 빌드 기록은 <a href="https://github.com/codersongpro/susin/releases" target="_blank" rel="noopener">GitHub 릴리즈 페이지</a>에서 볼 수 있습니다.</p>
+
+  <div class="lic-group glass-inner">
+    <h3>글꼴</h3>
+    <p>Copyright (c) 2021, Kil Hyung-jin. 글꼴 이름(Pretendard)을 바꾸거나 줄이지 않고 라이선스 전문과 함께 앱에 넣었습니다.</p>
+    <div class="lic-rows">
+        <div class="lic-row"><div class="n"><a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noopener">Pretendard</a></div><div class="u">앱 화면과 이 페이지의 글꼴</div><div class="l">SIL Open Font License 1.1</div></div>
+    </div>
+  </div>
+
+  <div class="lic-group glass-inner">
+    <h3>앱 안에 들어 있는 부품</h3>
+    <p>실행 파일(sintongpick.exe)에 함께 묶여 있는 소프트웨어입니다. 이름과 라이선스는 각 프로젝트의 안내를 따랐습니다.</p>
+    <div class="lic-rows">
+        <div class="lic-row"><div class="n"><a href="https://docs.python.org/3/license.html" target="_blank" rel="noopener">Python</a></div><div class="u">프로그램을 돌리는 바탕</div><div class="l">PSF License</div></div>
+        <div class="lic-row"><div class="n">Tcl/Tk (tkinter)</div><div class="u">앱 화면을 그리는 부분</div><div class="l">Tcl/Tk License (BSD 계열)</div></div>
+        <div class="lic-row"><div class="n"><a href="https://github.com/asweigart/pyautogui" target="_blank" rel="noopener">PyAutoGUI</a></div><div class="u">마우스와 키보드를 대신 움직임</div><div class="l">BSD</div></div>
+        <div class="lic-row"><div class="n">PyMsgBox, PyGetWindow, PyRect</div><div class="u">PyAutoGUI 가 함께 쓰는 부품</div><div class="l">BSD</div></div>
+        <div class="lic-row"><div class="n">PyScreeze, PyTweening</div><div class="u">PyAutoGUI 가 함께 쓰는 부품</div><div class="l">MIT</div></div>
+        <div class="lic-row"><div class="n"><a href="https://github.com/asweigart/mouseinfo" target="_blank" rel="noopener">MouseInfo</a></div><div class="u">PyAutoGUI 에 딸려 오는 부품 (신통픽은 쓰지 않음)</div><div class="l">GPL-3.0 이상</div></div>
+        <div class="lic-row"><div class="n"><a href="https://github.com/asweigart/pyperclip" target="_blank" rel="noopener">Pyperclip</a></div><div class="u">클립보드 복사</div><div class="l">BSD</div></div>
+        <div class="lic-row"><div class="n"><a href="https://openpyxl.readthedocs.io" target="_blank" rel="noopener">openpyxl</a>, et-xmlfile</div><div class="u">엑셀 파일 읽기와 쓰기</div><div class="l">MIT</div></div>
+        <div class="lic-row"><div class="n"><a href="https://python-pillow.org" target="_blank" rel="noopener">Pillow</a></div><div class="u">유리 같은 바탕과 화면 이미지</div><div class="l">MIT-CMU (HPND)</div></div>
+        <div class="lic-row"><div class="n"><a href="https://github.com/mhammond/pywin32" target="_blank" rel="noopener">pywin32</a></div><div class="u">윈도우 기능 호출</div><div class="l">PSF License</div></div>
+        <div class="lic-row"><div class="n"><a href="https://github.com/enthought/comtypes" target="_blank" rel="noopener">comtypes</a></div><div class="u">소통메신저 목록 읽기</div><div class="l">MIT</div></div>
+        <div class="lic-row"><div class="n"><a href="https://github.com/decalage2/olefile" target="_blank" rel="noopener">olefile</a></div><div class="u">한글(HWP) 파일 읽기</div><div class="l">BSD</div></div>
+    </div>
+  </div>
+
+  <div class="lic-group glass-inner">
+    <h3>만들 때만 쓴 도구</h3>
+    <div class="lic-rows">
+        <div class="lic-row"><div class="n"><a href="https://pyinstaller.org" target="_blank" rel="noopener">PyInstaller</a></div><div class="u">exe 파일로 묶는 도구 (실행 파일에는 들어가지 않음)</div><div class="l">GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항</div></div>
+    </div>
+  </div>
+
+  <div class="lic-group glass-inner">
+    <h3>기관 이름 자료와 서비스 이름</h3>
+    <p>
+      기관 이름 사전은 교육부 나이스의 학교기본정보(2026년 8월 31일 기준)와 에듀파인 조직도에 나온 기관 이름을 정리한 것입니다.
+      학교 이름, 학교급, 기관 이름 같은 사실 정보만 담고 있습니다.
+    </p>
+    <p style="margin-top:10px;">
+      소통메신저, 에듀파인, 나이스는 각 제공 기관의 서비스이며 신통픽과는 별개입니다.
+      이 페이지의 화면 사진에는 사용 방법을 설명하려고 이 서비스의 화면 일부가 나오고, 사람 이름은 모두 지어낸 예시입니다.
+    </p>
+  </div>
+
+  <p class="lic-note">
+    신통픽은 무료로 쓸 수 있고, 만든 사람은 송동석입니다. 위 라이선스에 관한 문의는 <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a> 으로 보내 주세요.
+  </p>
+</section>
+
 </main>
 
 <footer>
   <div class="foot glass">
     <strong>신통픽</strong>
     <span>&nbsp;·&nbsp; Developed by 송동석(Dustin) &nbsp;·&nbsp; Teacher / App developer / Data analyst</span>
+    <span>&nbsp;·&nbsp; <a href="#license">라이선스</a></span>
   </div>
 </footer>
 
