@@ -351,7 +351,7 @@ class CaptureDialog(tk.Toplevel):
 
     def _begin(self):
         self.start_btn.config(state='disabled')
-        self.status.config(text='잡을 자리를 클릭하세요.  Enter 로도 확정 / Esc 취소')
+        self.status.config(text='캡처할 자리를 클릭하세요.  Enter 로도 확정 / Esc 취소')
         self.bind('<Return>', lambda _e: self._confirm())
         self.bind('<Escape>', lambda _e: self.destroy())
 
@@ -538,10 +538,10 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   이 가운데 4번, 5번, 6번 자리를 신통픽에 알려 주면 됩니다.
 
-  자리를 잡는 방법은 모두 같습니다.
-    [다시 잡기] 를 누르고 [캡처 시작] 을 누른 뒤, 소통메신저에서 그 자리를 클릭합니다.
+  마우스 위치를 캡처하는 방법은 모두 같습니다.
+    [다시 캡처] 를 누르고 [캡처 시작] 을 누른 뒤, 소통메신저에서 그 자리를 클릭합니다.
     클릭하는 대신 마우스를 옮기고 Enter 를 눌러도 확정되고, Esc 를 누르면 취소됩니다.
-    클릭은 소통메신저에도 전달되므로, 6번을 잡을 때는 그 사람이 실제로 추가됩니다.
+    클릭은 소통메신저에도 전달되므로, 6번 위치를 캡처할 때는 그 사람이 실제로 추가됩니다.
     캡처를 마친 뒤 받는 사람 목록을 확인하세요.
 
   [ 4번 ]  검색 입력칸
@@ -592,11 +592,11 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   Q. 프로그램이 엉뚱한 위치를 클릭해요.
   A. 소통메신저 창을 옮기셨을 수 있습니다.
-     [위치 설정] 탭에서 세 곳을 다시 잡고 저장하세요.
+     [위치 설정] 탭에서 세 곳의 마우스 위치를 다시 캡처하고 저장하세요.
 
   Q. 검색은 됐는데 추가가 안 돼요.
-  A. 6번 자리(오른쪽 화살표 버튼)가 잘못 잡혔을 수 있습니다.
-     그 자리를 다시 잡고 저장하세요.
+  A. 6번 위치(오른쪽 화살표 버튼)가 잘못 캡처됐을 수 있습니다.
+     그 위치를 다시 캡처하고 저장하세요.
 
   Q. 검색 결과가 아예 없어요.
   A. 소통메신저에 등록되지 않은 사용자입니다.
@@ -769,9 +769,9 @@ GUIDE_STEPS = {
         ('input', 'parsed_list', '추출 결과를 확인하세요',
          '소속없음이나 이름 오류가 있으면 항목을 더블클릭해 고칩니다.\n'
          '동명이인이 있으면 수동 확인 모드를 켜 두세요.'),
-        ('calib', 'calibration_panel', '클릭할 위치 세 곳을 잡으세요',
+        ('calib', 'calibration_panel', '클릭할 위치 세 곳을 캡처하세요',
          '검색 입력창, 결과 첫 번째 행, 사용자 선택 버튼을 차례로 설정합니다.\n'
-         '소통메신저 창을 옮겼다면 위치를 다시 잡아야 합니다.'),
+         '소통메신저 창을 옮겼다면 위치를 다시 캡처해야 합니다.'),
         ('auto', 'start_button', '자동 선택을 시작하세요',
          '소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 먼저 열어 두세요.\n'
          '[자동 선택 시작]을 누르면 명단을 한 명씩 검색합니다.\n'
@@ -1984,7 +1984,7 @@ class App:
             badge.grid(row=row_i, column=0, padx=(0, 10), pady=6, sticky='nw')
             cell = tk.Frame(order.body, bg=order.fill)
             cell.grid(row=row_i, column=1, pady=6, sticky='w')
-            tail = '  아래에서 이 자리를 잡습니다' if mine else ''
+            tail = '  아래에서 이 위치를 캡처합니다' if mine else ''
             tk.Label(
                 cell, text=f'{title}\n{desc}{tail}', bg=order.fill,
                 font=ui.font(9), fg=COLORS['on_surface_variant'], justify='left',
@@ -1999,11 +1999,11 @@ class App:
         right.grid(row=1, column=1, sticky='nsew', padx=(7, 14), pady=(0, 8))
         right.columnconfigure(0, weight=1)
 
-        # 오른쪽 위: 잡아 둘 자리 세 곳
+        # 오른쪽 위: 캡처해 둘 위치 세 곳
         pos = Card(right, tone='inner', pad=(16, 12))
         pos.grid(row=0, column=0, sticky='ew', pady=(0, 10))
         self.calibration_panel = pos
-        self._section_title(pos.body, '잡아 둘 자리 세 곳', pos.fill).grid(
+        self._section_title(pos.body, '캡처해 둘 위치 세 곳', pos.fill).grid(
             row=0, column=0, columnspan=4, sticky='w', pady=(0, 6))
         pos.body.columnconfigure(1, weight=1)
         for row_i, (label_text, key) in enumerate([
@@ -3417,8 +3417,8 @@ class App:
             intro.config(text=(
                 '소통메신저에서 편지 버튼에 마우스를 올려 [쪽지작성] 을 누르고,\n'
                 '[받는사람 추가] 로 [사용자 선택] 창을 열어 두세요.\n'
-                '아래 차례에서 4번 검색 입력칸, 5번 검색 결과 첫 줄, 6번 화살표 버튼을 잡습니다.\n'
-                '[캡처 시작] 을 누른 뒤 잡을 자리를 클릭하면 그 자리가 저장됩니다. '
+                '아래 차례에서 4번 검색 입력칸, 5번 검색 결과 첫 줄, 6번 화살표 버튼의 마우스 위치를 캡처합니다.\n'
+                '[캡처 시작] 을 누른 뒤 그 자리를 클릭하면 위치가 저장됩니다. '
                 'Enter 로도 확정되고 Esc 는 취소입니다.'
             ))
         auto_intro = getattr(self, 'auto_intro', None)
@@ -3766,11 +3766,11 @@ class App:
             btn = getattr(self, f'btn_{key}', None)
             done = x is not None and y is not None
             if lbl:
-                lbl.config(text=f'({x}, {y})' if done else '아직 잡지 않았습니다')
+                lbl.config(text=f'({x}, {y})' if done else '아직 캡처하지 않았습니다')
             if chip:
                 chip.set('설정됨' if done else '미설정', 'ok' if done else 'err')
             if btn:
-                btn.config(text='다시 잡기' if done else '캡처 시작')
+                btn.config(text='다시 캡처' if done else '캡처 시작')
         self._refresh_calib_next()
         self._refresh_ready_status()
 
@@ -3786,8 +3786,8 @@ class App:
             left = sum(1 for key in ('search_field', 'result_first', 'add_button')
                        if self.config.data.get(key + '_x') is None
                        or self.config.data.get(key + '_y') is None)
-            hint.config(text='세 곳을 모두 잡았습니다' if ready
-                        else f'아직 잡지 않은 자리가 {left}곳 있습니다',
+            hint.config(text='세 곳을 모두 캡처했습니다' if ready
+                        else f'아직 캡처하지 않은 위치가 {left}곳 있습니다',
                         fg=COLORS['ok'] if ready else COLORS['on_surface_variant'])
 
     def _calib_next(self):
@@ -3858,10 +3858,10 @@ class App:
             return True
         return messagebox.askyesno(
             '화면 크기가 달라졌습니다',
-            f'위치를 잡을 때 화면은 {saved_w}×{saved_h} 였고, 지금은 '
+            f'위치를 캡처할 때 화면은 {saved_w}×{saved_h} 였고, 지금은 '
             f'{current[0]}×{current[1]} 입니다.\n\n'
             f'해상도나 확대 배율이 바뀌면 저장해 둔 위치가 어긋나 엉뚱한 곳을 '
-            f'누르게 됩니다. [위치 설정] 탭에서 세 곳을 다시 잡아 주세요.\n\n'
+            f'누르게 됩니다. [위치 설정] 탭에서 세 곳을 다시 캡처해 주세요.\n\n'
             f'그래도 지금 이대로 시작할까요?'
         )
 
@@ -3880,9 +3880,9 @@ class App:
             return True
         return messagebox.askyesno(
             '[사용자 선택] 창이 옮겨졌습니다',
-            '위치를 잡을 때와 [사용자 선택] 창의 자리가 다릅니다.\n\n'
+            '위치를 캡처할 때와 [사용자 선택] 창의 자리가 다릅니다.\n\n'
             '이대로 시작하면 저장해 둔 자리가 창 밖을 가리켜 엉뚱한 곳을 누릅니다. '
-            '창을 처음 자리로 옮기거나, [위치 설정] 탭에서 4, 5, 6번을 다시 잡아 주세요.\n\n'
+            '창을 처음 자리로 옮기거나, [위치 설정] 탭에서 4, 5, 6번을 다시 캡처해 주세요.\n\n'
             '그래도 지금 이대로 시작할까요?'
         )
 
@@ -4192,15 +4192,15 @@ class App:
             return None, '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
         point = self._arrow_point()
         if point is None:
-            return None, '[위치 설정] 에서 6번 화살표 버튼 위치를 먼저 잡아 주세요.'
+            return None, '[위치 설정] 에서 6번 화살표 버튼 위치를 먼저 캡처해 주세요.'
         dialogs = self._messenger_dialogs()
         if not dialogs:
             return None, ('소통메신저 [사용자 선택] 창이 열려 있지 않습니다. '
                           '[받는사람 추가] 를 눌러 창을 연 채로 다시 눌러 주세요.')
         inside = [w for w in dialogs if self._window_contains(w, point)]
         if not inside:
-            return None, ('[사용자 선택] 창이 위치를 잡을 때와 다른 곳에 있습니다. '
-                          '창을 옮기셨다면 [위치 설정] 에서 4, 5, 6번을 다시 잡아 주세요.')
+            return None, ('[사용자 선택] 창이 위치를 캡처할 때와 다른 곳에 있습니다. '
+                          '창을 옮기셨다면 [위치 설정] 에서 4, 5, 6번을 다시 캡처해 주세요.')
         uia, why = self._uia()
         if uia is None:
             return None, (f'화면 읽어 주기를 쓸 수 없습니다 ({why}). '
@@ -4473,7 +4473,7 @@ class App:
         if gui is None:
             headline = '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
         elif point is None:
-            headline = '6번 오른쪽 화살표 버튼 위치를 먼저 잡아 주세요.'
+            headline = '6번 오른쪽 화살표 버튼 위치를 먼저 캡처해 주세요.'
         else:
             picked = self._find_selected_list()
             count = self._count_items(picked[0], picked[1]) if picked else None
@@ -4486,8 +4486,8 @@ class App:
                 headline = '소통메신저 [사용자 선택] 창을 찾지 못했습니다.'
                 advice = '소통메신저에서 [받는사람 추가] 를 눌러 창을 연 채로 다시 눌러 주세요.'
             elif not inside:
-                headline = '[사용자 선택] 창이 위치를 잡을 때와 다른 곳에 있습니다.'
-                advice = ('창을 옮기셨다면 [위치 설정] 에서 4, 5, 6번을 다시 잡고 다시 눌러 '
+                headline = '[사용자 선택] 창이 위치를 캡처할 때와 다른 곳에 있습니다.'
+                advice = ('창을 옮기셨다면 [위치 설정] 에서 4, 5, 6번을 다시 캡처하고 다시 눌러 '
                           '주세요. 이대로 자동 선택을 시작하면 엉뚱한 곳을 누릅니다.')
             else:
                 # 창 안이 웹 화면이면 윈도우 목록 칸이 없다. 화면 읽어 주기로 다시 본다.
@@ -4852,7 +4852,7 @@ class App:
                 raise RuntimeError(
                     f'좌표 오류: 결과 위치({x}, {y})가 주 모니터'
                     f'({screen_w}×{screen_h}) 밖입니다. 소통메신저를 주 모니터로 '
-                    f'옮기고 위치를 다시 잡아 주세요'
+                    f'옮기고 위치를 다시 캡처해 주세요'
                 )
             left = min(max(0, left), max(0, screen_w - RESULT_SCAN_WIDTH))
             top = min(max(0, top), max(0, screen_h - RESULT_SCAN_HEIGHT))

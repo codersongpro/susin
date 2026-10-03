@@ -1765,7 +1765,7 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}):
             text = self.app._probe_messenger_lists()
         self.assertTrue(text.startswith('결과: X'), text)
-        self.assertIn('위치를 잡을 때와 다른 곳에 있습니다', text)
+        self.assertIn('위치를 캡처할 때와 다른 곳에 있습니다', text)
         self.assertIn('화살표 위치는 이 창 밖에 있습니다', text)
 
     def test_start_warns_when_the_dialog_was_moved(self):
@@ -1809,7 +1809,7 @@ class AppFlowTest(unittest.TestCase):
         with patch.object(self.app, '_win32gui', return_value=object()):
             text = self.app._probe_messenger_lists()
         self.assertTrue(text.startswith('결과: X'), text)
-        self.assertIn('화살표 버튼 위치를 먼저 잡아', text)
+        self.assertIn('화살표 버튼 위치를 먼저 캡처해', text)
 
     def test_excel_is_read_back_and_compared(self):
         """만든 엑셀을 다시 열어, 추출한 기관이 실제로 몇 줄 들어갔는지 대조한다."""
