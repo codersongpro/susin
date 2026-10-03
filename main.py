@@ -442,7 +442,6 @@ class CaptureDialog(tk.Toplevel):
 # ─────────────────────────────────────────────
 _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   {APP_NAME}  v{APP_VERSION}  (소통메신저와 에듀파인 수신자 선택)
-  처음 쓰시는 분도 따라 할 수 있게 순서대로 적었습니다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ■ 이 프로그램이 하는 일
@@ -526,7 +525,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   소통메신저에서 클릭할 자리 세 곳을 {APP_NAME}에 알려 주는 단계입니다.
-  한 번 저장해 두면 다음에도 그대로 씁니다.
+  한 번 저장하면 다음에도 씁니다.
 
   소통메신저에서 누르는 차례는 아래와 같습니다.
     1번  편지 버튼             오른쪽 위에 있습니다. 누르지 말고 마우스만 올리면
@@ -557,7 +556,9 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     결과 목록과 [선택된 사용자] 사이의 화살표 버튼을 클릭합니다.
 
   [ 검색 설정 ]
-    · 검색 후 대기 시간: 기본값은 0.5초입니다. 화면이 느리면 1.0~2.0초로 늘립니다.
+    · 검색 후 대기 시간: 기본값은 0.5초입니다. 자동 선택이 느리면 값을 낮추고,
+      소통메신저가 결과를 늦게 띄워 오류가 나면 1.0~2.0초로 늘립니다.
+      너무 낮추면 결과가 뜨기 전에 다음으로 넘어갑니다.
     · 수동 확인 모드: 동명이인이 걱정될 때 켭니다.
       사람마다 검색 결과를 직접 확인하고 [계속] 을 눌러야 다음으로 넘어갑니다.
 
@@ -603,7 +604,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   Q. 너무 빨라서 오류가 나요.
   A. [위치 설정] 탭에서 '검색 후 대기 시간'을 늘리세요.
-     화면이 느린 컴퓨터는 1.0~2.0초를 권합니다.
+     소통메신저가 느린 컴퓨터는 1.0~2.0초가 맞습니다.
 
   Q. 동명이인이 있어서 걱정돼요.
   A. 검색 결과가 두 명을 넘으면 신통픽이 첫 사람을 누르지 않고 멈춥니다.
@@ -654,7 +655,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
     [명단 추출] 을 누르면 기관이 네 가지로 나뉩니다.
 
-      확정              그대로 씁니다.
+      확정              엑셀에 넣습니다.
       같은 이름이 여럿  '행정과' 처럼 같은 이름이 여러 곳에 있는 경우입니다.
       추정              이름이 비슷해서 짐작만 한 경우입니다.
       찾지 못함         사전에 없는 이름입니다.
@@ -685,7 +686,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
       예)  청주 초등학교   ·   행정과   ·   단재 연수부
 
-    부서는 엑셀로 올리는 쪽이 안전합니다.
+    부서는 엑셀로 올리세요.
     좌표로 자동 선택하는 방식은 조직명 칸에 '행정과' 를 쳐서 첫 결과를 고르기 때문에,
     여러 곳에 있는 부서 이름에서는 엉뚱한 곳이 잡힐 수 있습니다.
 
@@ -748,7 +749,6 @@ _SOTONG_HELP_TEXT = _sotong_help.replace(
 ).rstrip()
 _SUSIN_HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   수신픽 사용법  v{APP_VERSION}  (에듀파인 수신그룹 엑셀 만들기)
-  처음 쓰시는 분도 따라 할 수 있게 순서대로 적었습니다.
 {_HELP_EDUFINE_MARKER}
 {_susin_help.lstrip()}"""
 
@@ -762,13 +762,13 @@ GUIDE_STEPS = {
     TARGET_MESSENGER: [
         ('input', 'input_text', '명단을 넣으세요',
          '소속기관과 이름이 들어 있는 표를 이 입력창에 붙여넣으세요.\n'
-         '엑셀·HWP 파일을 여는 방법도 사용할 수 있습니다.'),
+         '엑셀이나 한글 파일을 열어도 됩니다.'),
         ('input', 'parse_button', '명단을 추출하세요',
          '명단을 넣은 뒤 [명단 추출]을 누르세요.\n'
          '표에 섞인 직위·연락처·번호는 자동으로 걸러냅니다.'),
         ('input', 'parsed_list', '추출 결과를 확인하세요',
          '소속없음이나 이름 오류가 있으면 항목을 더블클릭해 고칩니다.\n'
-         '동명이인이 있으면 수동 확인 모드를 사용하는 편이 안전합니다.'),
+         '동명이인이 있으면 수동 확인 모드를 켜 두세요.'),
         ('calib', 'calibration_panel', '클릭할 위치 세 곳을 잡으세요',
          '검색 입력창, 결과 첫 번째 행, 사용자 선택 버튼을 차례로 설정합니다.\n'
          '소통메신저 창을 옮겼다면 위치를 다시 잡아야 합니다.'),
@@ -1550,8 +1550,8 @@ class App:
         self.messenger_tabs = [(f2, '  2. 위치 설정  '), (f3, '  3. 자동 선택  ')]
         self.edufine_tabs = [(f4, '  2. 수신그룹 엑셀  ')]
         self.help_tabs = {
-            TARGET_MESSENGER: (f5, '  📖 소통픽 사용법  '),
-            TARGET_EDUFINE: (f6, '  📖 수신픽 사용법  '),
+            TARGET_MESSENGER: (f5, '  소통픽 사용법  '),
+            TARGET_EDUFINE: (f6, '  수신픽 사용법  '),
         }
 
         # 탭 등록은 _apply_target 이 한다. 고른 도구에 따라 매번 다시 구성한다.
@@ -2060,7 +2060,7 @@ class App:
         tk.Checkbutton(
             setting.body, variable=self.manual_var, bg=setting.fill, activebackground=setting.fill,
             text='수동 확인 모드 (권장)\n검색한 뒤 [계속] 을 눌러야 다음으로 넘어갑니다. 동명이인이나 '
-                 '검색 오탐이\n걱정될 때 안전합니다. 모든 사람마다 멈추므로 느립니다.',
+                 '검색 오탐이\n걱정될 때 켜세요. 한 사람마다 멈추므로 느립니다.',
             font=ui.font(9), fg=COLORS['on_surface'], justify='left', anchor='w'
         ).grid(row=3, column=0, columnspan=3, sticky='w', pady=(8, 0))
 
@@ -2540,7 +2540,7 @@ class App:
         tally = result['tally']
         note = (f'엑셀을 다시 열어 {result["rows"]}줄을 확인했습니다.\n{result["path"]}\n\n'
                 '에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록] 에서 이 파일을 올리세요. '
-                '올린 뒤 수신그룹에 보이는 기관 수를 아래에 적으면 빠진 곳이 있는지 알려 드립니다.')
+                '올린 뒤 수신그룹에 보이는 기관 수를 아래에 적으면 빠진 곳이 있는지 알려 줍니다.')
         if any(reason == reconcile.NO_CODE for _item, reason in tally.missing):
             note += '\n코드가 없는 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.'
         ResultReport(
@@ -3860,9 +3860,8 @@ class App:
             '화면 크기가 달라졌습니다',
             f'위치를 잡을 때 화면은 {saved_w}×{saved_h} 였고, 지금은 '
             f'{current[0]}×{current[1]} 입니다.\n\n'
-            f'해상도나 확대 배율이 바뀌면 저장해 둔 위치가 어긋나서 엉뚱한 곳을 '
-            f'누를 수 있습니다. [위치 설정] 탭에서 세 곳을 다시 잡는 것이 '
-            f'안전합니다.\n\n'
+            f'해상도나 확대 배율이 바뀌면 저장해 둔 위치가 어긋나 엉뚱한 곳을 '
+            f'누르게 됩니다. [위치 설정] 탭에서 세 곳을 다시 잡아 주세요.\n\n'
             f'그래도 지금 이대로 시작할까요?'
         )
 
@@ -3883,8 +3882,7 @@ class App:
             '[사용자 선택] 창이 옮겨졌습니다',
             '위치를 잡을 때와 [사용자 선택] 창의 자리가 다릅니다.\n\n'
             '이대로 시작하면 저장해 둔 자리가 창 밖을 가리켜 엉뚱한 곳을 누릅니다. '
-            '창을 처음 자리로 옮기거나, [위치 설정] 탭에서 4, 5, 6번을 다시 잡는 것이 '
-            '안전합니다.\n\n'
+            '창을 처음 자리로 옮기거나, [위치 설정] 탭에서 4, 5, 6번을 다시 잡아 주세요.\n\n'
             '그래도 지금 이대로 시작할까요?'
         )
 
@@ -4160,7 +4158,7 @@ class App:
             win.geometry('+20+20')
         except tk.TclError as exc:
             logging.debug('동명이인 창 위치 설정 실패: %s', exc)
-        tk.Label(win, text=f'⏸  {name}  ·  검색 결과 {count}명',
+        tk.Label(win, text=f'{name}  ·  검색 결과 {count}명, 직접 골라 주세요',
                  bg=COLORS['warn_container'], fg=COLORS['on_warn_container'], font=ui.font(11, 'bold'),
                  padx=12, pady=8).pack(fill='x')
         tk.Label(
@@ -4230,7 +4228,7 @@ class App:
         if len(inside) > 1:
             which = '맨 위 창' if used == 0 else f'위에서 {used + 1}번째 창'
             self.compare_note = (f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 {which}을 '
-                                 '읽었습니다. 쓰지 않는 창은 닫아 두는 편이 안전합니다.')
+                                 '읽었습니다. 쓰지 않는 창은 닫아 두세요.')
         return rows, ''
 
     def _compare_with_messenger(self, quiet: bool = False):
@@ -4619,7 +4617,7 @@ class App:
                     # 검색 결과가 여럿이면 첫 사람을 누르지 않고 사람이 고르게 한다
                     many = self._run_on_ui(self._read_search_count)
                     if many is not None and many >= 2:
-                        self._log(f'⏸  (검색 결과 {many}명, 직접 고르기 기다림) ')
+                        self._log(f'멈춤  (검색 결과 {many}명, 직접 고르기 기다림) ')
                         self.continue_event.clear()
                         self.root.after(0, lambda n=search_str, k=many: self._ask_pick(n, k))
                         self.continue_event.wait()
@@ -4645,7 +4643,7 @@ class App:
                         break
                     if result == 'duplicate':
                         fail += 1
-                        self._log('⚠  이미 선택된 사용자\n')
+                        self._log('✗  이미 선택된 사용자\n')
                         self._mark_failed(idx, FAIL_DUPLICATE, item)
                         self._update_progress(idx + 1, total)
                         continue
@@ -4653,7 +4651,7 @@ class App:
                     item['added'] = True
                     self._log('✓\n')
             except pyautogui.FailSafeException:
-                self._log('\n⚠  긴급 중지 (화면 모서리)\n')
+                self._log('\n✗  긴급 중지 (화면 모서리)\n')
                 self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                 self.stop_flag.set()
                 break
@@ -5075,7 +5073,7 @@ class App:
         self.log.config(state='normal')
         if '✓' in msg:
             self.log.insert('end', msg, 'ok')
-        elif '✗' in msg or '⚠' in msg:
+        elif '✗' in msg:
             self.log.insert('end', msg, 'fail')
         else:
             self.log.insert('end', msg)
