@@ -488,7 +488,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ■ 탭 1 — 명단 입력
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  명단 입력 방법은 두 가지입니다.
+  명단 입력 방법은 세 가지입니다.
 
   [ 방법 A ]  파일 직접 열기
     ① [엑셀 파일 열기] 또는 [HWP 파일 열기] 버튼을 클릭합니다.
@@ -500,6 +500,15 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     ② Ctrl+C 로 복사합니다.
     ③ 입력창을 클릭하고 Ctrl+V 로 붙여넣습니다.
     ④ [명단 추출 →] 버튼을 클릭합니다.
+
+  [ 방법 C ]  직접 넣기
+    목록 맨 아래 '직접 넣기' 칸에 적고 Enter 를 누르면 명단에 더해집니다.
+    소통픽은 '학성초 송동석', 수신픽은 '청주교육지원청 행정과' 처럼 적고,
+    쉼표로 여럿을 한꺼번에 넣을 수 있습니다. 이미 있는 것은 다시 넣지 않습니다.
+
+  ▶ 소통픽과 수신픽 명단은 따로입니다
+    도구를 바꾸면 그 도구에서 쓰던 입력 글과 명단이 그대로 돌아옵니다.
+    앱을 닫으면 지워집니다. 사람 이름을 PC 에 남기지 않기 위해서입니다.
 
   ▶ 추출 결과 목록 활용
     · 항목 더블클릭:  소속기관·이름 직접 수정
@@ -637,6 +646,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     [1. 명단 입력] 탭에서 '수신픽' 을 고르고
     기관 명단을 붙여넣습니다.
     줄바꿈·쉼표·탭 아무거나 되고, 글머리기호와 번호는 알아서 뗍니다.
+    몇 곳뿐이면 목록 아래 '직접 넣기' 칸에 기관명을 적고 Enter 를 눌러도 됩니다.
 
       학성초
       한천초, 백곡초
@@ -1335,6 +1345,8 @@ class App:
         # 지난 수신그룹 엑셀 결과. 결과 대조 창을 닫았다가 다시 열 수 있게 둔다.
         self.last_excel_result = None
         self.compare_note = ''
+        # 도구를 바꾸면 쓰던 입력과 명단을 여기 맡겨 둔다 {도구: {...}}
+        self.tool_states = {}
 
         self._apply_theme()
         self._build_ui()
@@ -1560,6 +1572,26 @@ class App:
             wraplength=840, padx=8, pady=4
         )
         self.org_issue_summary.grid(row=5, column=0, sticky='ew', padx=8, pady=(0, 4))
+
+        # ⑨ 직접 넣기 (목록 맨 아래). 파일을 열거나 붙여넣지 않고 한 사람(한 기관)씩 넣는다.
+        direct = tk.Frame(frame, bg='#F5F7FA')
+        direct.grid(row=8, column=0, sticky='ew', padx=8, pady=(0, 6))
+        direct.columnconfigure(1, weight=1)
+        tk.Label(direct, text='직접 넣기', bg='#F5F7FA', fg='#263238',
+                 font=('맑은 고딕', 9, 'bold')).grid(row=0, column=0, sticky='w', padx=(2, 6))
+        self.direct_var = tk.StringVar()
+        self.direct_entry = tk.Entry(direct, textvariable=self.direct_var,
+                                     font=('맑은 고딕', 10))
+        self.direct_entry.grid(row=0, column=1, sticky='ew')
+        self.direct_entry.bind('<Return>', lambda _e: self._add_direct())
+        tk.Button(
+            direct, text='＋ 명단에 넣기', command=self._add_direct,
+            bg='#1565C0', fg='white', disabledforeground='#ECEFF1', activebackground='#0D47A1',
+            relief='flat', font=('맑은 고딕', 9, 'bold'), padx=10, pady=3, cursor='hand2'
+        ).grid(row=0, column=2, padx=(6, 0))
+        self.direct_hint = tk.Label(direct, text='', bg='#F5F7FA', fg='#555',
+                                    font=('맑은 고딕', 8), anchor='w')
+        self.direct_hint.grid(row=1, column=0, columnspan=3, sticky='w', padx=2, pady=(2, 0))
 
         # ⑥ 추출된 명단 리스트
         list_frame = tk.Frame(frame)
@@ -2893,15 +2925,42 @@ class App:
             return
         if self.guide_dialog is not None:
             self.guide_dialog.finish()
+        # 소통픽은 사람, 수신픽은 기관을 다룬다. 한쪽 명단이 다른 쪽에 넘어가면
+        # 헷갈리므로, 도구마다 입력 글과 명단을 따로 보관했다가 돌아오면 되살린다.
+        self._stash_tool_state(self.config.target)
         self.target_var.set(target)
         self.config.use_target(target)
         self.config.save()
-        # 명단의 의미가 달라진다 (사람 ↔ 기관). 남겨 두면 헷갈리므로 비운다.
-        self.names_list.clear()
-        self.last_org_duplicates = []
-        self.parsed_list.delete(0, 'end')
-        self.parse_status.config(text='')
+        self._restore_tool_state(target)
         self._apply_target()
+
+    def _stash_tool_state(self, target: str):
+        """지금 도구의 입력 글, 명단, 상태 글을 보관한다 (앱을 켜 둔 동안)."""
+        try:
+            status = (self.parse_status.cget('text'), self.parse_status.cget('fg'))
+        except Exception:
+            status = ('', '#555')
+        self.tool_states[target] = {
+            'input': self.input_text.get('1.0', 'end').rstrip('\n'),
+            'names': self.names_list,
+            'duplicates': self.last_org_duplicates,
+            'status': status,
+            'direct': self.direct_var.get() if hasattr(self, 'direct_var') else '',
+        }
+
+    def _restore_tool_state(self, target: str):
+        """그 도구에서 쓰던 입력 글과 명단을 되살린다. 처음이면 빈 채로 시작한다."""
+        state = self.tool_states.pop(target, None) or {}
+        self.input_text.delete('1.0', 'end')
+        if state.get('input'):
+            self.input_text.insert('1.0', state['input'])
+        self.names_list = state.get('names') or []
+        self.last_org_duplicates = state.get('duplicates') or []
+        text, fg = state.get('status') or ('', '#555')
+        self.parse_status.config(text=text, fg=fg)
+        if hasattr(self, 'direct_var'):
+            self.direct_var.set(state.get('direct', ''))
+        self._rebuild_parsed_list()
 
     def _on_target_change(self):
         """target_var 에 들어 있는 값으로 전환한다."""
@@ -2921,6 +2980,7 @@ class App:
     def _apply_target(self):
         edufine_on = self.is_edufine()
         self._paint_target_cards()
+        self._refresh_direct_hint()
 
         # 고른 도구에 필요한 탭만 남긴다. 수신픽은 엑셀을 만들어 올리는 방식이라
         # 마우스 위치를 잡을 일이 없다.
@@ -3092,6 +3152,61 @@ class App:
         self.status_var.set(f'기관 {confirmed}곳 확정, 확인 필요 {pending}곳')
         self._refresh_ready_status()
         self._refresh_edufine_status()
+
+    def _add_direct(self):
+        """직접 넣기 칸의 글을 명단에 더한다. 명단 추출과 같은 규칙으로 읽는다.
+
+        소통픽은 '학성초 송동석', 수신픽은 '청주교육지원청 행정과' 처럼 적는다.
+        쉼표로 여럿을 한 번에 넣을 수 있다. 이미 있는 것은 다시 넣지 않는다.
+        수신픽에서 짐작으로 찾은 기관은 지금처럼 빨갛게 남아 사람이 골라야 한다.
+        """
+        if self._block_while_running():
+            return 0
+        text = (self.direct_var.get() or '').strip()
+        if not text:
+            return 0
+        text = re.sub(r'\s*[,;]\s*', '\n', text)
+        if self.is_edufine():
+            index = edufine.index_by_short_name(self.codes)
+            rows = edufine.parse_and_resolve(text, self.codes, index, deduplicate=False)
+            items, _duplicates = self._summarize_org_rows(rows, index)
+            have = {(i.get('org') or i.get('raw')) for i in self.names_list}
+            fresh = [i for i in items if (i.get('org') or i.get('raw')) not in have]
+            unit = '곳'
+        else:
+            have = {(i.get('org'), i.get('name')) for i in self.names_list}
+            fresh = []
+            for item in parse_input(text):
+                org = (item.get('org') or '').replace(' ', '')
+                name = (item.get('name') or '').replace(' ', '')
+                if name and (org, name) not in have:
+                    fresh.append({'org': org, 'name': name})
+                    have.add((org, name))
+            unit = '명'
+        if not fresh:
+            self.direct_hint.config(
+                text=('이미 명단에 있습니다.' if text and self.names_list else
+                      '알아보지 못했습니다. 예시처럼 적어 주세요.'), fg='#B71C1C')
+            return 0
+        self.names_list.extend(fresh)
+        self._rebuild_parsed_list()
+        self._after_list_edit()
+        self.direct_var.set('')
+        shown = ', '.join(i.get('search') or f"{i.get('org', '')} {i.get('name', '')}".strip()
+                          for i in fresh[:3])
+        more = f' 외 {len(fresh) - 3}{unit}' if len(fresh) > 3 else ''
+        self.direct_hint.config(text=f'넣었습니다: {shown}{more}', fg='#2E7D32')
+        return len(fresh)
+
+    def _refresh_direct_hint(self):
+        hint = getattr(self, 'direct_hint', None)
+        if hint is None:
+            return
+        if self.is_edufine():
+            text = ('기관명을 적고 Enter. 예) 학성초  ·  청주교육지원청 행정과  ·  쉼표로 여러 곳')
+        else:
+            text = ('소속과 이름을 적고 Enter. 예) 학성초 송동석  ·  쉼표로 여러 명')
+        hint.config(text=text, fg='#555')
 
     def _clear_input(self):
         if self._block_while_running():

@@ -1033,6 +1033,64 @@ class AppFlowTest(unittest.TestCase):
         finally:
             self.app.names_list = []
 
+    # ── 직접 넣기 ──────────────────────────────
+    def test_direct_input_adds_people_without_parsing_the_box(self):
+        from app_config import TARGET_MESSENGER
+        self.app._choose_target(TARGET_MESSENGER)
+        try:
+            self.app.names_list = [{'org': '학성초등학교', 'name': '송동석'}]
+            self.app.direct_var.set('학성초 송동석, 새터초 박동훈')
+            self.assertEqual(self.app._add_direct(), 1, '이미 있는 사람을 또 넣었습니다')
+            self.assertEqual([(i['org'], i['name']) for i in self.app.names_list],
+                             [('학성초등학교', '송동석'), ('새터초등학교', '박동훈')])
+            self.assertEqual(self.app.direct_var.get(), '', '넣은 뒤 칸을 비워야 다음 사람을 적는다')
+            self.app.direct_var.set('   ')
+            self.assertEqual(self.app._add_direct(), 0)
+        finally:
+            self.app.names_list = []
+            self.app.tool_states.clear()
+
+    def test_direct_input_for_orgs_keeps_the_safety_rules(self):
+        """수신픽: 정확히 찾은 기관은 확정, 여러 곳에 있는 이름은 사람이 고르게 남긴다."""
+        self.assertTrue(self.app.is_edufine())
+        try:
+            self.app.direct_var.set('학성초, 행정과')
+            self.assertEqual(self.app._add_direct(), 2)
+            first, second = self.app.names_list
+            self.assertEqual(first['org'], '충청북도진천교육지원청 학성초등학교')
+            self.assertIn(first['grade'], ('exact', 'abbr', 'prefix'))
+            self.assertTrue(self.app._org_needs_review(second), '행정과를 짐작으로 확정했습니다')
+            self.app.direct_var.set('학성초')
+            self.assertEqual(self.app._add_direct(), 0, '같은 기관을 또 넣었습니다')
+        finally:
+            self.app.names_list.clear()
+
+    # ── 도구마다 명단 따로 ─────────────────────
+    def test_each_tool_keeps_its_own_list(self):
+        """소통픽과 수신픽을 오가도 각자 넣어 둔 명단과 입력 글이 남는다."""
+        from app_config import TARGET_EDUFINE, TARGET_MESSENGER
+        try:
+            # 수신픽에서 기관을 넣어 둔다
+            self.parse('학성초')
+            orgs = list(self.app.names_list)
+            # 소통픽으로 가면 빈 명단으로 시작한다
+            self.app._choose_target(TARGET_MESSENGER)
+            self.assertEqual(self.app.names_list, [])
+            self.assertEqual(self.app.input_text.get('1.0', 'end').strip(), '')
+            self.parse('학성초 송동석')
+            people = list(self.app.names_list)
+            # 수신픽으로 돌아오면 기관 명단과 입력 글이 그대로다
+            self.app._choose_target(TARGET_EDUFINE)
+            self.assertEqual(self.app.names_list, orgs)
+            self.assertEqual(self.app.input_text.get('1.0', 'end').strip(), '학성초')
+            # 다시 소통픽으로 가도 사람 명단이 그대로다
+            self.app._choose_target(TARGET_MESSENGER)
+            self.assertEqual(self.app.names_list, people)
+        finally:
+            self.app._choose_target(TARGET_EDUFINE)
+            self.app.tool_states.clear()
+            self.app.names_list = []
+
     def test_tab_has_no_result_list_button(self):
         """[결과 대조 · 빠진 명단] 버튼은 뺐다. 소통메신저와 비교가 그 일을 한다."""
         self.assertFalse(hasattr(self.app, 'failed_list_btn'))
