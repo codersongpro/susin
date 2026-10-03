@@ -165,3 +165,69 @@ class RowTextsTest(unittest.TestCase):
         node, kid_type, _count, _off = guess_selected_list(nodes, 350)
         rows = row_texts(nodes, node['id'], kid_type)
         self.assertEqual(rows, ['담긴사람0 소속 빼기', '담긴사람1 소속 빼기', '담긴사람2 소속 빼기'])
+
+
+def real_messenger_nodes():
+    """2026-10-03 실제 PC 에서 읽은 [사용자 선택] 창의 짜임새.
+
+    읽은 요소 88개. 오른쪽에 'Custom 안 Button 7개' (선택된 사용자 7명) 와
+    그 아래 'Custom 안 Text 2개' (그룹단위 선택추가 제목) 가 있었다. 화면 밖 요소
+    하나는 '선택된 사용자 입니다.' 안내문으로 보이며, 제목보다 먼저 나왔다.
+    창 왼쪽 위가 (970, 120), 화살표 버튼이 (1284, 403).
+    """
+    nodes = []
+
+    def add(parent, kind, rect, name='', off=False):
+        nodes.append({'id': len(nodes), 'parent': parent, 'type': kind,
+                      'rect': rect, 'name': name, 'offscreen': off})
+        return len(nodes) - 1
+
+    x0, y0 = 970, 120
+    doc = add(-1, 50030, (x0, y0, x0 + 630, y0 + 600))
+    # 숨은 안내문이 제목보다 먼저 나온다
+    add(doc, 50020, (x0 + 200, y0 + 300, x0 + 400, y0 + 320), '선택된 사용자 입니다.', off=True)
+    tree = add(doc, 50023, (x0 + 10, y0 + 150, x0 + 290, y0 + 530))
+    for k in range(18):
+        add(tree, 50024, (x0 + 10, y0 + 150 + k * 20, x0 + 290, y0 + 170 + k * 20),
+            f'조직도{k}[교사(초등)]')
+    add(doc, 50020, (x0 + 339, y0 + 60, x0 + 450, y0 + 78), '선택된 사용자')
+    box = add(doc, 50025, (x0 + 339, y0 + 83, x0 + 615, y0 + 383))
+    names = ['문유리 [부장교사]', '이경숙 [교사(초등)]', '김다래 [교사(초등)]',
+             '나상연 [교사(초등)]', '함봉주 [교사(초등)]', '이정훈 [교사(초등)]',
+             '송동석 [교사(초등)]']
+    for k, name in enumerate(names):
+        add(box, 50000, (x0 + 339, y0 + 83 + k * 49, x0 + 600, y0 + 132 + k * 49),
+            f'{name} [전담] 교무')
+    group = add(doc, 50025, (x0 + 339, y0 + 383, x0 + 615, y0 + 420))
+    add(group, 50020, (x0 + 339, y0 + 383, x0 + 450, y0 + 400), '그룹단위 선택추가')
+    add(group, 50020, (x0 + 450, y0 + 383, x0 + 600, y0 + 400), '(내그룹/조직도 더블클릭)')
+    return nodes
+
+
+class RealMessengerTest(unittest.TestCase):
+    """7명이 담겨 있는데 2명으로 세던 문제의 회귀 방지선."""
+
+    def test_counts_seven_not_two(self):
+        from automation import guess_selected_list
+        node, kid_type, count, _off = guess_selected_list(real_messenger_nodes(), 1284)
+        self.assertEqual((kid_type, count), (50000, 7))
+
+    def test_hidden_notice_is_not_the_label(self):
+        from automation import find_label
+        label = find_label(real_messenger_nodes(), '선택된 사용자')
+        self.assertEqual(label['name'], '선택된 사용자')
+        self.assertFalse(label['offscreen'])
+
+    def test_person_rows(self):
+        from automation import guess_selected_list, person_rows
+        nodes = real_messenger_nodes()
+        node, kid_type, _count, _off = guess_selected_list(nodes, 1284)
+        self.assertEqual(person_rows(nodes, node['id'], kid_type), 7)
+
+    def test_names_are_read_for_comparison(self):
+        import reconcile
+        from automation import guess_selected_list, row_texts
+        nodes = real_messenger_nodes()
+        node, kid_type, _count, _off = guess_selected_list(nodes, 1284)
+        names = [reconcile.person_name_from_row(t) for t in row_texts(nodes, node['id'], kid_type)]
+        self.assertEqual(names, ['문유리', '이경숙', '김다래', '나상연', '함봉주', '이정훈', '송동석'])

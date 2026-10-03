@@ -39,6 +39,7 @@ from automation import (
     count_message_for,
     guess_selected_list,
     pick_selected_list,
+    person_rows,
     repeated_containers,
     row_texts,
     find_label,
@@ -3911,7 +3912,11 @@ class App:
         offscreen = sum(1 for node in nodes if node['offscreen'])
         lines.append(f'  읽은 요소: {len(nodes)}개 (화면 밖 {offscreen}개), {tries}번 읽음')
         label = find_label(nodes, SELECTED_LABEL)
-        lines.append(f"  '{SELECTED_LABEL}' 제목: {'찾음' if label else '못 찾음'}")
+        if label:
+            l, t, _r, _b = label['rect']
+            lines.append(f"  '{SELECTED_LABEL}' 제목: 찾음  창 기준 ({l - base_left}, {t - base_top})")
+        else:
+            lines.append(f"  '{SELECTED_LABEL}' 제목: 못 찾음")
         kinds = {}
         for node in nodes:
             name = uia_type_name(node['type'])
@@ -3923,9 +3928,12 @@ class App:
         lines.append('  오른쪽에서 같은 줄이 반복되는 요소 (많은 순):')
         for node, kid_type, count, off in right[:8]:
             l, t, r, b = node['rect']
+            persons = person_rows(nodes, node['id'], kid_type)
+            picked = '  ← 이것으로 셈' if guess and guess[0] is node else ''
             lines.append(
                 f'    {uia_type_name(node["type"])} 안 {uia_type_name(kid_type)} {count}개'
-                f' (화면 밖 {off})  창 기준 ({l - base_left}, {t - base_top}) 크기 {r - l}x{b - t}')
+                f' (이름 줄 {persons}, 화면 밖 {off})  창 기준 ({l - base_left}, {t - base_top})'
+                f' 크기 {r - l}x{b - t}{picked}')
         if not right:
             lines.append('    없음')
         lines.append(f'  추정: {guess[2]}명' if guess else '  추정: 찾지 못함')

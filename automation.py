@@ -1,5 +1,7 @@
 """Small automation status helpers."""
 
+import re
+
 FAIL_NO_USER = '사용자 없음'
 FAIL_DUPLICATE = '중복'
 FAIL_SEARCH_STALE = '검색 결과 안 바뀜'
@@ -134,10 +136,22 @@ def uia_type_name(control_type) -> str:
 
 
 def find_label(nodes, text):
-    """이름에 text 가 들어간 첫 요소. nodes 는 _uia_nodes 의 결과."""
-    for node in nodes:
-        if text in (node.get('name') or ''):
-            return node
+    """화면에 보이는 제목 요소. 이름이 text 와 똑같은 것을 먼저 찾는다.
+
+    '선택된 사용자 입니다.' 같은 숨은 안내문도 text 를 품고 있다. 실제 화면에서
+    그것을 제목으로 잘못 잡아 그 아래만 보다가 진짜 목록을 놓친 일이 있다.
+    그래서 이름이 똑같고 화면 안에 있는 것, 화면 안에서 text 를 품은 것,
+    어디서든 품은 것 순으로 고른다.
+    """
+    def plain(node):
+        return (node.get('name') or '').strip()
+
+    for test in (lambda n: plain(n) == text and not n.get('offscreen'),
+                 lambda n: text in plain(n) and not n.get('offscreen'),
+                 lambda n: text in plain(n)):
+        for node in nodes:
+            if test(node):
+                return node
     return None
 
 
@@ -172,17 +186,21 @@ def guess_selected_list(nodes, split_x: int):
     단추는 많아야 서너 개라서, 담긴 사람이 그보다 많으면 목록이 이긴다.
     """
     label = find_label(nodes, SELECTED_LABEL)
-    best = None
-    for node, kid_type, count, offscreen in repeated_containers(nodes):
-        left, top, right, bottom = node['rect']
-        if left < split_x:
-            continue
-        if label is not None:
-            l_left, l_top, l_right, _l_bottom = label['rect']
-            if top < l_top or right < l_left:
-                continue
-        if best is None or count > best[2]:
-            best = (node, kid_type, count, offscreen)
+    right_side = [c for c in repeated_containers(nodes) if c[0]['rect'][0] >= split_x]
+    below = right_side
+    if label is not None:
+        l_left, l_top, _l_right, _l_bottom = label['rect']
+        below = [c for c in right_side
+                 if c[0]['rect'][1] >= l_top and c[0]['rect'][2] >= l_left]
+    # 제목을 잘못 잡아 다 걸러지면 제목 없이 다시 고른다
+    candidates = below or right_side
+    best, best_score = None, None
+    for node, kid_type, count, offscreen in candidates:
+        # 줄마다 '이름 [직위]' 가 있는 요소가 목록이다. 그런 줄이 없으면 줄 수로 고른다.
+        persons = person_rows(nodes, node['id'], kid_type)
+        score = (persons, count)
+        if best is None or score > best_score:
+            best, best_score = (node, kid_type, count, offscreen), score
     return best
 
 
@@ -209,3 +227,12 @@ def row_texts(nodes, container_id: int, row_type: int) -> list:
             stack.extend(reversed(children.get(node['id'], [])))
         rows.append(' '.join(pieces))
     return rows
+
+
+PERSON_ROW = re.compile(r'[가-힣]{2,5}\s*\[')
+
+
+def person_rows(nodes, container_id: int, row_type: int) -> int:
+    """'문유리 [부장교사]' 처럼 이름 뒤에 직위가 붙은 줄의 수."""
+    return sum(1 for text in row_texts(nodes, container_id, row_type)
+               if PERSON_ROW.search(text))
