@@ -7,7 +7,7 @@ tkinter 없이 import 할 수 있다 (테스트가 돈다).
 import fonts
 
 FONT_FAMILY = fonts.family()   # Pretendard, 못 올리면 맑은 고딕
-FONT_SCALE = 1.2               # 글자는 이 배율로 키워서 쓴다 (fs 로 감싼다)
+FONT_SCALE = 1.4               # 글자는 이 배율로 키워서 쓴다 (fs 로 감싼다)
 
 
 def fs(pt: int) -> int:

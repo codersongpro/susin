@@ -185,9 +185,26 @@ class _Notebook(_WidgetBase):
     def tabs(self):
         return list(self.visible)
 
+    def select(self, tab=None):
+        """진짜처럼: 탭을 주면 그 탭을 고르고, 안 주면 지금 고른 탭을 돌려준다."""
+        if tab is not None:
+            if tab not in self.visible:
+                raise RuntimeError('보이지 않는 탭은 고를 수 없습니다')
+            object.__setattr__(self, 'selected', tab)
+        return getattr(self, 'selected', self.visible[0] if self.visible else '')
+
 
 class _Widget(_WidgetBase):
     pass
+
+
+def _photo_rows_nodes(*args, **kwargs):
+    """tests/test_automation.py 의 실제 화면 짜임새 (unittest 를 어디서 돌려도 불러온다)."""
+    try:
+        from test_automation import photo_rows_nodes
+    except ImportError:
+        from tests.test_automation import photo_rows_nodes
+    return photo_rows_nodes(*args, **kwargs)
 
 
 def install_tk_stubs():
@@ -710,6 +727,65 @@ class AppFlowTest(unittest.TestCase):
         self.assertFalse(guide.winfo_exists())
         self.assertTrue(overlay.destroy.called)
         self.assertTrue(bubble.destroy.called)
+
+    def test_calibration_next_button_is_on_only_when_all_three_spots_are_set(self):
+        """소통픽 위치 설정: 세 곳이 다 잡혔을 때만 [다음, 자동 선택] 이 켜진다."""
+        data = self.app.config.data
+        keys = ('search_field', 'result_first', 'add_button')
+        saved = {k + suffix: data.get(k + suffix) for k in keys for suffix in ('_x', '_y')}
+        try:
+            for k in keys:
+                data[k + '_x'] = data[k + '_y'] = None
+            self.app._refresh_calib_labels()
+            self.assertEqual(self.app.calib_next_btn.state_value, 'disabled')
+
+            for k in keys[:2]:
+                data[k + '_x'], data[k + '_y'] = 10, 20
+            self.app._refresh_calib_labels()
+            self.assertEqual(self.app.calib_next_btn.state_value, 'disabled')
+
+            data['add_button_x'], data['add_button_y'] = 30, 40
+            self.app._refresh_calib_labels()
+            self.assertEqual(self.app.calib_next_btn.state_value, 'normal')
+        finally:
+            data.update(saved)
+            self.app._refresh_calib_labels()
+
+    def test_calibration_next_saves_and_moves_to_the_auto_tab(self):
+        from app_config import TARGET_MESSENGER
+        self.app._choose_target(TARGET_MESSENGER)
+        data = self.app.config.data
+        keys = ('search_field', 'result_first', 'add_button')
+        saved = {k + suffix: data.get(k + suffix) for k in keys for suffix in ('_x', '_y')}
+        auto_tab = self.app.messenger_tabs[1][0]
+        try:
+            for k in keys:
+                data[k + '_x'], data[k + '_y'] = 5, 6
+            self.app.nb.select(self.app.messenger_tabs[0][0])
+            with patch.object(self.app.config, 'save') as saved_call:
+                self.app._calib_next()
+            saved_call.assert_called()
+            self.assertEqual(str(self.app.nb.select()), str(auto_tab))
+        finally:
+            data.update(saved)
+            self.app._refresh_calib_labels()
+
+    def test_calibration_next_does_nothing_until_everything_is_set(self):
+        from app_config import TARGET_MESSENGER
+        self.app._choose_target(TARGET_MESSENGER)
+        data = self.app.config.data
+        saved = data.get('add_button_x')
+        try:
+            data['add_button_x'] = None
+            first = self.app.messenger_tabs[0][0]
+            self.app.nb.select(first)
+            with patch.object(self.app.config, 'save') as saved_call:
+                self.app._calib_next()
+            saved_call.assert_not_called()
+            self.assertEqual(str(self.app.nb.select()), str(first))
+        finally:
+            data['add_button_x'] = saved
+            self.app._refresh_calib_labels()
 
     def test_zoom_scales_pixels_and_is_clamped(self):
         """창 크기에 따른 배율. 범위를 넘지 않고, 바뀌었을 때만 True 를 돌려준다."""
@@ -1634,7 +1710,6 @@ class AppFlowTest(unittest.TestCase):
 
     def test_compare_brings_the_two_people_already_selected(self):
         """담긴 사람이 두 명이면 그 두 사람의 명단을 가져와야 한다 (그룹단위 제목 두 줄이 아니라)."""
-        from test_automation import photo_rows_nodes
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         gui.GetWindowText = lambda h: '사용자 선택'
         gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
@@ -1642,7 +1717,7 @@ class AppFlowTest(unittest.TestCase):
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
                 patch.object(self.app, '_uia', return_value=(object(), '')), \
-                patch.object(self.app, '_uia_nodes', return_value=photo_rows_nodes(2) * 1):
+                patch.object(self.app, '_uia_nodes', return_value=_photo_rows_nodes(2) * 1):
             got, why = self.app._read_messenger_selected()
         self.assertEqual(why, '')
         self.assertEqual(len(got), 2, got)
@@ -1652,15 +1727,14 @@ class AppFlowTest(unittest.TestCase):
 
     def test_compare_looks_at_the_next_window_when_the_top_one_has_no_people(self):
         """맨 위 창이 안 뜬 화면(제목 줄만 읽힘)이면 아래 창에서 담긴 사람을 읽는다."""
-        from test_automation import photo_rows_nodes
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         gui.GetWindowText = lambda h: '사용자 선택'
         gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
         gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (30, 10)]
-        blank = photo_rows_nodes(0, with_label=False)
+        blank = _photo_rows_nodes(0, with_label=False)
 
         def nodes_of(uia, hwnd, limit=3000):
-            return blank if hwnd == 30 else photo_rows_nodes(2)
+            return blank if hwnd == 30 else _photo_rows_nodes(2)
 
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10, 30}), \
@@ -1672,7 +1746,6 @@ class AppFlowTest(unittest.TestCase):
         self.assertIn('위에서 2번째 창', self.app.compare_note)
 
     def test_compare_says_so_when_the_list_cannot_be_found_at_all(self):
-        from test_automation import photo_rows_nodes
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         gui.GetWindowText = lambda h: '사용자 선택'
         gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
@@ -1680,7 +1753,7 @@ class AppFlowTest(unittest.TestCase):
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
                 patch.object(self.app, '_uia', return_value=(object(), '')), \
-                patch.object(self.app, '_uia_nodes', return_value=photo_rows_nodes(0, with_label=False)):
+                patch.object(self.app, '_uia_nodes', return_value=_photo_rows_nodes(0, with_label=False)):
             got, why = self.app._read_messenger_selected()
         self.assertIsNone(got)
         self.assertIn('목록을 찾지 못했습니다', why)

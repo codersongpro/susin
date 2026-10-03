@@ -318,7 +318,7 @@ class CaptureDialog(tk.Toplevel):
             self,
             text='[캡처 시작] 을 누른 뒤 위에 적힌 자리를 클릭하면 저장됩니다.\n'
                  '마우스를 옮긴 뒤 Enter 로 확정해도 되고, Esc 로 취소합니다.',
-            font=ui.font(10), justify='center', pady=8
+            font=ui.font(10), justify='center', padx=24, pady=10
         ).pack()
 
         if step == '6':
@@ -561,7 +561,9 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     · 수동 확인 모드: 동명이인이 걱정될 때 켭니다.
       사람마다 검색 결과를 직접 확인하고 [계속] 을 눌러야 다음으로 넘어갑니다.
 
-  마지막에 꼭 [설정 저장] 을 눌러 저장하세요.
+  마지막에 [설정 저장] 을 눌러 저장하세요.
+  세 곳이 모두 '설정됨' 이 되면 [다음, 자동 선택] 이 켜집니다. 이 단추를 눌러도 설정이 저장되고
+  바로 자동 선택으로 넘어갑니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -793,7 +795,7 @@ GUIDE_STEPS = {
         ('edufine', 'edufine_group_panel', '수신그룹 이름을 정하세요',
          '그룹명은 나중에 찾기 쉬운 이름으로 적습니다.\n'
          '예: 2026 진천 초등학교, 2학기 업무담당자\n'
-         '그룹기호는 선택 사항이므로 필요 없으면 비워 두세요.'),
+         '그룹기호는 선택 사항이라 비워 둬도 됩니다.'),
         ('edufine', 'edufine_make_button', '엑셀을 만들고 올리세요',
          '[수신그룹 엑셀 만들기]를 눌러 파일을 저장합니다.\n'
          '에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록]에서 올리면 됩니다.'),
@@ -859,7 +861,7 @@ class ResultReport(tk.Toplevel):
         self.base_count = base_count or 0
         self.on_retry = on_retry
         self.title(title)
-        self.geometry(f'{ui.px(560)}x{ui.px(560)}')
+        self.geometry(f'{ui.px(600)}x{ui.px(660)}')
         ok = tally.short == 0
         bg = PANEL_BG
         self.configure(bg=bg)
@@ -968,7 +970,7 @@ class MessengerCompareReport(tk.Toplevel):
         self.addable = list(result.missing) + [
             item for _name, people, _have in result.unsure for item in people]
         self.title('소통메신저와 비교')
-        self.geometry(f'{ui.px(560)}x{ui.px(560)}')
+        self.geometry(f'{ui.px(600)}x{ui.px(660)}')
         unsure = sum(len(people) for _n, people, _h in result.unsure)
         short = len(result.missing) + unsure
         ok = short == 0 and not result.no_name
@@ -1032,7 +1034,7 @@ class ClipboardWalker(tk.Toplevel):
         self.items = list(items)
         self.idx = 0
         self.title('클립보드 순차 복사')
-        self.geometry(f'{ui.px(520)}x{ui.px(230)}')
+        self.geometry(f'{ui.px(560)}x{ui.px(250)}')
         self.resizable(False, False)
         self.configure(bg=PANEL_BG)
         self.transient(parent)
@@ -1189,11 +1191,11 @@ class WalkthroughDialog:
         self.heading_var = tk.StringVar()
         tk.Label(head, textvariable=self.heading_var, bg=fill, fg=COLORS['on_surface'],
                  font=ui.font(13, 'bold'), anchor='w', justify='left',
-                 wraplength=ui.px(300)).pack(side='left', padx=(10, 0))
+                 wraplength=ui.px(360)).pack(side='left', padx=(10, 0))
         self.body_var = tk.StringVar()
         tk.Label(body, textvariable=self.body_var, bg=fill, fg=COLORS['on_surface_variant'],
                  font=ui.font(11), justify='left', anchor='nw',
-                 wraplength=ui.px(360)).pack(fill='x', pady=(12, 8))
+                 wraplength=ui.px(440)).pack(fill='x', pady=(12, 8))
         tk.Label(body, text='밝게 보이는 곳에서 이 단계를 진행하세요.', bg=fill, fg=ui.acc()[0],
                  font=ui.font(9, 'bold'), anchor='w').pack(fill='x')
         buttons = tk.Frame(body, bg=fill)
@@ -1428,8 +1430,8 @@ class App:
         self.root = root
         self.root.title(f'{APP_NAME}  v{APP_VERSION}')
         # 글자를 키웠으므로 창도 키운다. 작은 화면(1366x768)에서는 화면에 맞춘다.
-        width = min(1280, max(960, self.root.winfo_screenwidth() - 40))
-        height = min(820, max(640, self.root.winfo_screenheight() - 90))
+        width = min(1360, max(960, self.root.winfo_screenwidth() - 40))
+        height = min(860, max(640, self.root.winfo_screenheight() - 90))
         self.root.geometry(f'{width}x{height}')
         self.root.minsize(ui.px(960), ui.px(640))
 
@@ -1770,6 +1772,7 @@ class App:
         self.guide_body = tk.Label(head, text='', font=ui.font(9), justify='left',
                                    fg=COLORS['on_surface_variant'], anchor='w', wraplength=560)
         self.guide_body.grid(row=1, column=0, sticky='w', pady=(2, 0))
+        ui.autowrap(self.guide_body, margin=ui.px(340))      # 오른쪽 파일 열기 단추 자리를 비워 둔다
         files = tk.Frame(head, bg=PANEL_BG)
         files.grid(row=0, column=1, rowspan=2, sticky='e')
         M3Button(
@@ -1831,7 +1834,8 @@ class App:
             self.org_issue_card.body, text='', fg=COLORS['on_warn_container'],
             bg=self.org_issue_card.fill, font=ui.font(9, 'bold'), justify='left',
             anchor='w', wraplength=520)
-        self.org_issue_summary.pack(anchor='w')
+        self.org_issue_summary.pack(anchor='w', fill='x')
+        ui.autowrap(self.org_issue_summary, margin=4)
         self.org_issue_card.grid_remove()
 
         list_card, self.parsed_list = ui.list_card(
@@ -2026,6 +2030,14 @@ class App:
             btn.grid(row=row_i, column=3)
             setattr(self, f'btn_{key}', btn)
 
+        # 세 곳을 모두 잡으면 켜진다. 누르면 설정을 저장하고 자동 선택으로 넘어간다.
+        self.calib_hint = tk.Label(pos.body, text='', bg=pos.fill, font=ui.font(9),
+                                   fg=COLORS['on_surface_variant'], anchor='w')
+        self.calib_hint.grid(row=4, column=0, columnspan=3, sticky='w', pady=(8, 0))
+        self.calib_next_btn = M3Button(pos.body, text='다음, 자동 선택', command=self._calib_next,
+                                       state='disabled', size='sm')
+        self.calib_next_btn.grid(row=4, column=3, sticky='e', pady=(8, 0))
+
         # 오른쪽 아래: 검색 설정
         setting = Card(right, tone='inner', pad=(16, 12))
         setting.grid(row=1, column=0, sticky='ew')
@@ -2038,16 +2050,19 @@ class App:
         ttk.Spinbox(setting.body, from_=0.3, to=5.0, increment=0.1,
                     textvariable=self.delay_var, width=6, font=ui.font(10)
                     ).grid(row=1, column=1, padx=8, sticky='w')
-        tk.Label(setting.body, text='느리면 값을 높이세요', bg=setting.fill,
-                 fg=COLORS['on_surface_variant'], font=ui.font(9)).grid(
-            row=1, column=2, sticky='w')
+        delay_hint = tk.Label(
+            setting.body, text='느리면 값을 낮추세요, 단 소통메신저 최소 검색 시간이 필요합니다.',
+            bg=setting.fill, fg=COLORS['on_surface_variant'], font=ui.font(9), justify='left',
+            anchor='w', wraplength=ui.px(420))
+        delay_hint.grid(row=2, column=0, columnspan=3, sticky='w')
+        ui.autowrap(delay_hint, margin=4)
         self.manual_var = tk.BooleanVar(value=self.config.data.get('manual_confirm', False))
         tk.Checkbutton(
             setting.body, variable=self.manual_var, bg=setting.fill, activebackground=setting.fill,
             text='수동 확인 모드 (권장)\n검색한 뒤 [계속] 을 눌러야 다음으로 넘어갑니다. 동명이인이나 '
                  '검색 오탐이\n걱정될 때 안전합니다. 모든 사람마다 멈추므로 느립니다.',
             font=ui.font(9), fg=COLORS['on_surface'], justify='left', anchor='w'
-        ).grid(row=2, column=0, columnspan=3, sticky='w', pady=(8, 0))
+        ).grid(row=3, column=0, columnspan=3, sticky='w', pady=(8, 0))
 
         # 아래: 저장
         bottom = tk.Frame(frame, bg=PANEL_BG)
@@ -2218,7 +2233,7 @@ class App:
 
         dlg = tk.Toplevel(self.root)
         dlg.title('기관 찾아보기')
-        dlg.geometry(f'{ui.px(680)}x{ui.px(600)}')
+        dlg.geometry(f'{ui.px(780)}x{ui.px(680)}')
         dlg.grab_set()
         dlg.transient(self.root)
         dlg.configure(bg=PANEL_BG)
@@ -2801,7 +2816,7 @@ class App:
             lines.append(f'중복 입력: {shown}{more} · 목록에는 한 번만 남겼습니다.')
         if review:
             lines.append(
-                f'확인 필요 {len(review)}곳 · 붉은 항목을 '
+                f'확인 필요 {len(review)}곳입니다. 붉은 항목은 '
                 '[확인 필요 기관 일괄 수정]에서 한 번에 처리하세요.'
             )
 
@@ -2859,7 +2874,7 @@ class App:
 
         dlg = tk.Toplevel(self.root)
         dlg.title('수신픽 추출 기록')
-        dlg.geometry(f'{ui.px(720)}x{ui.px(560)}')
+        dlg.geometry(f'{ui.px(800)}x{ui.px(620)}')
         dlg.transient(self.root)
         dlg.configure(bg=PANEL_BG)
 
@@ -2929,8 +2944,8 @@ class App:
 
         dlg = tk.Toplevel(self.root)
         dlg.title('확인 필요 기관 일괄 수정')
-        dlg.geometry(f'{ui.px(820)}x{ui.px(560)}')
-        dlg.minsize(ui.px(760), ui.px(520))
+        dlg.geometry(f'{ui.px(900)}x{ui.px(660)}')
+        dlg.minsize(ui.px(800), ui.px(600))
         dlg.grab_set()
         dlg.transient(self.root)
         dlg.configure(bg=PANEL_BG)
@@ -2940,9 +2955,9 @@ class App:
 
         tk.Label(
             dlg,
-            text='같은 이름이 여럿이면 신통픽은 아무것도 고르지 않습니다. 공문이 엉뚱한 곳으로 '
-                 '가지 않도록 직접 골라 주세요.\n'
-                 '1. 왼쪽에서 기관을 하나 고릅니다   2. 오른쪽 목록에서 맞는 기관을 고릅니다   '
+            text='같은 이름이 여럿이면 신통픽은 아무것도 고르지 않습니다.\n'
+                 '공문이 엉뚱한 곳으로 가지 않도록 직접 골라 주세요.\n'
+                 '1. 왼쪽에서 기관을 하나 고릅니다   2. 오른쪽 목록에서 맞는 기관을 고릅니다\n'
                  '3. [선택 기관으로 확정] 을 누릅니다',
             bg=COLORS['warn_container'], fg=COLORS['on_warn_container'],
             font=ui.font(9, 'bold'), justify='left', wraplength=ui.px(780),
@@ -3299,7 +3314,7 @@ class App:
         self.names_list = state.get('names') or []
         self.last_org_duplicates = state.get('duplicates') or []
         text, fg = state.get('status') or ('', '#555')
-        self.parse_status.config(text=text, fg=fg)
+        self._set_parse_status(text, fg)
         if hasattr(self, 'direct_var'):
             self.direct_var.set(state.get('direct', ''))
         self._rebuild_parsed_list()
@@ -3371,11 +3386,8 @@ class App:
         hint = getattr(self, 'target_hint', None)
         if hint:
             hint.config(text=(
-                f'{TARGET_LABELS[self.config.target]} 사용 중  ·  '
-                + (TARGET_SYSTEMS[TARGET_EDUFINE] + ' 공문 수신그룹'
-                   if edufine_on else
-                   TARGET_SYSTEMS[TARGET_MESSENGER] + ' 수신자 선택')
-                + f'   |   v{APP_VERSION}  ·  송동석(Dustin)  ·  Teacher / App developer / Data analyst  ·  dungst.me@gmail.com'
+                f'v{APP_VERSION}  ·  송동석(Dustin)  ·  Teacher / App developer / Data analyst'
+                '  ·  dungst.me@gmail.com'
             ))
 
         title = getattr(self, 'guide_title', None)
@@ -3385,14 +3397,15 @@ class App:
                 title.config(text='기관 명단을 넣으세요')
                 body.config(text=(
                     '엑셀이나 한글에서 기관명을 복사해 붙여넣거나 파일을 바로 여세요.\n'
-                    '줄바꿈, 쉼표, 탭 어느 것으로 나눠도 됩니다.   예) 학성초, 충북외고, 청주교육지원청 행정과'
+                    '줄바꿈, 쉼표, 탭 어느 것으로 나눠도 됩니다.\n'
+                    '예) 학성초, 충북외고, 청주교육지원청 행정과'
                 ))
             else:
                 title.config(text='소속기관과 이름을 넣으세요')
                 body.config(text=(
-                    '소통메신저에서 고를 사람의 명단입니다. 엑셀이나 한글에서 소속기관과 이름 두 열을 '
-                    '복사해 붙여넣으세요.\n'
-                    '파일을 바로 열어도 됩니다.   예) 충주중학교  홍길동 (소속기관, 이름 순서)'
+                    '소통메신저에서 고를 사람의 명단입니다.\n'
+                    '엑셀이나 한글에서 소속기관과 이름 두 열을 복사해 붙여넣거나 파일을 바로 여세요.\n'
+                    '예) 충주중학교  홍길동 (소속기관, 이름 순서)'
                 ))
         nxt = getattr(self, 'next_btn', None)
         if nxt:
@@ -3411,9 +3424,9 @@ class App:
         auto_intro = getattr(self, 'auto_intro', None)
         if auto_intro:
             auto_intro.config(text=(
-                '소통메신저 [사용자 선택] 창을 열고 [전체조직] 탭을 켜 두세요. 이름마다 검색하고, '
-                '결과 첫 줄을 누르고, 오른쪽 화살표 버튼으로 담습니다. 도는 동안에는 마우스를 '
-                '건드리지 마세요. 마우스를 화면 왼쪽 위 모서리로 옮기면 긴급 중지됩니다.'
+                '소통메신저 [사용자 선택] 창을 열고 [전체조직] 탭을 켜 두세요.\n'
+                '이름마다 검색하고, 결과 첫 줄을 누르고, 오른쪽 화살표 버튼으로 담습니다.\n'
+                '진행 중에는 마우스를 건드리지 마세요. 마우스를 화면 왼쪽 위 모서리로 옮기면 긴급 중지됩니다.'
             ))
 
         self._refresh_calib_labels()
@@ -3461,10 +3474,7 @@ class App:
             parts.append(f'소속없음 {no_org}')
             if warn_items:
                 parts.append(f'({", ".join(warn_items[:5])}{"..." if len(warn_items) > 5 else ""})')
-        self.parse_status.config(
-            text='  /  제외: '.join(parts) if (fail or no_org) else parts[0],
-            fg=color
-        )
+        self._set_parse_status('  /  제외: '.join(parts) if (fail or no_org) else parts[0], color)
         self.status_var.set(f'명단 추출 완료: {ok}명')
         self._refresh_ready_status()
 
@@ -3495,15 +3505,9 @@ class App:
         self._rebuild_parsed_list()
         self._record_org_extraction()
 
-        parts = [f'기관 {confirmed}곳 확정']
-        if pending:
-            parts.append(f'확인 필요 {pending}곳')
-        if duplicates:
-            parts.append(f'중복 입력 {len(duplicates)}종 제거')
-        self.parse_status.config(
-            text='  /  '.join(parts),
-            fg=COLORS['ok'] if pending == 0 and confirmed else COLORS['error']
-        )
+        # 확정 수와 확인 필요 수는 위의 칩과 배너가 이미 보여 준다. 여기에는 따로 알릴 것만 적는다.
+        self._set_parse_status(f'같은 기관 {len(duplicates)}종은 한 번만 남겼습니다' if duplicates else '',
+                               COLORS['on_surface_variant'])
         self.status_var.set(f'기관 {confirmed}곳 확정, 확인 필요 {pending}곳')
         self._refresh_ready_status()
         self._refresh_edufine_status()
@@ -3570,7 +3574,7 @@ class App:
         self.parsed_list.delete(0, 'end')
         self.names_list.clear()
         self.last_org_duplicates = []
-        self.parse_status.config(text='')
+        self._set_parse_status('')
         self._refresh_summary_chips()
         self._refresh_ready_status()
         self._refresh_failed_retry_state()
@@ -3584,19 +3588,27 @@ class App:
         self._rebuild_parsed_list()
         self._after_list_edit()
 
+    def _set_parse_status(self, text, fg=None):
+        """추출 결과 위의 한 줄. 적을 말이 없으면 줄 자리까지 없앤다 (목록이 그만큼 넓어진다)."""
+        if fg is None:
+            self.parse_status.config(text=text)
+        else:
+            self.parse_status.config(text=text, fg=fg)
+        try:
+            if text:
+                self.parse_status.grid()
+            else:
+                self.parse_status.grid_remove()
+        except Exception as exc:
+            logging.debug('추출 결과 줄 보이기 실패: %s', exc)
+
     def _after_list_edit(self):
         """목록을 손본 뒤 상태를 다시 맞춘다. 이 목록이 그대로 엑셀로 간다."""
         total = len(self.names_list)
         if self.is_edufine():
-            pending = sum(1 for i in self.names_list if self._org_needs_review(i))
-            parts = [f'기관 {total - pending}곳 확정']
-            if pending:
-                parts.append(f'확인 필요 {pending}곳')
-            self.parse_status.config(
-                text='  /  '.join(parts),
-                fg=COLORS['ok'] if not pending else COLORS['error'])
+            self._set_parse_status('')
         else:
-            self.parse_status.config(text=f'명단 추출 완료: {total}명', fg=COLORS['ok'])
+            self._set_parse_status(f'명단 추출 완료: {total}명', COLORS['ok'])
         self._refresh_ready_status()
         self._refresh_edufine_status()
         self._refresh_org_review_state()
@@ -3615,7 +3627,7 @@ class App:
 
         dlg = tk.Toplevel(self.root)
         dlg.title('항목 수정')
-        dlg.geometry(f'{ui.px(360)}x{ui.px(190)}')
+        dlg.geometry(f'{ui.px(440)}x{ui.px(230)}')
         dlg.resizable(False, False)
         dlg.grab_set()
         dlg.transient(self.root)
@@ -3691,7 +3703,7 @@ class App:
         """에듀파인 기관 항목 고치기 — 후보에서 고르거나 직접 적는다."""
         dlg = tk.Toplevel(self.root)
         dlg.title('기관 확인')
-        dlg.geometry(f'{ui.px(420)}x{ui.px(380)}')
+        dlg.geometry(f'{ui.px(500)}x{ui.px(440)}')
         dlg.resizable(False, False)
         dlg.grab_set()
         dlg.transient(self.root)
@@ -3759,7 +3771,32 @@ class App:
                 chip.set('설정됨' if done else '미설정', 'ok' if done else 'err')
             if btn:
                 btn.config(text='다시 잡기' if done else '캡처 시작')
+        self._refresh_calib_next()
         self._refresh_ready_status()
+
+    def _refresh_calib_next(self):
+        """세 곳을 모두 잡았을 때만 [다음, 자동 선택] 을 켠다."""
+        button = getattr(self, 'calib_next_btn', None)
+        hint = getattr(self, 'calib_hint', None)
+        if button is None:
+            return
+        ready = self.config.is_calibrated()
+        button.config(state='normal' if ready else 'disabled')
+        if hint is not None:
+            left = sum(1 for key in ('search_field', 'result_first', 'add_button')
+                       if self.config.data.get(key + '_x') is None
+                       or self.config.data.get(key + '_y') is None)
+            hint.config(text='세 곳을 모두 잡았습니다' if ready
+                        else f'아직 잡지 않은 자리가 {left}곳 있습니다',
+                        fg=COLORS['ok'] if ready else COLORS['on_surface_variant'])
+
+    def _calib_next(self):
+        """위치 설정을 저장하고 자동 선택으로 넘어간다. 세 곳이 다 잡혀 있을 때만 된다."""
+        if not self.config.is_calibrated():
+            self._refresh_calib_next()
+            return
+        self._save_calib()
+        self._go_next_step()
 
     # ── 자동 선택 시작/중지/계속 ───────────────
     def _start(self, items=None):
@@ -3896,7 +3933,7 @@ class App:
             return
         self.names_list = failed
         self._rebuild_parsed_list()
-        self.parse_status.config(text=f'실패 항목 재실행 준비: {len(failed)}명', fg=COLORS['ok'])
+        self._set_parse_status(f'실패 항목 재실행 준비: {len(failed)}명', COLORS['ok'])
         self._start()
 
     def _selected_count(self):
@@ -4495,7 +4532,7 @@ class App:
 
         win = tk.Toplevel(self.root)
         win.title('소통메신저 목록 읽기 확인')
-        win.geometry(f'{ui.px(620)}x{ui.px(460)}')
+        win.geometry(f'{ui.px(680)}x{ui.px(520)}')
         color = COLORS['ok'] if mark == 'O' else COLORS['error']
         tk.Label(win, text=mark, fg=color, font=ui.font(48, 'bold')).pack(pady=(10, 0))
         tk.Label(win, text=headline, fg=color, font=ui.font(11, 'bold'),
