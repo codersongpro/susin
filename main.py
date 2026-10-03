@@ -450,6 +450,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   [선택된 사용자] 목록을 직접 세어 맞는지 알려 줍니다. 스크롤해야 보이는
   아래쪽 사람까지 셉니다. 셀 수 있는지는 [2. 위치 설정] 탭의
   [소통메신저 목록 읽기 확인] 으로 미리 볼 수 있습니다.
+  셀 수 있으면 O, 없으면 X 로 알려 줍니다.
 
   수십에서 수백 명을 일일이 추가하는 반복 작업을 대신합니다.
 
@@ -3525,20 +3526,29 @@ class App:
         """
         lines = []
         point = self._arrow_point()
+        # 결과는 O 아니면 X 다. 한눈에 보이도록 창 맨 위에 크게 쓴다.
+        mark, headline, advice = 'X', '', ''
         if self._win32gui() is None:
-            lines.append('이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.')
+            headline = '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
         elif point is None:
-            lines.append('6번 오른쪽 화살표 버튼 위치를 먼저 잡아 주세요.')
+            headline = '6번 오른쪽 화살표 버튼 위치를 먼저 잡아 주세요.'
         else:
-            windows = self._windows_at(*point)
             picked = self._find_selected_list()
-            if picked:
-                count = self._count_items(picked[0], picked[1])
-                lines.append(f'✓ [선택된 사용자] 목록을 찾았습니다. 지금 {count}명이 들어 있습니다.')
-                lines.append('소통메신저에 보이는 사람 수와 같은지 확인해 주세요.')
+            count = self._count_items(picked[0], picked[1]) if picked else None
+            if count is not None:
+                mark = 'O'
+                headline = f'[선택된 사용자] 목록을 셀 수 있습니다. 지금 {count}명이 들어 있습니다.'
+                advice = '소통메신저에 담아 둔 사람 수와 같은지 확인해 주세요.'
             else:
-                lines.append('✗ [선택된 사용자] 목록을 찾지 못했습니다.')
-                lines.append('[받는사람 추가] 창을 연 채로 다시 눌러 보세요. 그래도 안 되면 아래 내용을 보내 주세요.')
+                headline = '[선택된 사용자] 목록을 셀 수 없습니다.'
+                advice = ('[받는사람 추가] 창을 연 채로 다시 눌러 보세요. '
+                          '그래도 X 면 [내용 복사] 로 아래 내용을 보내 주세요.')
+        lines.append(f'결과: {mark}')
+        lines.append(headline)
+        if advice:
+            lines.append(advice)
+        if point is not None and self._win32gui() is not None:
+            windows = self._windows_at(*point)
             lines.append('')
             lines.append(f'화살표 버튼 위치: ({point[0]}, {point[1]})')
             lines.append(f'그 자리를 덮은 창: {len(windows)}개')
@@ -3561,8 +3571,15 @@ class App:
 
         win = tk.Toplevel(self.root)
         win.title('소통메신저 목록 읽기 확인')
-        win.geometry('620x420')
-        box = scrolledtext.ScrolledText(win, font=('맑은 고딕', 9), wrap='word')
+        win.geometry('620x460')
+        color = '#2E7D32' if mark == 'O' else '#C62828'
+        tk.Label(win, text=mark, fg=color, font=('맑은 고딕', 48, 'bold')).pack(pady=(10, 0))
+        tk.Label(win, text=headline, fg=color, font=('맑은 고딕', 11, 'bold'),
+                 wraplength=580, justify='center').pack(padx=10)
+        if advice:
+            tk.Label(win, text=advice, fg='#555', font=('맑은 고딕', 9),
+                     wraplength=580, justify='center').pack(padx=10, pady=(2, 0))
+        box = scrolledtext.ScrolledText(win, font=('맑은 고딕', 9), wrap='word', height=10)
         box.pack(fill='both', expand=True, padx=10, pady=(10, 4))
         box.insert('1.0', text)
         box.config(state='disabled')
@@ -3571,7 +3588,7 @@ class App:
         status = tk.Label(row, text='', fg='green', font=('맑은 고딕', 9))
         tk.Button(
             row, text='📋  내용 복사',
-            command=lambda: copy_text(win, text) and status.config(text='✓ 복사했습니다'),
+            command=lambda: copy_text(win, text) and status.config(text='복사했습니다'),
             bg='#607D8B', fg='white', relief='flat', font=('맑은 고딕', 10),
             padx=10, pady=4, cursor='hand2'
         ).pack(side='left')

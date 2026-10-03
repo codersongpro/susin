@@ -1125,13 +1125,23 @@ class AppFlowTest(unittest.TestCase):
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}):
             text = self.app._probe_messenger_lists()
+        self.assertTrue(text.startswith('결과: O'), text)
         self.assertIn('지금 17명이 들어 있습니다', text)
         self.assertIn('항목 3', text)
+
+    def test_probe_says_x_when_the_list_cannot_be_counted(self):
+        gui, _sent = self._fake_messenger(list_class='CustomGrid')
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}):
+            text = self.app._probe_messenger_lists()
+        self.assertTrue(text.startswith('결과: X'), text)
+        self.assertIn('칸 종류: Button 1, CustomGrid 2', text)
 
     def test_probe_asks_for_the_arrow_position_first(self):
         self.app.config.data['add_button_x'] = None
         with patch.object(self.app, '_win32gui', return_value=object()):
             text = self.app._probe_messenger_lists()
+        self.assertTrue(text.startswith('결과: X'), text)
         self.assertIn('화살표 버튼 위치를 먼저 잡아', text)
 
     def test_excel_is_read_back_and_compared(self):

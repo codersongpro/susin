@@ -164,14 +164,33 @@ python3 tools/merge_edufine_orgs.py --apply   # 수확한 기관명을 org_db �
 ## 고치면서 돌려 보기
 
 exe 를 만들지 않고 소스로 바로 띄운다. 고칠 때마다 빌드를 기다릴 일이 없다.
+아직 릴리즈하지 않은 `main` 의 최신 코드가 그대로 뜬다.
+
+### 파일 하나만 받아서 쓰기 (Git 없이)
+
+**[개발용 실행.bat 받기](https://github.com/codersongpro/susin/raw/main/%EA%B0%9C%EB%B0%9C%EC%9A%A9%20%EC%8B%A4%ED%96%89.bat)**
+
+링크를 눌렀는데 글자만 보이면 그 화면에서 `Ctrl+S` 로 저장한다. 또는
+[파일 화면](https://github.com/codersongpro/susin/blob/main/%EA%B0%9C%EB%B0%9C%EC%9A%A9%20%EC%8B%A4%ED%96%89.bat)
+오른쪽 위의 다운로드 단추(Download raw file)를 누른다.
+
+받은 파일을 아무 데나 두고 누르면 된다. 옆에 신통픽 코드가 없으면 GitHub 에서
+최신 코드를 받아 `%USERPROFILE%\sintongpick-dev` 에 풀고 거기서 띄운다. 누를 때마다
+새로 받으므로 늘 최신이다. 설정은 다른 곳에 저장되어 지워지지 않는다.
+
+인터넷에서 받은 파일이라 윈도우가 "PC 보호" 창을 띄우면 [추가 정보] 를 누르고
+[실행] 을 누른다. 업무망 PC 라면 임의로 실행하지 말고 정보보안 담당자와 상의한다.
+파이썬이 없으면 `sintongpick-dev` 폴더의 `시작.bat` 을 한 번 실행해 파이썬까지 깐다.
+
+### 저장소를 받아서 쓰기 (Git 있을 때)
 
 ```
 git clone https://github.com/codersongpro/susin.git
 cd susin
 ```
 
-그다음부터는 **`개발용 실행.bat`** 만 누르면 된다. 최신 코드를 받고, 빠진
-패키지만 깔고, 앱을 띄우는 것까지 한 번에 한다. 파이썬이 없으면 `시작.bat` 을
+그다음부터는 **`개발용 실행.bat`** 만 누르면 된다. `git pull` 로 최신 코드를 받고,
+빠진 패키지만 깔고, 앱을 띄우는 것까지 한 번에 한다. 파이썬이 없으면 `시작.bat` 을
 한 번 실행해 파이썬까지 깔고 나서 쓴다.
 
 릴리즈는 고치는 것이 끝나고 확인까지 마쳤을 때 한 번만 한다.
