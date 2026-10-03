@@ -8,7 +8,7 @@
 """
 
 APP_NAME    = '신통픽'
-APP_VERSION = '2.2.10'
+APP_VERSION = '2.2.11'
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
@@ -36,7 +36,9 @@ from app_config import (
 import edufine
 from automation import (
     FAIL_DUPLICATE,
+    FAIL_SAME_NAME_SKIPPED,
     count_message_for,
+    search_count_in,
     guess_selected_list,
     pick_selected_list,
     person_rows,
@@ -609,8 +611,10 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
      느린 환경: 1.0~2.0초 권장
 
   Q. 동명이인이 있어서 걱정돼요.
-  A. '수동 확인 모드'를 체크하세요.
-     검색 후 결과를 직접 확인하고 [▶▶ 계속]을 눌러 진행합니다.
+  A. 검색 결과가 두 명 넘게 나오면 신통픽이 첫 사람을 누르지 않고 멈춥니다.
+     화면 왼쪽 위에 뜨는 작은 창을 보고, 맞는 분을 직접 골라 화살표를 누른 뒤
+     [계속] 을 누르세요. 아무도 담지 않으려면 [건너뛰기] 를 누릅니다.
+     모든 사람마다 멈추고 싶으면 '수동 확인 모드'를 체크하세요.
 
   Q. HWP 파일이 안 열려요.
   A. 한/글이 설치되어 있지 않으면 일부 파일이 열리지 않습니다.
@@ -3507,6 +3511,13 @@ class App:
         if not self._automation_is_running():
             return
         self.stop_flag.set()
+        win = getattr(self, 'pick_window', None)
+        if win is not None:
+            try:
+                win.destroy()
+            except Exception:
+                pass
+            self.pick_window = None
         self.continue_event.set()
         # 워커가 실제로 끝날 때까지 다시 시작할 수 없게 둔다. 여기서 시작 버튼을
         # 켜면 새 실행이 stop_flag를 지워 두 워커가 동시에 마우스를 움직일 수 있다.
@@ -3657,12 +3668,16 @@ class App:
 
     def _uia(self):
         """윈도우 화면 읽어 주기(UI 자동화). (객체, 못 쓰는 이유) 로 돌려준다."""
+        cached = getattr(self, '_uia_cached', None)
+        if cached is not None:
+            return cached, ''
         try:
             import comtypes.client
             comtypes.client.GetModule('UIAutomationCore.dll')
             from comtypes.gen import UIAutomationClient as client
             uia = comtypes.client.CreateObject(
                 client.CUIAutomation, interface=client.IUIAutomation)
+            self._uia_cached = uia
             return uia, ''
         except Exception as exc:
             logging.info('UI 자동화를 쓸 수 없습니다: %s', exc)
@@ -3713,6 +3728,85 @@ class App:
                 break
             time.sleep(0.8)
         return nodes, tries
+
+    def _read_search_count(self):
+        """소통메신저 '검색 결과(N명)' 의 N. 화면 읽어 주기로 읽고, 못 읽으면 None.
+
+        화면 스레드에서만 부른다. 화면 읽어 주기 객체가 이 스레드에서 만들어졌다.
+        """
+        if self._win32gui() is None:
+            return None
+        point = self._arrow_point()
+        dialogs = [w for w in self._messenger_dialogs()
+                   if point is None or self._window_contains(w, point)]
+        if not dialogs:
+            return None
+        uia, _why = self._uia()
+        if uia is None:
+            return None
+        nodes, _tries = self._read_uia_nodes(uia, dialogs[0])
+        return search_count_in(nodes, SEARCH_COUNT_RE)
+
+    def _run_on_ui(self, fn, timeout: float = 5.0):
+        """워커 스레드에서 fn 을 화면 스레드로 넘겨 부르고 결과를 받는다. 늦으면 None."""
+        done = threading.Event()
+        box = {}
+
+        def call():
+            try:
+                box['value'] = fn()
+            except Exception as exc:
+                logging.debug('화면 스레드 호출 실패: %s', exc)
+            finally:
+                done.set()
+
+        self.root.after(0, call)
+        if not done.wait(timeout):
+            return None
+        return box.get('value')
+
+    def _ask_pick(self, name: str, count: int):
+        """검색 결과가 여럿일 때 맨 위에 작은 창을 띄워 고르게 한다. 화면 스레드에서 부른다."""
+        self.pick_choice = None
+        self.status_var.set(
+            f'동명이인 확인: {name}  ·  검색 결과 {count}명. 소통메신저에서 맞는 분을 골라 '
+            f'화살표를 누른 뒤 [계속] 을 누르세요')
+        self.continue_btn.config(state='normal')
+        win = tk.Toplevel(self.root)
+        win.title('동명이인 확인')
+        try:
+            win.attributes('-topmost', True)
+            win.geometry('+20+20')
+        except tk.TclError as exc:
+            logging.debug('동명이인 창 위치 설정 실패: %s', exc)
+        tk.Label(win, text=f'⏸  {name}  ·  검색 결과 {count}명',
+                 bg='#E65100', fg='white', font=('맑은 고딕', 11, 'bold'),
+                 padx=12, pady=8).pack(fill='x')
+        tk.Label(
+            win,
+            text=('같은 이름이 여럿이라 신통픽이 고르지 않았습니다.\n'
+                  '소통메신저 검색 결과에서 맞는 분을 누르고 오른쪽 화살표를 누른 뒤\n'
+                  '[계속] 을 누르세요. 아무도 담지 않으려면 [건너뛰기] 를 누르세요.'),
+            font=('맑은 고딕', 9), justify='left', padx=12, pady=8
+        ).pack(anchor='w')
+        row = tk.Frame(win)
+        row.pack(fill='x', padx=12, pady=(0, 10))
+
+        def choose(choice):
+            self.pick_choice = choice
+            try:
+                win.destroy()
+            except tk.TclError:
+                pass
+            self._resume()
+
+        tk.Button(row, text='▶  계속 (골라서 담았음)', command=lambda: choose('continue'),
+                  bg='#2E7D32', fg='white', relief='flat', font=('맑은 고딕', 10, 'bold'),
+                  padx=10, pady=4, cursor='hand2').pack(side='left')
+        tk.Button(row, text='건너뛰기', command=lambda: choose('skip'),
+                  bg='#757575', fg='white', relief='flat', font=('맑은 고딕', 10),
+                  padx=10, pady=4, cursor='hand2').pack(side='left', padx=6)
+        self.pick_window = win
 
     def _read_messenger_selected(self):
         """소통메신저 [선택된 사용자] 목록의 줄 글을 읽는다.
@@ -4134,6 +4228,28 @@ class App:
                     item['added'] = True
                     self._log('✓\n')
                 else:
+                    # 검색 결과가 여럿이면 첫 사람을 누르지 않고 사람이 고르게 한다
+                    many = self._run_on_ui(self._read_search_count)
+                    if many is not None and many >= 2:
+                        self._log(f'⏸  (검색 결과 {many}명, 직접 고르기 기다림) ')
+                        self.continue_event.clear()
+                        self.root.after(0, lambda n=search_str, k=many: self._ask_pick(n, k))
+                        self.continue_event.wait()
+                        if self.stop_flag.is_set():
+                            self._log('\n')
+                            self._mark_failed(idx, FAIL_MANUAL_STOP, item)
+                            break
+                        if getattr(self, 'pick_choice', None) == 'skip':
+                            fail += 1
+                            self._log('—  (건너뜀)\n')
+                            self._mark_failed(idx, FAIL_SAME_NAME_SKIPPED, item)
+                            self._update_progress(idx + 1, total)
+                            continue
+                        ok += 1
+                        item['added'] = True
+                        self._log('✓  (직접 고름)\n')
+                        self._update_progress(idx + 1, total)
+                        continue
                     result = self._do_select()
                     if result == 'stopped':
                         self._log('\n')

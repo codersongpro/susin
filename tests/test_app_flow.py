@@ -1091,6 +1091,74 @@ class AppFlowTest(unittest.TestCase):
             self.app.tool_states.clear()
             self.app.names_list = []
 
+    # ── 동명이인: 검색 결과가 여럿이면 멈춘다 ──
+    def _run_one(self, count, choice='continue'):
+        """한 사람을 돌린다. 검색 결과가 count 명이고, 멈추면 choice 를 고른다."""
+        m = self.app_module
+        item = {'org': '', 'name': '김다래'}
+        self.app.names_list = [item]
+        self.app.stop_flag.clear()
+        manual = self.app.config.data.get('manual_confirm')
+        self.app.config.data['manual_confirm'] = False
+        asked = []
+
+        def ask(name, many):
+            asked.append((name, many))
+            self.app.pick_choice = choice
+            self.app.continue_event.set()
+
+        try:
+            with patch.object(self.app.root, 'after', side_effect=lambda _ms, fn: fn()), \
+                    patch.object(m.time, 'sleep', lambda *_: None), \
+                    patch.object(self.app, '_result_pixels', return_value=None), \
+                    patch.object(self.app, '_do_search'), \
+                    patch.object(self.app, '_wait_for_result', return_value='new'), \
+                    patch.object(self.app, '_run_on_ui', return_value=count), \
+                    patch.object(self.app, '_ask_pick', side_effect=ask), \
+                    patch.object(self.app, '_do_select', return_value='ok') as clicked, \
+                    patch.object(self.app, '_log'), \
+                    patch.object(m, 'pyautogui', types.SimpleNamespace(
+                        FailSafeException=type('FailSafeException', (Exception,), {}))), \
+                    patch.object(self.app, '_done'):
+                self.app._worker((item,))
+        finally:
+            self.app.config.data['manual_confirm'] = manual
+            self.app.names_list = []
+        return item, asked, clicked
+
+    def test_several_results_pause_instead_of_clicking_the_first(self):
+        """검색 결과가 둘이면 첫 사람을 누르지 않는다. 엉뚱한 사람이 들어갈 수 있다."""
+        item, asked, clicked = self._run_one(2)
+        self.assertEqual(asked, [('김다래', 2)])
+        clicked.assert_not_called()
+        self.assertTrue(item.get('added'))
+
+    def test_skipping_a_same_name_person_marks_it(self):
+        from automation import FAIL_SAME_NAME_SKIPPED
+        item, _asked, clicked = self._run_one(3, choice='skip')
+        clicked.assert_not_called()
+        self.assertEqual(item.get('failure_reason'), FAIL_SAME_NAME_SKIPPED)
+        self.assertFalse(item.get('added'))
+
+    def test_one_result_or_unknown_count_goes_on_as_before(self):
+        for count in (1, None):
+            item, asked, clicked = self._run_one(count)
+            self.assertEqual(asked, [])
+            clicked.assert_called_once()
+            self.assertTrue(item.get('added'))
+
+    def test_search_count_is_read_with_ui_automation(self):
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        nodes = [{'id': 0, 'parent': -1, 'type': 50030, 'rect': (0, 0, 800, 600),
+                  'name': '', 'offscreen': False},
+                 {'id': 1, 'parent': 0, 'type': 50020, 'rect': (10, 80, 200, 100),
+                  'name': '검색 결과(2명)', 'offscreen': False}]
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', return_value=nodes):
+            self.assertEqual(self.app._read_search_count(), 2)
+
     def test_tab_has_no_result_list_button(self):
         """[결과 대조 · 빠진 명단] 버튼은 뺐다. 소통메신저와 비교가 그 일을 한다."""
         self.assertFalse(hasattr(self.app, 'failed_list_btn'))

@@ -231,3 +231,14 @@ class RealMessengerTest(unittest.TestCase):
         node, kid_type, _count, _off = guess_selected_list(nodes, 1284)
         names = [reconcile.person_name_from_row(t) for t in row_texts(nodes, node['id'], kid_type)]
         self.assertEqual(names, ['문유리', '이경숙', '김다래', '나상연', '함봉주', '이정훈', '송동석'])
+
+
+class SearchCountTest(unittest.TestCase):
+    def test_visible_label_first(self):
+        import re
+        from automation import search_count_in
+        pattern = re.compile(r'검색\s*결과\s*\(?\s*(\d+)\s*명')
+        nodes = [{'name': '검색 결과(5명)', 'offscreen': True},
+                 {'name': '검색 결과(2명)', 'offscreen': False}]
+        self.assertEqual(search_count_in(nodes, pattern), 2)
+        self.assertIsNone(search_count_in([{'name': '선택된 사용자'}], pattern))

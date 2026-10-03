@@ -641,7 +641,7 @@
 
       <div class="app-preview" aria-label="신통픽 앱 작업 흐름 미리보기">
         <div class="preview-titlebar">
-          <span>신통픽 v2.2.10</span>
+          <span>신통픽 v2.2.11</span>
           <span>준비</span>
         </div>
         <div class="preview-tabs">
@@ -658,9 +658,9 @@
             <div class="preview-row"><span>충청북도교육청</span><span>이영희</span><span>추출 완료</span></div>
           </div>
           <div class="preview-flow">
-            <span>검색 입력</span>
-            <span>첫 결과 선택</span>
-            <span>사용자 추가</span>
+            <span>검색해서 담기</span>
+            <span>동명이인은 멈춤</span>
+            <span>소통메신저와 비교</span>
           </div>
         </div>
       </div>
@@ -710,6 +710,18 @@
         <span class="f-icon">🔍</span>
         <div class="f-name">오타 자동 보정</div>
         <div class="f-desc">충북외고, 학성초처럼 약칭으로 적어도 정식 학교명을 찾아냅니다.</div>
+      </div>
+      <div class="feature-card">
+        <span class="f-icon">✏️</span>
+        <div class="f-name">직접 넣기</div>
+        <div class="f-desc">몇 사람, 몇 곳뿐이면 파일 없이 목록 아래 칸에 적고 Enter 를 누르면 됩니다.
+          소통픽과 수신픽 명단은 따로 보관되어 도구를 바꿔도 섞이지 않습니다.</div>
+      </div>
+      <div class="feature-card">
+        <span class="f-icon">✅</span>
+        <div class="f-name">소통메신저와 비교</div>
+        <div class="f-desc">다 담고 나면 소통메신저 [선택된 사용자] 를 읽어 누가 들어갔고 누가 빠졌는지 보여 줍니다.
+          빠진 사람은 버튼 하나로 다시 담습니다.</div>
       </div>
     </div>
 
@@ -770,6 +782,7 @@
                   줄바꿈이든 쉼표든 탭이든 상관없습니다. 문서 제목, 순번, 역할, 직위, 연락처가
                   섞인 표를 통째로 붙여넣어도 기관만 골라냅니다.
                   학교는 약칭으로 적어도 되고, 부서는 [기관 찾아보기]에서 검색해 골라도 됩니다.
+                  몇 곳뿐이면 목록 아래 <strong>직접 넣기</strong> 칸에 기관명을 적고 Enter 를 눌러도 됩니다.
                 </div>
                 <div class="paste-demo">
                   <div class="paste-demo-head"><span>붙여넣는 그대로</span><span>인식 결과</span></div>
@@ -888,7 +901,7 @@
             <li class="step-item">
               <div class="step-num hi">2</div>
               <div>
-                <div class="step-title">명단 넣기 (둘 중 편한 쪽으로)</div>
+                <div class="step-title">명단 넣기 (편한 쪽으로)</div>
                 <div class="step-desc">
                   <strong>붙여넣기</strong> &nbsp;엑셀이나 한글에서 표를 복사해 입력창에 붙여넣습니다.
                   직위나 연락처 열이 끼어 있어도 소속기관과 이름만 찾아냅니다.<br>
@@ -1004,7 +1017,9 @@
               <div class="step-num hi">2</div>
               <div>
                 <div class="step-title">자동 진행 중에는 마우스를 건드리지 마세요</div>
-                <div class="step-desc">이름마다 검색하고, 첫 결과를 누르고, 선택 버튼을 누릅니다. 진행 상황은 아래 로그에 한 줄씩 올라옵니다.</div>
+                <div class="step-desc">이름마다 검색하고, 결과를 누르고, 선택 버튼을 누릅니다. 진행 상황은 아래 로그에 한 줄씩 올라옵니다.
+                  검색 결과가 두 명 넘게 나오면(동명이인) 누르지 않고 멈춥니다. 화면 왼쪽 위에 뜨는 작은 창을 보고,
+                  맞는 분을 직접 골라 화살표를 누른 뒤 [계속] 을 누르세요. 아무도 담지 않으려면 [건너뛰기] 를 누르면 됩니다.</div>
               </div>
             </li>
             <li class="step-item">
@@ -1070,8 +1085,12 @@
       <details>
         <summary>동명이인이 있을 때는 어떻게 하나요?</summary>
         <div class="faq-body">
-          [위치 설정] 탭에서 <strong>수동 확인</strong>을 켜세요.
-          이름마다 검색까지만 해 주고 멈추니, 맞는 사람을 직접 고른 뒤 [계속]을 누르면 다음으로 넘어갑니다.
+          검색 결과가 두 명 넘게 나오면 신통픽이 첫 사람을 누르지 않고 멈춥니다.
+          맞는 분을 직접 골라 화살표를 누른 뒤 [계속] 을 누르면 다음 사람으로 넘어갑니다.
+          명단에 소속이 적혀 있으면 소속과 이름으로 함께 검색하므로, 다른 학교 동명이인은 대개 걸러집니다.<br><br>
+          다 끝난 뒤 비교할 때 같은 이름이 명단에 여럿인데 일부만 들어 있으면
+          <strong>(동명이인 2명 중 1명만 들어감, 확인 필요)</strong> 처럼 이름 옆에 붙여 알려 드립니다.<br><br>
+          모든 사람마다 멈추고 싶으면 [위치 설정] 탭에서 <strong>수동 확인</strong>을 켜세요.
         </div>
       </details>
       <details>
@@ -1191,7 +1210,7 @@
           <dt>이용</dt>
           <dd>무료 · 윈도우 전용 · 설치 없이 실행</dd>
           <dt>현재 버전</dt>
-          <dd><span class="version-pill">v2.2.10</span></dd>
+          <dd><span class="version-pill">v2.2.11</span></dd>
         </dl>
         <div class="dev-note">
           개인이 만들어 나누는 프로그램입니다. 충청북도교육청이 공식으로 배포하는 프로그램은 아닙니다.

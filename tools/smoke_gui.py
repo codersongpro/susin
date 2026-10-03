@@ -129,6 +129,12 @@ def main():
     window.destroy()
     print('소통메신저 비교 창 ok')
 
+    # 동명이인 고르기 창
+    app._ask_pick('김다래', 2)
+    assert app.pick_window.winfo_exists()
+    app.pick_window.destroy()
+    print('동명이인 고르기 창 ok')
+
     root.destroy()
     print('스모크 테스트 통과')
     return 0

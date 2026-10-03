@@ -236,3 +236,25 @@ def person_rows(nodes, container_id: int, row_type: int) -> int:
     """'문유리 [부장교사]' 처럼 이름 뒤에 직위가 붙은 줄의 수."""
     return sum(1 for text in row_texts(nodes, container_id, row_type)
                if PERSON_ROW.search(text))
+
+
+# ── 동명이인: 검색 결과가 여럿이면 멈춘다 ──────
+# 소속 없이 이름만 있거나 같은 학교에 같은 이름이 있으면 검색 결과가 여럿 나온다.
+# 첫 사람을 그대로 누르면 엉뚱한 사람이 받는 사람에 들어간다. 그래서 결과가
+# 둘 넘으면 누르지 않고 사람이 고르게 한다.
+FAIL_SAME_NAME_SKIPPED = '동명이인이라 건너뜀'
+
+
+def search_count_in(nodes, pattern):
+    """화면 읽어 주기로 읽은 요소에서 '검색 결과(N명)' 의 N. 없으면 None.
+
+    화면에 보이는 것을 먼저 본다. 숨은 요소에 예전 수가 남아 있을 수 있다.
+    """
+    for visible_only in (True, False):
+        for node in nodes:
+            if visible_only and node.get('offscreen'):
+                continue
+            found = pattern.search(node.get('name') or '')
+            if found:
+                return int(found.group(1))
+    return None
