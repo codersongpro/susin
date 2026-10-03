@@ -97,18 +97,35 @@ def main():
         print(f"창 바탕 ok - {app._shell['drawn']}")
 
     # 창 크기를 바꾸면 글자 배율이 따라가고, 단추와 칩도 같이 다시 그려진다.
+    # CI 러너는 화면이 작아서(1024x768 안팎) 창을 키워도 화면보다 커지지 않는다. 그래서 창 크기로
+    # 배율이 달라지는지는 화면이 클 때만 비교하고, 배율을 직접 바꿔 다시 그리는 길은 늘 돌려 본다.
     import time
     import ui_kit
-    sizes = {}
-    for label, geometry in (('작게', '1000x660'), ('크게', '1700x1000'), ('원래', '1280x820')):
-        root.geometry(geometry)
-        end = time.time() + 0.5
+
+    def settle(seconds=0.5):
+        end = time.time() + seconds
         while time.time() < end:
             root.update()
             time.sleep(0.01)
-        sizes[label] = ui_kit.zoom()
-    assert sizes['크게'] > sizes['작게'], sizes
+
+    screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
+    sizes = {}
+    for label, geometry in (('작게', '900x620'), ('크게', f'{min(1700, screen_w - 40)}x{min(1000, screen_h - 80)}'),
+                            ('원래', '1100x700')):
+        root.geometry(geometry)
+        settle()
+        sizes[label] = (ui_kit.zoom(), root.winfo_width())
+    if sizes['크게'][1] >= 1500:
+        assert sizes['크게'][0] > sizes['작게'][0], sizes
     print(f'창 크기에 따른 배율 ok - {sizes}')
+
+    before = ui_kit.px(40)
+    assert ui_kit.set_zoom(1.3), '배율을 바꾸지 못했습니다'
+    settle(0.4)
+    assert ui_kit.px(40) > before
+    ui_kit.set_zoom(1.0)
+    settle(0.4)
+    print('배율을 직접 바꿔 다시 그리기 ok')
 
     # 사용 가이드: 화면을 어둡게 하고 대상만 비추는 덮개가 단계마다 그려지고, 끝내면 사라진다
     app._choose_target(TARGET_MESSENGER)
