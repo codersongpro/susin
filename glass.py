@@ -198,20 +198,29 @@ def panel_shadow(size, radius, blur=9, alpha=12, spread=10):
 PANEL_RADIUS = {'top': 32, 'rail': 28, 'body': 28, 'status': 20}
 
 
-def compose_shell(width, height, tool='sotong', zoom=1.0):
-    """창 틀 전체 그림 (RGB). Canvas 한 장으로 깔고, 위젯은 판 자리에 올린다."""
+def compose_shell(width, height, tool='sotong', zoom=1.0, shrink=1):
+    """창 틀 전체 그림 (RGB). Canvas 한 장으로 깔고, 위젯은 판 자리에 올린다.
+
+    shrink 가 1 보다 크면 그만큼 작게 그린다. 창 크기를 끌어 바꾸는 동안 쓰는 초안이고,
+    Tk 가 정수 배로 키워서 깐다 (모서리가 거칠어도 끌기가 끝나면 제대로 다시 그린다).
+    """
     width, height = max(width, 320), max(height, 240)
     layout = shell_layout(width, height, zoom=zoom)
-    back = make_backdrop(width, height, tool)
+    if shrink > 1:
+        layout = {name: tuple(v // shrink for v in box) for name, box in layout.items()}
+        width, height = width // shrink, height // shrink
+    back = make_backdrop(width, height, tool, shrink=8 if shrink == 1 else 2)
     out = back.convert('RGBA')
+    spread = max(10 // shrink, 2)
     for name, box in layout.items():
-        radius = PANEL_RADIUS[name]
+        radius = max(PANEL_RADIUS[name] // shrink, 2)
         size = (box[2] - box[0], box[3] - box[1])
-        spread = 10
-        out.alpha_composite(panel_shadow(size, min(radius, size[1] // 2)),
+        out.alpha_composite(panel_shadow(size, min(radius, size[1] // 2), spread=spread,
+                                         blur=9 / shrink),
                             (box[0] - spread, box[1] - spread))
     for name, box in layout.items():
-        out.alpha_composite(flat_glass_panel(back, box, PANEL_RADIUS[name]), (box[0], box[1]))
+        out.alpha_composite(
+            flat_glass_panel(back, box, max(PANEL_RADIUS[name] // shrink, 2)), (box[0], box[1]))
     return out.convert('RGB')
 
 

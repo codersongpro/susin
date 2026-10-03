@@ -28,7 +28,7 @@ FONT = FONT_FAMILY
 INNER_BG = mix('#FFFFFF', PANEL_BG, 0.5)           # 판 위의 판
 EDGE = mix(COLORS['outline'], '#FFFFFF', 0.22)     # 카드 가장자리
 
-_state = {'tool': 'susin', 'zoom': 1.0}
+_state = {'tool': 'susin', 'zoom': 1.0, 'live': False}
 _fonts = {}                         # (크기, 굵기) -> 이름 붙은 글꼴. 크기를 바꾸면 쓰는 곳이 한꺼번에 바뀐다
 _scalables = weakref.WeakSet()      # 창 크기에 따라 다시 그려야 하는 부품 (칩, 도구 선택, 레일)
 
@@ -67,6 +67,16 @@ ft = font
 
 def zoom():
     return _state['zoom']
+
+
+def set_live(on):
+    """창 크기를 끌어 바꾸는 중이면 True. 그동안 카드 바탕은 다시 그리지 않고, 끝나면 한꺼번에 그린다."""
+    on = bool(on)
+    if on == _state['live']:
+        return
+    _state['live'] = on
+    if not on:
+        flush_stale()
 
 
 def set_zoom(value):
@@ -454,6 +464,9 @@ class Card(tk.Frame):
             self._on_size()
 
     def _on_size(self, _event=None):
+        if _state['live']:                         # 끌어 바꾸는 중에는 끝난 뒤에 그린다
+            _stale[self] = self._on_size
+            return
         if self._pending is not None:
             try:
                 self.after_cancel(self._pending)

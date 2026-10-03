@@ -1512,7 +1512,8 @@ class App:
         self.canvas.pack(fill='both', expand=True)
         # 바탕 그림은 맨 아래에 깔고, 판마다 틀을 올린다. 틀은 크기가 바뀌면 다시 놓는다.
         self._bg_item = self.canvas.create_image(0, 0, anchor='nw')
-        self._shell = {'size': (0, 0), 'after': None, 'drawn': None, 'photo': None}
+        self._shell = {'size': (0, 0), 'after': None, 'drawn': None, 'photo': None,
+                       'settle': None, 'zoom_ok': 0.0}
         self._shell_windows = {}
         frames = {}
         for name in ('top', 'rail', 'body', 'status'):
@@ -1610,19 +1611,49 @@ class App:
         if event.widget is not self.canvas:
             return
         self._shell['size'] = (event.width, event.height)
-        self._apply_zoom(event.width, event.height)
         self._place_shell()
-        self._schedule_backdrop()
+        self._note_resizing()
+        self._maybe_apply_zoom()
+        self._schedule_backdrop(delay=40)      # 이벤트가 몰려도 초당 20번만 그린다
         if self.guide_dialog is not None:
             self.guide_dialog.parent_resized()
 
-    def _apply_zoom(self, width, height):
-        """창 크기에 맞춰 글자와 부품을 키우거나 줄인다. 글꼴은 곧바로 바뀐다."""
+    def _note_resizing(self):
+        """끌어서 크기를 바꾸는 중임을 알린다. 조용해지면(0.14초) 제대로 다시 그린다."""
+        ui.set_live(True)
+        if self._shell['settle'] is not None:
+            try:
+                self.root.after_cancel(self._shell['settle'])
+            except Exception:
+                pass
+        self._shell['settle'] = self.root.after(140, self._settle_resize)
+
+    def _settle_resize(self):
+        self._shell['settle'] = None
+        self._maybe_apply_zoom(force=True)
+        ui.set_live(False)                 # 미뤄 둔 카드 바탕을 그린다
+        self._shell['drawn'] = None
+        self._schedule_backdrop(delay=1)
+
+    def _wanted_zoom(self):
+        width, height = self._shell['size']
         base_w, base_h = self.BASE_SIZE
-        raw = min(width / base_w, height / base_h)
-        zoom = round(raw / 0.04) * 0.04
-        if ui.set_zoom(zoom):
+        return round(min(width / base_w, height / base_h) / 0.04) * 0.04
+
+    def _maybe_apply_zoom(self, force=False):
+        """글자 배율을 맞춘다. 끌어 바꾸는 동안에는 지난번에 걸린 시간의 세 배 뒤에야 다시 바꾼다.
+
+        배율을 바꾸면 모든 글자와 단추를 다시 배치해서 느리다. 매번 바꾸면 끌기가 버벅이므로,
+        컴퓨터가 느릴수록 덜 자주 바꾸고 끌기가 끝나면 마지막 배율로 맞춘다.
+        """
+        now = time.time()
+        if not force and now < self._shell['zoom_ok']:
+            return
+        start = now
+        if ui.set_zoom(self._wanted_zoom()):
             self._shell['drawn'] = None
+            self._place_shell()
+            self._shell['zoom_ok'] = time.time() + 3 * (time.time() - start)
 
     def _place_shell(self):
         """판 자리에 틀을 놓는다. 크기를 바꾸는 동안에도 바로 따라가야 한다."""
@@ -1644,23 +1675,32 @@ class App:
             return
         self._shell['after'] = self.root.after(delay, self._render_backdrop)
 
+    DRAFT_SHRINK = 4         # 끌어 바꾸는 동안 바탕을 이만큼 작게 그려 키워서 깐다
+
     def _render_backdrop(self):
         self._shell['after'] = None
         width, height = self._shell['size']
         if glass is None or width < 50 or height < 50:
             return
+        draft = bool(getattr(ui, '_state', {}).get('live'))
         key = (width, height, ui.current_tool(), ui.zoom())
-        if self._shell['drawn'] == key:
+        if not draft and self._shell['drawn'] == key:
             return
+        shrink = self.DRAFT_SHRINK if draft else 1
         try:
-            image = glass.compose_shell(width, height, ui.current_tool(), zoom=ui.zoom())
+            image = glass.compose_shell(width, height, ui.current_tool(), zoom=ui.zoom(),
+                                        shrink=shrink)
             try:
-                photo = tk.PhotoImage(master=self.canvas, data=glass.ppm_bytes(image), format='ppm')
+                photo = tk.PhotoImage(master=self.canvas, data=glass.ppm_bytes(image),
+                                      format='ppm')
             except Exception:
                 photo = tk.PhotoImage(master=self.canvas, data=glass.png_base64(image, level=1))
+            if shrink > 1:
+                small, photo = photo, photo.zoom(shrink)
+                self._shell['small'] = small
             self._shell['photo'] = photo
             self.canvas.itemconfigure(self._bg_item, image=photo)
-            self._shell['drawn'] = key
+            self._shell['drawn'] = None if draft else key
         except Exception as exc:
             logging.warning('창 바탕을 그리지 못했습니다: %s', exc)
             return

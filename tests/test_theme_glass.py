@@ -148,6 +148,19 @@ class FastDrawingTest(unittest.TestCase):
         glass.compose_shell(1280, 820, 'sotong')
         self.assertLess(time.time() - start, 0.6)          # 예전에는 0.35~0.6초였다
 
+    def test_draft_shell_is_small_and_much_cheaper(self):
+        """끌어 바꾸는 동안 쓰는 초안은 작게 그려 키우므로 훨씬 싸야 한다."""
+        import time
+        start = time.time()
+        full = glass.compose_shell(1280, 820, 'sotong')
+        full_time = time.time() - start
+        start = time.time()
+        draft = glass.compose_shell(1280, 820, 'sotong', shrink=4)
+        draft_time = time.time() - start
+        self.assertEqual(draft.size, (1280 // 4, 820 // 4))
+        self.assertEqual(full.size, (1280, 820))
+        self.assertLess(draft_time, full_time / 2)
+
     def test_ppm_round_trip(self):
         from PIL import Image
         import io
