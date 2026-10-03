@@ -219,7 +219,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <footer>
   <div class="foot glass">
     <strong>신통픽</strong>
-    <span>&nbsp;·&nbsp; Developed by 송동석(Dustin)</span>
+    <span>&nbsp;·&nbsp; 문의 <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a></span>
     <span>&nbsp;·&nbsp; <a href="terms.html">이용약관</a> &nbsp;·&nbsp; <a href="license.html">라이선스</a></span>
   </div>
 </footer>
@@ -291,7 +291,7 @@ TERMS_BODY = """<section class="glass doc" id="terms">
   <p class="lead">신통픽을 쓰기 전에 알아 두실 내용입니다. 시행일은 2026년 10월 3일입니다.</p>
 
   <h2>제1조 목적</h2>
-  <p>이 약관은 송동석(이하 제작자)이 무료로 나누는 신통픽(수신픽과 소통픽)의 이용 조건을 정합니다.</p>
+  <p>이 약관은 신통픽 개발자(이하 개발자)가 무료로 나누는 신통픽(수신픽과 소통픽)의 이용 조건을 정합니다.</p>
 
   <h2>제2조 이용 대상과 환경</h2>
   <ol>
@@ -317,7 +317,7 @@ TERMS_BODY = """<section class="glass doc" id="terms">
 
   <h2>제5조 정보 처리</h2>
   <ol>
-    <li>이용자가 넣은 명단과 기관 정보는 이용자의 PC 안에서만 다루며 제작자나 다른 곳으로 보내지 않습니다.</li>
+    <li>이용자가 넣은 명단과 기관 정보는 이용자의 PC 안에서만 다루며 개발자나 다른 곳으로 보내지 않습니다.</li>
     <li>소통픽과 수신픽에 넣은 명단은 앱을 닫으면 지워집니다.</li>
     <li>이용자의 PC 에는 설정 파일이 남습니다. 캡처한 마우스 위치, 검색 후 대기 시간, 수신픽의 사용자ID, 사용자명, 그룹명, 최근 30회의 기관 추출 기록(기관 이름)이 들어 있고, 위치는 <code>%LOCALAPPDATA%\\SintongPick</code> 폴더입니다. 같은 폴더의 작동 기록(app.log)에는 사람 이름을 남기지 않고 순번과 사유만 적습니다. 이 폴더를 지우면 모두 없어집니다.</li>
     <li>인터넷은 새 버전이 나왔는지 확인할 때만 쓰며, 이때 명단이나 이름은 보내지 않습니다.</li>
@@ -331,11 +331,11 @@ TERMS_BODY = """<section class="glass doc" id="terms">
   </ol>
 
   <h2>제7조 책임의 한계</h2>
-  <p>제작자는 신통픽을 쓰다가 생긴 손해에 대해 법이 허용하는 범위에서 책임지지 않습니다. 제작자의 고의 또는 중대한 과실로 생긴 손해는 제외합니다.</p>
+  <p>개발자는 신통픽을 쓰다가 생긴 손해에 대해 법이 허용하는 범위에서 책임지지 않습니다. 개발자의 고의 또는 중대한 과실로 생긴 손해는 제외합니다.</p>
 
   <h2>제8조 지식재산권</h2>
   <ol>
-    <li>신통픽의 저작권은 제작자에게 있고, 사용 조건은 <a href="license.html">신통픽 사용 허가서</a>를 따릅니다. 판매와 수정은 제작자의 허락 없이 할 수 없습니다.</li>
+    <li>신통픽의 저작권은 개발자에게 있고, 사용 조건은 <a href="license.html">신통픽 사용 허가서</a>를 따릅니다. 판매와 수정은 개발자의 허락 없이 할 수 없습니다.</li>
     <li>신통픽에 함께 묶인 소프트웨어와 글꼴은 <a href="license.html#oss">오픈소스 고지</a>의 라이선스를 따릅니다.</li>
     <li>소통메신저, 에듀파인, 나이스 같은 이름과 화면은 각 제공 기관의 것입니다. 사용 방법 화면 사진은 설명을 위해 일부를 실은 것입니다.</li>
   </ol>

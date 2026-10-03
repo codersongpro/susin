@@ -50,11 +50,12 @@ class GeneratedFilesTest(unittest.TestCase):
 class LicenseTermsTest(unittest.TestCase):
     def test_license_is_free_use_but_no_sale_and_no_modification(self):
         text = read('LICENSE')
-        self.assertIn('Copyright (c) 2026 송동석 (Dustin). All rights reserved.', text)
+        self.assertIn('Copyright (c) 2026 신통픽 개발자. All rights reserved.', text)
         self.assertIn('무료로 내려받아 쓸 수 있습니다', text)
         self.assertIn('가. 판매', text)
         self.assertIn('나. 수정', text)
         self.assertNotIn('MIT', text)
+        self.assertNotIn('송동석', text)
         self.assertNotIn('Permission is hereby granted', text)
 
     def test_license_page_shows_the_license_file_as_is(self):
@@ -63,7 +64,7 @@ class LicenseTermsTest(unittest.TestCase):
 
     def test_terms_say_the_same_thing_as_the_license(self):
         terms = read('terms.html')
-        self.assertIn('판매와 수정은 제작자의 허락 없이 할 수 없습니다', terms)
+        self.assertIn('판매와 수정은 개발자의 허락 없이 할 수 없습니다', terms)
         self.assertIn('시행일은 2026년 10월 3일', terms)
         for clause in ('제1조 목적', '제4조 이용자의 확인 책임', '제5조 정보 처리',
                        '제7조 책임의 한계', '제10조 문의'):
