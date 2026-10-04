@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import unittest
+from html import unescape
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
@@ -58,9 +59,14 @@ class LicenseTermsTest(unittest.TestCase):
         self.assertNotIn('송동석', text)
         self.assertNotIn('Permission is hereby granted', text)
 
-    def test_license_page_shows_the_license_file_as_is(self):
-        body = read('LICENSE').rstrip('\n')
-        self.assertIn(body, read('license.html'))
+    def test_license_page_preserves_all_license_text_in_readable_blocks(self):
+        page = build_notices.build_license_page()
+        body = re.search(r'<div class="plain">(.*?)</div>', page, re.S).group(1)
+        visible = unescape(re.sub(r'<[^>]+>', ' ', body))
+        self.assertEqual(' '.join(read('LICENSE').split()), ' '.join(visible.split()))
+        self.assertEqual(body.count('<h3>'), 6)
+        self.assertEqual(body.count('<li>'), 7)
+        self.assertNotRegex(body, r'\S\n +\S')
 
     def test_terms_say_the_same_thing_as_the_license(self):
         terms = read('terms.html')
@@ -74,7 +80,7 @@ class LicenseTermsTest(unittest.TestCase):
         page = read('index.html')
         self.assertIn('href="terms.html"', page)
         self.assertIn('href="license.html"', page)
-        self.assertIn('판매와 수정은 할 수 없습니다', page)
+        self.assertIn('판매와 수정에는 개발자의 사전 서면 허락이 필요합니다', page)
         self.assertNotIn('MIT', re.sub(r'data:[^"]+', '', page))
 
     def test_privacy_statement_matches_what_the_app_stores(self):

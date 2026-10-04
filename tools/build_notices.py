@@ -46,8 +46,8 @@ PyInstaller (https://pyinstaller.org).
 GPL-2.0 or later, with a special exception that allows the programs it builds
 to be distributed under any license.
 
-실행 파일을 만드는 도구입니다. 만들어진 실행 파일에는 PyInstaller 의 부트로더가
-들어가며, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.
+PyInstaller는 실행 파일을 만드는 도구이며, 생성된 실행 파일에는 부트로더가 포함됩니다.
+위 예외 조항에 따라 신통픽 자체에는 GPL 라이선스가 적용되지 않습니다.
 
   - 라이선스 전문: licenses/PyInstaller-COPYING-full.txt
 """
@@ -56,29 +56,29 @@ to be distributed under any license.
 COMPONENTS = [
     ('Pretendard', 'https://github.com/orioncactus/pretendard', '앱 화면과 이 페이지의 글꼴',
      'SIL Open Font License 1.1', ('path', FONT_LICENSE)),
-    ('Python', 'https://docs.python.org/3/license.html', '프로그램을 돌리는 바탕',
+    ('Python', 'https://docs.python.org/3/license.html', '프로그램 실행 환경',
      'PSF License', ('text', PYTHON_NOTICE)),
-    ('Tcl/Tk (tkinter)', 'https://www.tcl.tk/software/tcltk/license.html', '앱 화면을 그리는 부분',
+    ('Tcl/Tk (tkinter)', 'https://www.tcl.tk/software/tcltk/license.html', '앱 화면 구성',
      'Tcl/Tk License (BSD 계열)', ('file', 'Tcl-Tk.txt')),
-    ('PyAutoGUI', 'https://github.com/asweigart/pyautogui', '마우스와 키보드를 대신 움직임',
+    ('PyAutoGUI', 'https://github.com/asweigart/pyautogui', '마우스·키보드 자동 조작',
      'BSD 3-Clause', ('file', 'PyAutoGUI.txt')),
-    ('PyMsgBox', 'https://github.com/asweigart/pymsgbox', 'PyAutoGUI 가 함께 쓰는 부품',
+    ('PyMsgBox', 'https://github.com/asweigart/pymsgbox', 'PyAutoGUI의 메시지 창 기능',
      'BSD 3-Clause', ('file', 'PyMsgBox.txt')),
-    ('PyGetWindow', 'https://github.com/asweigart/PyGetWindow', 'PyAutoGUI 가 함께 쓰는 부품',
+    ('PyGetWindow', 'https://github.com/asweigart/PyGetWindow', 'PyAutoGUI의 창 정보 조회 기능',
      'BSD 3-Clause', ('file', 'PyGetWindow.txt')),
-    ('PyRect', 'https://github.com/asweigart/pyrect', 'PyAutoGUI 가 함께 쓰는 부품',
+    ('PyRect', 'https://github.com/asweigart/pyrect', '창 위치와 크기 계산',
      'BSD 3-Clause', ('file', 'PyRect.txt')),
-    ('PyScreeze', 'https://github.com/asweigart/pyscreeze', 'PyAutoGUI 가 함께 쓰는 부품',
+    ('PyScreeze', 'https://github.com/asweigart/pyscreeze', '화면 캡처와 이미지 검색',
      'BSD 3-Clause', ('file', 'PyScreeze.txt')),
-    ('PyTweening', 'https://github.com/asweigart/pytweening', 'PyAutoGUI 가 함께 쓰는 부품',
+    ('PyTweening', 'https://github.com/asweigart/pytweening', '마우스 이동 속도 조절',
      'BSD 3-Clause', ('file', 'PyTweening.txt')),
     ('Pyperclip', 'https://github.com/asweigart/pyperclip', '클립보드 복사',
      'BSD 3-Clause', ('file', 'Pyperclip.txt')),
     ('openpyxl', 'https://openpyxl.readthedocs.io', '엑셀 파일 읽기와 쓰기',
      'MIT', ('file', 'openpyxl.txt')),
-    ('et-xmlfile', 'https://foss.heptapod.net/openpyxl/et_xmlfile', 'openpyxl 이 함께 쓰는 부품',
+    ('et-xmlfile', 'https://foss.heptapod.net/openpyxl/et_xmlfile', 'openpyxl의 XML 파일 작성 기능',
      'MIT', ('file', 'et-xmlfile.txt')),
-    ('Pillow', 'https://python-pillow.org', '유리 같은 바탕과 화면 이미지',
+    ('Pillow', 'https://python-pillow.org', '배경 효과와 화면 이미지 생성',
      'MIT-CMU (HPND)', ('file', 'Pillow.txt')),
     ('pywin32', 'https://github.com/mhammond/pywin32', '윈도우 기능 호출',
      'BSD 3-Clause', ('file', 'pywin32.txt')),
@@ -86,8 +86,8 @@ COMPONENTS = [
      'MIT', ('file', 'comtypes.txt')),
     ('olefile', 'https://github.com/decalage2/olefile', '한글(HWP) 파일 읽기',
      'BSD 2-Clause', ('file', 'olefile.txt')),
-    ('PyInstaller', 'https://pyinstaller.org', 'exe 파일로 묶는 도구 (부트로더가 exe 에 들어감)',
-     'GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항', ('text', PYINSTALLER_NOTICE)),
+    ('PyInstaller', 'https://pyinstaller.org', '실행 파일 패키징 (부트로더 포함)',
+     'GPL-2.0 이상 (생성한 프로그램의 배포에 관한 예외 조항 포함)', ('text', PYINSTALLER_NOTICE)),
 ]
 
 
@@ -109,19 +109,19 @@ def build_markdown() -> str:
     lines = [
         '# 오픈소스 고지',
         '',
-        '신통픽(sintongpick)은 아래 소프트웨어와 글꼴을 쓰거나 함께 묶어 배포합니다.',
-        '각 라이선스가 요구하는 저작권 표시와 사용 조건을 여기에 모았습니다.',
-        '이 파일은 `python3 tools/build_notices.py --apply` 로 만들며, 손으로 고치지 않습니다.',
+        '신통픽(sintongpick)에 사용되거나 배포 파일에 포함된 소프트웨어와 글꼴의 저작권 표시 및 라이선스 안내입니다.',
+        '각 구성 요소에는 해당 라이선스가 적용됩니다.',
+        '이 문서는 `python3 tools/build_notices.py --apply`로 생성합니다. 수정할 때는 생성 스크립트와 원본 문서를 변경하세요.',
         '',
-        '신통픽 자체의 사용 조건은 `LICENSE` (신통픽 사용 허가서) 에 있습니다.',
+        '신통픽 자체의 이용 조건은 `LICENSE`(신통픽 사용 허가서)를 참고하세요.',
         '',
-        '| 이름 | 쓰임 | 라이선스 |',
+        '| 이름 | 용도 | 라이선스 |',
         '|---|---|---|',
     ]
     for name, url, use, kind, _source in COMPONENTS:
         lines.append(f'| [{name}]({url}) | {use} | {kind} |')
     for name, url, _use, kind, source in COMPONENTS:
-        lines += ['', '---', '', f'## {name}', '', f'{kind}  ', url, '', '```text',
+        lines += ['', '---', '', f'## {name}', '', kind, '', url, '', '```text',
                   license_text(source).rstrip('\n'), '```']
     return '\n'.join(lines) + '\n'
 
@@ -132,13 +132,15 @@ def build_markdown() -> str:
 
 PAGE_CSS = """
     .page-title { font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin-bottom: 10px; }
-    .doc { padding: 40px 48px; }
+    .doc { max-width: 920px; margin: 16px auto 0; padding: 40px 48px; }
     .doc h2 { font-size: 22px; font-weight: 700; margin: 36px 0 8px; }
     .doc h2:first-of-type { margin-top: 8px; }
-    .doc h3 { font-size: 16px; font-weight: 700; margin: 22px 0 4px; }
+    .doc h3 { font-size: 17px; font-weight: 700; margin: 24px 0 8px; }
     .doc p, .doc li { font-size: 15px; color: var(--ink-2); line-height: 1.85; max-width: 780px; }
-    .doc ol { margin: 4px 0 0 22px; }
-    .doc li + li { margin-top: 4px; }
+    .doc p + p { margin-top: 12px; }
+    .doc ol { margin: 8px 0 0; padding-left: 24px; }
+    .doc li + li { margin-top: 12px; }
+    .doc li p + p { margin-top: 8px; }
     .doc code { font-size: 13px; background: rgba(0, 0, 0, .05); padding: 1px 6px; border-radius: 6px; }
     .doc .meta { font-size: 13px; }
     .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
@@ -146,9 +148,12 @@ PAGE_CSS = """
              background: var(--acc-c); color: var(--on-acc-c); }
     .plain {
       margin-top: 14px; padding: 22px 24px; border-radius: 16px; background: rgba(255, 255, 255, .6);
-      border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere;
+      border: 1px solid var(--line); overflow-wrap: anywhere;
       font: 15px/1.85 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif; color: var(--ink);
     }
+    .plain .license-title { font-size: 17px; font-weight: 700; color: var(--ink); }
+    .plain .license-clauses { list-style: none; padding-left: 0; }
+    .plain .license-clauses li { padding-left: 1.5em; text-indent: -1.5em; }
     .oss-head, .oss-item summary {
       display: grid; grid-template-columns: minmax(130px, 1fr) 1.6fr 1.3fr 22px; gap: 6px 20px;
       align-items: center; font-size: 14px; line-height: 1.6;
@@ -162,25 +167,32 @@ PAGE_CSS = """
     .oss-item summary .n { font-weight: 700; }
     .oss-item summary .u { color: var(--ink-2); }
     .oss-item summary .l { font-weight: 600; }
+    .oss-item summary > span { min-width: 0; overflow-wrap: anywhere; text-wrap: pretty; }
+    .oss-item summary:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; }
     .oss-item summary:hover .n { text-decoration: underline; }
-    .oss-item .oss-link { margin: 0 0 8px; font-size: 13px; }
+    .oss-item .oss-link { margin: 0 0 8px; font-size: 13px; overflow-wrap: anywhere; }
     .oss-item pre {
       margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: rgba(255, 255, 255, .65);
       border: 1px solid var(--line); font: 12px/1.6 ui-monospace, Consolas, 'Courier New', monospace;
-      color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto;
+      color: var(--ink-2); white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; max-height: 400px; overflow: auto;
     }
     footer { max-width: 1120px; margin: 0 auto 24px; padding: 0 12px; }
-    .foot { height: 48px; border-radius: 20px; display: flex; align-items: center; justify-content: center;
-            gap: 8px; font-size: 13px; color: var(--ink-2); }
+    .foot { min-height: 48px; padding: 12px 16px; border-radius: 20px; display: flex; flex-wrap: wrap;
+            align-items: center; justify-content: center; gap: 4px 8px; font-size: 13px; color: var(--ink-2); }
     .foot strong { color: var(--ink); }
     @media (max-width: 960px) { .nav-links { display: none; } nav { justify-content: space-between; } }
     @media (max-width: 640px) {
-      nav { margin: 8px 8px 0; padding: 0 8px 0 18px; top: 8px; }
+      nav { margin: 8px 8px 0; padding: 0 8px 0 18px; top: 8px; gap: 8px; }
+      .brand { flex-shrink: 0; }
+      .brand small { display: block; margin-left: 0; font-size: 10px; }
+      nav .btn-sm { padding: 0 12px; font-size: 13px; }
       main { padding: 0 8px 16px; }
       section, .doc { padding: 30px 20px; }
       .page-title { font-size: 30px; }
+      .plain { padding: 20px 16px; }
       .oss-head { display: none; }
-      .oss-item summary { grid-template-columns: 1fr 22px; gap: 2px 12px; }
+      .oss-item summary { grid-template-columns: minmax(0, 1fr) 22px; gap: 4px 12px; }
+      .oss-item summary > span { grid-column: 1; }
       .oss-item summary::after { grid-column: 2; grid-row: 1 / span 3; }
     }
 """
@@ -260,91 +272,119 @@ def oss_items() -> str:
     return '\n'.join(out)
 
 
+def render_license_body() -> str:
+    """LICENSE의 내용을 유지하면서 텍스트 파일의 줄바꿈을 문단과 목록으로 바꾼다."""
+    out = []
+    for index, block in enumerate(re.split(r'\n\s*\n', read_text(LICENSE_PATH).strip())):
+        lines = [line.strip() for line in block.splitlines()]
+        if re.match(r'^\d+\. ', lines[0]):
+            out.append(f'<h3>{html.escape(" ".join(lines))}</h3>')
+        elif re.match(r'^[가-힣]\. ', lines[0]):
+            items = []
+            for line in lines:
+                if re.match(r'^[가-힣]\. ', line):
+                    items.append(line)
+                else:
+                    items[-1] += ' ' + line
+            out.append('<ol class="license-clauses">\n' + '\n'.join(
+                f'<li>{html.escape(item)}</li>' for item in items) + '\n</ol>')
+        else:
+            attr = ' class="license-title"' if index == 0 else ''
+            out.append(f'<p{attr}>{html.escape(" ".join(lines))}</p>')
+    return '\n'.join(out)
+
+
 def build_license_page() -> str:
-    license_body = html.escape(read_text(LICENSE_PATH).rstrip('\n'), quote=False)
+    license_body = render_license_body()
     body = f"""<section class="glass doc" id="license">
   <span class="label">라이선스</span>
   <h1 class="page-title">라이선스</h1>
-  <p class="lead">신통픽을 쓰는 조건과, 신통픽에 함께 묶인 소프트웨어의 저작권 표시를 모았습니다.</p>
-  <div class="toc"><a href="#app">신통픽 사용 허가서</a><a href="#oss">오픈소스 고지</a><a href="#data">기관 이름 자료</a></div>
+  <p class="lead">신통픽의 이용 조건과 사용된 소프트웨어·글꼴의 저작권 및 라이선스를 안내합니다.</p>
+  <div class="toc"><a href="#app">신통픽 사용 허가서</a><a href="#oss">오픈소스 고지</a><a href="#data">기관명 데이터</a></div>
 
   <h2 id="app">신통픽 사용 허가서</h2>
-  <p>신통픽은 무료로 쓸 수 있습니다. 판매와 수정은 허락 없이 할 수 없습니다. 같은 내용이 저장소와 실행 파일에 들어 있는 <code>LICENSE</code> 파일입니다.</p>
+  <p>신통픽은 무료로 사용할 수 있으며, 수정하지 않은 원본은 무료로 배포할 수 있습니다. 판매와 수정에는 개발자의 사전 서면 허락이 필요합니다.</p>
+  <p>아래는 저장소와 배포 파일에 포함된 <code>LICENSE</code>의 전문입니다.</p>
   <div class="plain">{license_body}</div>
 
   <h2 id="oss">오픈소스 고지</h2>
-  <p>신통픽은 아래 소프트웨어와 글꼴을 바탕으로 만들었고, 대부분은 실행 파일(sintongpick.exe)에 함께 묶여 있습니다. 이 소프트웨어들은 위 사용 허가서가 아니라 각자의 라이선스를 따릅니다. 항목을 누르면 저작권과 라이선스 전문이 나옵니다. 같은 내용이 앱과 함께 받는 <code>THIRD_PARTY_NOTICES.md</code> 에도 있습니다.</p>
-  <div class="oss-head"><span>이름</span><span>쓰임</span><span>라이선스</span><span></span></div>
+  <p>신통픽은 아래 소프트웨어와 글꼴을 사용하며, 대부분은 실행 파일(<code>sintongpick.exe</code>)에 포함되어 있습니다. 각 구성 요소에는 해당 라이선스가 적용됩니다.</p>
+  <p>항목을 펼치면 저작권 표시와 라이선스 원문 또는 전문이 있는 위치를 확인할 수 있습니다. 같은 고지 내용은 배포 파일에 포함된 <code>THIRD_PARTY_NOTICES.md</code>에도 있습니다.</p>
+  <div class="oss-head"><span>이름</span><span>용도</span><span>라이선스</span><span></span></div>
 {oss_items()}
 
-  <h2 id="data">기관 이름 자료</h2>
-  <p>기관 이름 사전은 나이스에서 공개한 공공데이터인 학교기본정보(2026년 8월 31일 기준)와 에듀파인 조직도에 나온 기관 이름을 정리한 것입니다. 학교 이름, 학교급, 기관 이름 같은 사실 정보만 담고 있습니다.</p>
-  <p>소통메신저, 에듀파인, 나이스는 각 제공 기관의 서비스이며 신통픽과는 별개입니다. 사용 방법 화면 사진에는 설명을 위해 이 서비스의 화면 일부가 나오고, 사람 이름은 모두 지어낸 예시입니다.</p>
+  <h2 id="data">기관명 데이터</h2>
+  <p>기관명 사전은 나이스의 공개 학교기본정보(2026년 8월 31일 기준)와 에듀파인 조직도의 기관명을 바탕으로 작성했습니다. 학교명, 학교급, 기관명 등 사실 정보만 포함합니다.</p>
+  <p>소통메신저, 에듀파인, 나이스는 각 제공 기관의 서비스이며 신통픽과는 별개입니다. 사용 안내에는 설명에 필요한 화면 일부만 사용했으며, 화면에 표시된 사람 이름은 모두 가상의 예시입니다.</p>
   <p class="meta">문의: <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a></p>
 </section>"""
-    return render_page('라이선스 | 신통픽', '신통픽 사용 허가서와 함께 묶인 오픈소스의 저작권, 라이선스 전문입니다.', body)
+    return render_page('라이선스 | 신통픽', '신통픽의 사용 허가서와 사용된 소프트웨어·글꼴의 저작권 및 라이선스 안내입니다.', body)
 
 
 TERMS_BODY = """<section class="glass doc" id="terms">
   <span class="label">이용약관</span>
   <h1 class="page-title">이용약관</h1>
-  <p class="lead">신통픽을 쓰기 전에 알아 두실 내용입니다. 시행일은 2026년 10월 3일입니다.</p>
+  <p class="lead">신통픽의 이용 조건과 이용자가 확인해야 할 사항을 안내합니다.</p>
+  <p class="meta">시행일은 2026년 10월 3일입니다.</p>
 
   <h2>제1조 목적</h2>
-  <p>이 약관은 신통픽 개발자(이하 개발자)가 무료로 나누는 신통픽(수신픽과 소통픽)의 이용 조건을 정합니다.</p>
+  <p>이 약관은 신통픽 개발자(이하 “개발자”)가 무료로 배포하는 신통픽(수신픽과 소통픽)의 이용 조건을 정합니다.</p>
 
   <h2>제2조 이용 대상과 환경</h2>
   <ol>
-    <li>신통픽은 누구나 무료로 쓸 수 있고, 윈도우에서만 돌아갑니다.</li>
-    <li>업무망 PC 에서 쓰기 전에 기관의 정보보안 담당자와 상의해 주세요. 백신 예외는 임의로 등록하지 마세요.</li>
-    <li>신통픽은 개인이 만든 프로그램입니다. 충청북도교육청, 소통메신저와 에듀파인의 제공 기관이 만들거나 보증한 프로그램이 아닙니다.</li>
-    <li>신통픽을 팔거나 고쳐서 나눌 수 없습니다. 자세한 조건은 <a href="license.html">신통픽 사용 허가서</a>에 있습니다.</li>
+    <li>신통픽은 누구나 무료로 사용할 수 있으며, Windows에서만 실행됩니다.</li>
+    <li>업무망 PC에서 사용하기 전에 소속 기관의 정보보안 담당자와 상의해 주세요. 백신 예외는 임의로 등록하지 마세요.</li>
+    <li>신통픽은 개인이 개발한 프로그램입니다. 충청북도교육청 또는 소통메신저·에듀파인의 제공 기관이 개발하거나 보증하지 않습니다.</li>
+    <li>개발자의 사전 서면 허락 없이 신통픽을 판매·수정하거나 수정한 프로그램을 배포할 수 없습니다. 자세한 조건은 <a href="license.html">신통픽 사용 허가서</a>를 참고하세요.</li>
   </ol>
 
-  <h2>제3조 프로그램이 하는 일</h2>
+  <h2>제3조 주요 기능</h2>
   <ol>
-    <li>소통픽은 마우스와 키보드를 대신 움직여 소통메신저 [사용자 선택] 창에서 수신자를 담습니다.</li>
-    <li>수신픽은 에듀파인 일괄등록에 올릴 엑셀 파일을 만듭니다. 파일을 올리고 공문을 보내는 일은 이용자가 직접 합니다.</li>
+    <li>소통픽은 마우스와 키보드를 자동으로 조작해 소통메신저의 [사용자 선택] 창에서 수신자를 선택합니다.</li>
+    <li>수신픽은 에듀파인의 수신그룹 일괄등록에 사용할 엑셀 파일을 만듭니다. 파일 등록과 공문 발송은 이용자가 직접 진행합니다.</li>
   </ol>
 
   <h2>제4조 이용자의 확인 책임</h2>
   <ol>
-    <li>신통픽이 고른 수신자와 만든 엑셀은 보조 결과입니다. 쪽지나 공문을 보내기 전에 수신자가 맞는지 이용자가 직접 확인해야 합니다.</li>
-    <li>같은 이름이 여럿이거나 이름이 비슷해 짐작만 한 항목은 신통픽이 확정하지 않고 이용자가 고르게 합니다. 확인하지 않고 보내서 생긴 결과의 책임은 이용자에게 있습니다.</li>
-    <li>자동 선택이 도는 동안에는 마우스를 움직이지 마세요. 멈추려면 마우스를 화면 왼쪽 위 모서리로 옮기거나 [중지] 를 누릅니다.</li>
-    <li>화면 해상도, 확대 배율, 소통메신저 창의 자리가 바뀌면 마우스 위치를 다시 캡처해야 합니다.</li>
+    <li>신통픽의 수신자 선택 결과와 생성한 엑셀 파일은 업무를 돕기 위한 자료입니다. 쪽지나 공문을 보내기 전에 수신자가 정확한지 이용자가 직접 확인해야 합니다.</li>
+    <li>이름이 같거나 유사해 하나로 확정할 수 없는 항목은 이용자가 직접 선택해야 합니다. 수신자를 확인하지 않고 발송해 발생한 결과에 대한 책임은 이용자에게 있습니다.</li>
+    <li>자동 선택이 실행되는 동안에는 마우스를 움직이지 마세요. 중단하려면 마우스를 화면 왼쪽 위 모서리로 옮기거나 [중지]를 누르세요.</li>
+    <li>화면 해상도, 확대 배율 또는 소통메신저 창의 위치가 바뀌면 마우스 위치를 다시 캡처해야 합니다.</li>
   </ol>
 
   <h2>제5조 정보 처리</h2>
   <ol>
-    <li>이용자가 넣은 명단과 기관 정보는 이용자의 PC 안에서만 다루며 개발자나 다른 곳으로 보내지 않습니다.</li>
-    <li>소통픽과 수신픽에 넣은 명단은 앱을 닫으면 지워집니다.</li>
-    <li>이용자의 PC 에는 설정 파일이 남습니다. 캡처한 마우스 위치, 검색 후 대기 시간, 수신픽의 사용자ID, 사용자명, 그룹명, 최근 30회의 기관 추출 기록(기관 이름)이 들어 있고, 위치는 <code>%LOCALAPPDATA%\\SintongPick</code> 폴더입니다. 같은 폴더의 작동 기록(app.log)에는 사람 이름을 남기지 않고 순번과 사유만 적습니다. 이 폴더를 지우면 모두 없어집니다.</li>
-    <li>인터넷은 새 버전이 나왔는지 확인할 때만 쓰며, 이때 명단이나 이름은 보내지 않습니다.</li>
+    <li>입력한 명단과 기관 정보는 이용자의 PC 안에서만 사용하며, 개발자나 외부로 전송하지 않습니다.</li>
+    <li>소통픽과 수신픽에 입력한 명단은 앱을 종료하면 삭제됩니다.</li>
+    <li>
+      <p>설정 파일은 이용자의 PC에 있는 <code>%LOCALAPPDATA%\\SintongPick</code> 폴더에 저장됩니다. 캡처한 마우스 위치, 검색 후 대기 시간, 수신픽의 사용자 ID·사용자명·그룹명, 최근 30회의 기관 추출 기록(기관명)이 포함됩니다.</p>
+      <p>같은 폴더의 실행 기록(<code>app.log</code>)에는 사람 이름을 기록하지 않고 순번과 사유만 남깁니다. 해당 폴더를 삭제하면 저장된 설정과 기록이 모두 삭제됩니다.</p>
+    </li>
+    <li>인터넷 연결은 새 버전 확인에만 사용하며, 이때 명단이나 이름은 전송하지 않습니다.</li>
   </ol>
 
   <h2>제6조 보증의 한계</h2>
   <ol>
-    <li>신통픽은 있는 그대로 제공합니다. 오류가 없다는 것과 모든 PC 에서 돌아간다는 것을 보증하지 않습니다.</li>
-    <li>소통메신저나 에듀파인 화면이 바뀌면 신통픽이 동작하지 않거나 엉뚱한 곳을 누를 수 있습니다.</li>
-    <li>마우스와 키보드를 대신 움직이는 방식 때문에 백신이 신통픽을 의심해 막을 수 있습니다.</li>
+    <li>신통픽은 현재 상태 그대로 사용할 수 있습니다. 오류가 없거나 모든 PC에서 정상적으로 실행된다는 점을 보증하지 않습니다.</li>
+    <li>소통메신저나 에듀파인의 화면이 변경되면 신통픽이 정상적으로 동작하지 않거나 잘못된 위치를 클릭할 수 있습니다.</li>
+    <li>마우스와 키보드를 자동으로 조작하는 기능으로 인해 백신이 신통픽의 실행을 차단할 수 있습니다.</li>
   </ol>
 
   <h2>제7조 책임의 한계</h2>
-  <p>개발자는 신통픽을 쓰다가 생긴 손해에 대해 법이 허용하는 범위에서 책임지지 않습니다. 개발자의 고의 또는 중대한 과실로 생긴 손해는 제외합니다.</p>
+  <p>개발자는 신통픽 이용으로 발생한 손해에 대해 법이 허용하는 범위에서 책임을 지지 않습니다. 다만, 개발자의 고의 또는 중대한 과실로 발생한 손해는 제외합니다.</p>
 
   <h2>제8조 지식재산권</h2>
   <ol>
-    <li>신통픽의 저작권은 개발자에게 있고, 사용 조건은 <a href="license.html">신통픽 사용 허가서</a>를 따릅니다. 판매와 수정은 개발자의 허락 없이 할 수 없습니다.</li>
-    <li>신통픽에 함께 묶인 소프트웨어와 글꼴은 <a href="license.html#oss">오픈소스 고지</a>의 라이선스를 따릅니다.</li>
-    <li>소통메신저, 에듀파인, 나이스 같은 이름과 화면은 각 제공 기관의 것입니다. 사용 방법 화면 사진은 설명을 위해 일부를 실은 것입니다.</li>
+    <li>신통픽의 저작권은 개발자에게 있으며, 이용 조건은 <a href="license.html">신통픽 사용 허가서</a>를 따릅니다. 판매와 수정은 개발자의 허락 없이 할 수 없습니다.</li>
+    <li>신통픽에 포함된 소프트웨어와 글꼴에는 <a href="license.html#oss">오픈소스 고지</a>에 명시된 각각의 라이선스가 적용됩니다.</li>
+    <li>소통메신저, 에듀파인, 나이스의 명칭과 화면에 관한 권리는 각 제공 기관에 있습니다. 사용 안내에는 설명에 필요한 화면 일부만 사용합니다.</li>
   </ol>
 
   <h2>제9조 약관의 변경</h2>
-  <p>이 약관을 바꾸면 이 페이지에 바뀐 내용과 시행일을 올립니다.</p>
+  <p>약관이 변경되면 이 페이지에 변경 내용과 시행일을 안내합니다.</p>
 
   <h2>제10조 문의</h2>
-  <p><a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a></p>
+  <p>이용 조건에 관한 문의는 <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a>으로 보내주세요.</p>
 </section>"""
 
 
