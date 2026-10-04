@@ -72,6 +72,7 @@ class LicenseTermsTest(unittest.TestCase):
         terms = read('terms.html')
         self.assertIn('판매와 수정은 개발자의 허락 없이 할 수 없습니다', terms)
         self.assertIn('시행일은 2026년 10월 3일', terms)
+        self.assertNotIn('고의 또는 중대한 과실로 발생한 손해는 제외합니다', terms)
         for clause in ('제1조 목적', '제4조 이용자의 확인 책임', '제5조 정보 처리',
                        '제7조 책임의 한계', '제10조 문의'):
             self.assertIn(clause, terms)
@@ -81,6 +82,8 @@ class LicenseTermsTest(unittest.TestCase):
         self.assertIn('href="terms.html"', page)
         self.assertIn('href="license.html"', page)
         self.assertIn('판매와 수정에는 개발자의 사전 서면 허락이 필요합니다', page)
+        self.assertIn('학성초 송충북', page)
+        self.assertNotIn('학성초 송동석', page)
         self.assertNotIn('MIT', re.sub(r'data:[^"]+', '', page))
 
     def test_privacy_statement_matches_what_the_app_stores(self):
