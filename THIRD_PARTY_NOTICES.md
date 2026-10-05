@@ -1,36 +1,37 @@
 # 오픈소스 고지
 
-신통픽(sintongpick)에는 아래 소프트웨어와 글꼴이 들어 있습니다.
-각 라이선스가 요구하는 저작권 표시와 라이선스 전문을 모았습니다.
-신통픽 자체의 이용 조건은 `LICENSE`(신통픽 사용 허가서)를 보세요.
+신통픽(sintongpick)에 사용되거나 배포 파일에 포함된 소프트웨어와 글꼴의 저작권 표시 및 라이선스 안내입니다.
+각 구성 요소에는 해당 라이선스가 적용됩니다.
+이 문서는 `python3 tools/build_notices.py --apply`로 생성합니다. 수정할 때는 생성 스크립트와 원본 문서를 변경하세요.
 
-이 파일은 `python3 tools/build_notices.py --apply` 로 만듭니다. 직접 고치지 마세요.
+신통픽 자체의 이용 조건은 `LICENSE`(신통픽 사용 허가서)를 참고하세요.
 
-| 이름 | 쓰임 | 라이선스 |
+| 이름 | 용도 | 라이선스 |
 |---|---|---|
-| [Pretendard](https://github.com/orioncactus/pretendard) | 글꼴 (앱 화면과 웹페이지) | SIL Open Font License 1.1 |
-| [Python](https://docs.python.org/3/license.html) | 실행 환경 | PSF License |
+| [Pretendard](https://github.com/orioncactus/pretendard) | 앱 화면과 이 페이지의 글꼴 | SIL Open Font License 1.1 |
+| [Python](https://docs.python.org/3/license.html) | 프로그램 실행 환경 | PSF License |
 | [Tcl/Tk (tkinter)](https://www.tcl.tk/software/tcltk/license.html) | 앱 화면 구성 | Tcl/Tk License (BSD 계열) |
-| [PyAutoGUI](https://github.com/asweigart/pyautogui) | 마우스와 키보드 자동 조작 | BSD 3-Clause |
-| [PyMsgBox](https://github.com/asweigart/pymsgbox) | PyAutoGUI 구성 요소 | BSD 3-Clause |
-| [PyGetWindow](https://github.com/asweigart/PyGetWindow) | PyAutoGUI 구성 요소 | BSD 3-Clause |
-| [PyRect](https://github.com/asweigart/pyrect) | PyAutoGUI 구성 요소 | BSD 3-Clause |
-| [PyScreeze](https://github.com/asweigart/pyscreeze) | PyAutoGUI 구성 요소 | BSD 3-Clause |
-| [PyTweening](https://github.com/asweigart/pytweening) | PyAutoGUI 구성 요소 | BSD 3-Clause |
+| [PyAutoGUI](https://github.com/asweigart/pyautogui) | 마우스·키보드 자동 조작 | BSD 3-Clause |
+| [PyMsgBox](https://github.com/asweigart/pymsgbox) | PyAutoGUI의 메시지 창 기능 | BSD 3-Clause |
+| [PyGetWindow](https://github.com/asweigart/PyGetWindow) | PyAutoGUI의 창 정보 조회 기능 | BSD 3-Clause |
+| [PyRect](https://github.com/asweigart/pyrect) | 창 위치와 크기 계산 | BSD 3-Clause |
+| [PyScreeze](https://github.com/asweigart/pyscreeze) | 화면 캡처와 이미지 검색 | BSD 3-Clause |
+| [PyTweening](https://github.com/asweigart/pytweening) | 마우스 이동 속도 조절 | BSD 3-Clause |
 | [Pyperclip](https://github.com/asweigart/pyperclip) | 클립보드 복사 | BSD 3-Clause |
 | [openpyxl](https://openpyxl.readthedocs.io) | 엑셀 파일 읽기와 쓰기 | MIT |
-| [et-xmlfile](https://foss.heptapod.net/openpyxl/et_xmlfile) | openpyxl 구성 요소 | MIT |
-| [Pillow](https://python-pillow.org) | 화면 이미지 처리 | MIT-CMU (HPND) |
-| [pywin32](https://github.com/mhammond/pywin32) | 윈도우 기능 사용 | BSD 3-Clause |
+| [et-xmlfile](https://foss.heptapod.net/openpyxl/et_xmlfile) | openpyxl의 XML 파일 작성 기능 | MIT |
+| [Pillow](https://python-pillow.org) | 배경 효과와 화면 이미지 생성 | MIT-CMU (HPND) |
+| [pywin32](https://github.com/mhammond/pywin32) | 윈도우 기능 호출 | BSD 3-Clause |
 | [comtypes](https://github.com/enthought/comtypes) | 소통메신저 목록 읽기 | MIT |
 | [olefile](https://github.com/decalage2/olefile) | 한글(HWP) 파일 읽기 | BSD 2-Clause |
-| [PyInstaller](https://pyinstaller.org) | 실행 파일 제작 | GPL-2.0 이상 (예외 조항 적용) |
+| [PyInstaller](https://pyinstaller.org) | 실행 파일 패키징 (부트로더 포함) | GPL-2.0 이상 (생성한 프로그램의 배포에 관한 예외 조항 포함) |
 
 ---
 
 ## Pretendard
 
-SIL Open Font License 1.1  
+SIL Open Font License 1.1
+
 https://github.com/orioncactus/pretendard
 
 ```text
@@ -134,20 +135,23 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ## Python
 
-PSF License  
+PSF License
+
 https://docs.python.org/3/license.html
 
+```text
 Python is licensed under the PSF License Agreement.
-
 Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
 
-라이선스 전문은 https://docs.python.org/3/license.html 에서 볼 수 있습니다.
+전문: https://docs.python.org/3/license.html
+```
 
 ---
 
 ## Tcl/Tk (tkinter)
 
-Tcl/Tk License (BSD 계열)  
+Tcl/Tk License (BSD 계열)
+
 https://www.tcl.tk/software/tcltk/license.html
 
 ```text
@@ -197,7 +201,8 @@ terms specified in this license.
 
 ## PyAutoGUI
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/asweigart/pyautogui
 
 ```text
@@ -234,7 +239,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## PyMsgBox
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/asweigart/pymsgbox
 
 ```text
@@ -271,7 +277,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## PyGetWindow
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/asweigart/PyGetWindow
 
 ```text
@@ -308,7 +315,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## PyRect
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/asweigart/pyrect
 
 ```text
@@ -345,7 +353,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## PyScreeze
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/asweigart/pyscreeze
 
 ```text
@@ -382,7 +391,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## PyTweening
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/asweigart/pytweening
 
 ```text
@@ -419,7 +429,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Pyperclip
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/asweigart/pyperclip
 
 ```text
@@ -456,7 +467,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## openpyxl
 
-MIT  
+MIT
+
 https://openpyxl.readthedocs.io
 
 ```text
@@ -489,7 +501,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## et-xmlfile
 
-MIT  
+MIT
+
 https://foss.heptapod.net/openpyxl/et_xmlfile
 
 ```text
@@ -522,7 +535,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Pillow
 
-MIT-CMU (HPND)  
+MIT-CMU (HPND)
+
 https://python-pillow.org
 
 ```text
@@ -562,7 +576,8 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ## pywin32
 
-BSD 3-Clause  
+BSD 3-Clause
+
 https://github.com/mhammond/pywin32
 
 ```text
@@ -602,7 +617,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## comtypes
 
-MIT  
+MIT
+
 https://github.com/enthought/comtypes
 
 ```text
@@ -636,7 +652,8 @@ THE SOFTWARE.
 
 ## olefile
 
-BSD 2-Clause  
+BSD 2-Clause
+
 https://github.com/decalage2/olefile
 
 ```text
@@ -702,11 +719,17 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ## PyInstaller
 
-GPL-2.0 이상 (예외 조항 적용)  
+GPL-2.0 이상 (생성한 프로그램의 배포에 관한 예외 조항 포함)
+
 https://pyinstaller.org
 
-PyInstaller is licensed under GPL-2.0 or later, with a special exception that allows the programs it builds to be distributed under any license.
+```text
+PyInstaller (https://pyinstaller.org).
+GPL-2.0 or later, with a special exception that allows the programs it builds
+to be distributed under any license.
 
-신통픽 실행 파일을 만드는 데 사용했습니다. 실행 파일에는 PyInstaller 의 부트로더가 들어 있지만, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.
+PyInstaller는 실행 파일을 만드는 도구이며, 생성된 실행 파일에는 부트로더가 포함됩니다.
+위 예외 조항에 따라 신통픽 자체에는 GPL 라이선스가 적용되지 않습니다.
 
-라이선스 전문은 https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt 에서 볼 수 있고, 앱과 함께 받는 licenses 폴더에도 있습니다.
+  - 라이선스 전문: licenses/PyInstaller-COPYING-full.txt
+```
