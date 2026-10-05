@@ -1,30 +1,30 @@
 # 오픈소스 고지
 
-신통픽(sintongpick)은 아래 소프트웨어와 글꼴을 쓰거나 함께 묶어 배포합니다.
-각 라이선스가 요구하는 저작권 표시와 사용 조건을 여기에 모았습니다.
-이 파일은 `python3 tools/build_notices.py --apply` 로 만들며, 손으로 고치지 않습니다.
+신통픽(sintongpick)에는 아래 소프트웨어와 글꼴이 들어 있습니다.
+각 라이선스가 요구하는 저작권 표시와 라이선스 전문을 모았습니다.
+신통픽 자체의 이용 조건은 `LICENSE`(신통픽 사용 허가서)를 보세요.
 
-신통픽 자체의 사용 조건은 `LICENSE` (신통픽 사용 허가서) 에 있습니다.
+이 파일은 `python3 tools/build_notices.py --apply` 로 만듭니다. 직접 고치지 마세요.
 
 | 이름 | 쓰임 | 라이선스 |
 |---|---|---|
-| [Pretendard](https://github.com/orioncactus/pretendard) | 앱 화면과 이 페이지의 글꼴 | SIL Open Font License 1.1 |
-| [Python](https://docs.python.org/3/license.html) | 프로그램을 돌리는 바탕 | PSF License |
-| [Tcl/Tk (tkinter)](https://www.tcl.tk/software/tcltk/license.html) | 앱 화면을 그리는 부분 | Tcl/Tk License (BSD 계열) |
-| [PyAutoGUI](https://github.com/asweigart/pyautogui) | 마우스와 키보드를 대신 움직임 | BSD 3-Clause |
-| [PyMsgBox](https://github.com/asweigart/pymsgbox) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyGetWindow](https://github.com/asweigart/PyGetWindow) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyRect](https://github.com/asweigart/pyrect) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyScreeze](https://github.com/asweigart/pyscreeze) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
-| [PyTweening](https://github.com/asweigart/pytweening) | PyAutoGUI 가 함께 쓰는 부품 | BSD 3-Clause |
+| [Pretendard](https://github.com/orioncactus/pretendard) | 글꼴 (앱 화면과 웹페이지) | SIL Open Font License 1.1 |
+| [Python](https://docs.python.org/3/license.html) | 실행 환경 | PSF License |
+| [Tcl/Tk (tkinter)](https://www.tcl.tk/software/tcltk/license.html) | 앱 화면 구성 | Tcl/Tk License (BSD 계열) |
+| [PyAutoGUI](https://github.com/asweigart/pyautogui) | 마우스와 키보드 자동 조작 | BSD 3-Clause |
+| [PyMsgBox](https://github.com/asweigart/pymsgbox) | PyAutoGUI 구성 요소 | BSD 3-Clause |
+| [PyGetWindow](https://github.com/asweigart/PyGetWindow) | PyAutoGUI 구성 요소 | BSD 3-Clause |
+| [PyRect](https://github.com/asweigart/pyrect) | PyAutoGUI 구성 요소 | BSD 3-Clause |
+| [PyScreeze](https://github.com/asweigart/pyscreeze) | PyAutoGUI 구성 요소 | BSD 3-Clause |
+| [PyTweening](https://github.com/asweigart/pytweening) | PyAutoGUI 구성 요소 | BSD 3-Clause |
 | [Pyperclip](https://github.com/asweigart/pyperclip) | 클립보드 복사 | BSD 3-Clause |
 | [openpyxl](https://openpyxl.readthedocs.io) | 엑셀 파일 읽기와 쓰기 | MIT |
-| [et-xmlfile](https://foss.heptapod.net/openpyxl/et_xmlfile) | openpyxl 이 함께 쓰는 부품 | MIT |
-| [Pillow](https://python-pillow.org) | 유리 같은 바탕과 화면 이미지 | MIT-CMU (HPND) |
-| [pywin32](https://github.com/mhammond/pywin32) | 윈도우 기능 호출 | BSD 3-Clause |
+| [et-xmlfile](https://foss.heptapod.net/openpyxl/et_xmlfile) | openpyxl 구성 요소 | MIT |
+| [Pillow](https://python-pillow.org) | 화면 이미지 처리 | MIT-CMU (HPND) |
+| [pywin32](https://github.com/mhammond/pywin32) | 윈도우 기능 사용 | BSD 3-Clause |
 | [comtypes](https://github.com/enthought/comtypes) | 소통메신저 목록 읽기 | MIT |
 | [olefile](https://github.com/decalage2/olefile) | 한글(HWP) 파일 읽기 | BSD 2-Clause |
-| [PyInstaller](https://pyinstaller.org) | exe 파일로 묶는 도구 (부트로더가 exe 에 들어감) | GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항 |
+| [PyInstaller](https://pyinstaller.org) | 실행 파일 제작 | GPL-2.0 이상 (예외 조항 적용) |
 
 ---
 
@@ -137,12 +137,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 PSF License  
 https://docs.python.org/3/license.html
 
-```text
 Python is licensed under the PSF License Agreement.
+
 Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
 
-전문: https://docs.python.org/3/license.html
-```
+라이선스 전문은 https://docs.python.org/3/license.html 에서 볼 수 있습니다.
 
 ---
 
@@ -703,16 +702,11 @@ PERFORMANCE OF THIS SOFTWARE.
 
 ## PyInstaller
 
-GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항  
+GPL-2.0 이상 (예외 조항 적용)  
 https://pyinstaller.org
 
-```text
-PyInstaller (https://pyinstaller.org).
-GPL-2.0 or later, with a special exception that allows the programs it builds
-to be distributed under any license.
+PyInstaller is licensed under GPL-2.0 or later, with a special exception that allows the programs it builds to be distributed under any license.
 
-실행 파일을 만드는 도구입니다. 만들어진 실행 파일에는 PyInstaller 의 부트로더가
-들어가며, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.
+신통픽 실행 파일을 만드는 데 사용했습니다. 실행 파일에는 PyInstaller 의 부트로더가 들어 있지만, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.
 
-  - 라이선스 전문: licenses/PyInstaller-COPYING-full.txt
-```
+라이선스 전문은 https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt 에서 볼 수 있고, 앱과 함께 받는 licenses 폴더에도 있습니다.

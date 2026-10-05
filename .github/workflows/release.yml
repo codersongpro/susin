@@ -79,6 +79,9 @@ jobs:
           --add-data "org_db.json;."
           --add-data "org_codes.json;."
           --add-data "assets/수신그룹_양식.xlsx;assets" --add-data "assets/guide;assets/guide"
+          --add-data "assets/fonts;assets/fonts"
+          --add-data "LICENSE;." --add-data "THIRD_PARTY_NOTICES.md;." --add-data "licenses;licenses"
+          --exclude-module mouseinfo
           --hidden-import pyperclip
           --hidden-import openpyxl
           --hidden-import PIL
@@ -97,6 +100,9 @@ jobs:
           --add-data "org_db.json;."
           --add-data "org_codes.json;."
           --add-data "assets/수신그룹_양식.xlsx;assets" --add-data "assets/guide;assets/guide"
+          --add-data "assets/fonts;assets/fonts"
+          --add-data "LICENSE;." --add-data "THIRD_PARTY_NOTICES.md;." --add-data "licenses;licenses"
+          --exclude-module mouseinfo
           --hidden-import pyperclip
           --hidden-import openpyxl
           --hidden-import PIL
@@ -117,7 +123,11 @@ jobs:
           test -f dist-onefile/sintongpick.exe
           test -f dist-onedir/sintongpick/sintongpick.exe
           test -f sintongpick-windows.zip
-          # 사용 허가서와 오픈소스 고지가 폴더형 빌드에 들어갔는지, GPL 부품이 빠졌는지 본다
+          # 글꼴이 빠지면 앱이 조용히 맑은 고딕으로 바뀐다. 파일이 있는지 꼭 본다
+          test -f dist-onedir/sintongpick/_internal/assets/fonts/Pretendard-Regular.ttf
+          test -f dist-onedir/sintongpick/_internal/assets/fonts/Pretendard-Bold.ttf
+          test -f dist-onedir/sintongpick/_internal/assets/fonts/LICENSE.txt
+          # 사용 허가서와 오픈소스 고지가 들어갔는지, GPL 부품이 빠졌는지 본다
           test -f dist-onedir/sintongpick/_internal/LICENSE
           test -f dist-onedir/sintongpick/_internal/THIRD_PARTY_NOTICES.md
           test -d dist-onedir/sintongpick/_internal/licenses

@@ -58,9 +58,25 @@ class LicenseTermsTest(unittest.TestCase):
         self.assertNotIn('송동석', text)
         self.assertNotIn('Permission is hereby granted', text)
 
-    def test_license_page_shows_the_license_file_as_is(self):
-        body = read('LICENSE').rstrip('\n')
-        self.assertIn(body, read('license.html'))
+    def test_license_page_shows_every_line_of_the_license_file(self):
+        """페이지는 LICENSE 에 모양만 입힌다. 글이 빠지거나 바뀌면 여기서 걸린다."""
+        page = read('license.html')
+        for line in read('LICENSE').splitlines():
+            line = re.sub(r'^(\d+|[가-힣])\. ', '', line.strip())
+            if line:
+                self.assertIn(line, page, f'LICENSE 의 문장이 페이지에 없습니다: {line[:30]}')
+
+    def test_license_file_has_no_hard_wrapped_lines(self):
+        """줄을 80칸에서 끊어 두면 화면 너비에 따라 줄바꿈이 어색해진다. 문단마다 한 줄로 쓴다."""
+        for line in read('LICENSE').splitlines():
+            self.assertLess(len(line), 200)
+        text = read('LICENSE')
+        self.assertNotIn('\n   ', text)
+
+    def test_reflow_joins_wrapped_paragraphs_but_keeps_lists_and_rules(self):
+        wrapped = 'first line\nsecond line\n\n* item one\n  continued\n\n-----\nTITLE\n-----\n\nplain\ntext'
+        self.assertEqual(build_notices.reflow(wrapped),
+                         'first line second line\n\n* item one\n  continued\n\n-----\nTITLE\n-----\n\nplain text\n')
 
     def test_terms_say_the_same_thing_as_the_license(self):
         terms = read('terms.html')
@@ -97,6 +113,15 @@ class BundlingTest(unittest.TestCase):
         self.assertIn("excludes=['mouseinfo']", read('sintongpick.spec'))
         self.assertIn('mouseinfo', read('.github', 'workflows', 'release.yml').lower())
         self.assertNotIn('mouseinfo', read('THIRD_PARTY_NOTICES.md').lower())
+
+    def test_release_workflow_packs_fonts_and_notices_like_the_spec(self):
+        """릴리즈는 spec 이 아니라 워크플로의 명령으로 빌드한다. 글꼴이 빠져 맑은 고딕으로 바뀐 적이 있다."""
+        workflow = read('.github', 'workflows', 'release.yml')
+        for item in ('assets/fonts;assets/fonts', 'LICENSE;.', 'THIRD_PARTY_NOTICES.md;.',
+                     'licenses;licenses', '--exclude-module mouseinfo'):
+            self.assertEqual(workflow.count(item), 2, f'onefile 과 onedir 모두에 {item} 이 있어야 합니다')
+        for item in ('_internal/assets/fonts/Pretendard-Regular.ttf', '_internal/LICENSE'):
+            self.assertIn(item, workflow)
 
     def test_site_files_are_deployed(self):
         ignore = read('.vercelignore')

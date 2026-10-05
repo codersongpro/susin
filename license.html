@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>라이선스 | 신통픽</title>
-  <meta name="description" content="신통픽 사용 허가서와 함께 묶인 오픈소스의 저작권, 라이선스 전문입니다." />
+  <meta name="description" content="신통픽 사용 허가서와 신통픽에 들어 있는 오픈소스의 저작권, 라이선스 전문입니다." />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
@@ -129,17 +129,24 @@
     .doc h3 { font-size: 16px; font-weight: 700; margin: 22px 0 4px; }
     .doc p, .doc li { font-size: 15px; color: var(--ink-2); line-height: 1.85; max-width: 780px; }
     .doc ol { margin: 4px 0 0 22px; }
+    .doc ul { margin: 4px 0 6px 20px; }
     .doc li + li { margin-top: 4px; }
     .doc code { font-size: 13px; background: rgba(0, 0, 0, .05); padding: 1px 6px; border-radius: 6px; }
     .doc .meta { font-size: 13px; }
     .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
     .toc a { padding: 6px 14px; border-radius: 14px; font-size: 14px; font-weight: 500; text-decoration: none;
              background: var(--acc-c); color: var(--on-acc-c); }
-    .plain {
-      margin-top: 14px; padding: 22px 24px; border-radius: 16px; background: rgba(255, 255, 255, .6);
-      border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere;
-      font: 15px/1.85 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif; color: var(--ink);
-    }
+    .license-text { margin-top: 14px; padding: 8px 28px 24px; border-radius: 16px;
+                    background: rgba(255, 255, 255, .6); border: 1px solid var(--line); }
+    .license-text p, .license-text li { font-size: 15px; color: var(--ink-2); line-height: 1.85; max-width: 760px; }
+    .license-text .lic-title { font-size: 19px; font-weight: 700; color: var(--ink); margin-top: 18px; }
+    .license-text .lic-copy { font-size: 14px; margin-bottom: 8px; }
+    .license-text h3 { font-size: 16px; margin: 24px 0 6px; }
+    .license-text ul.kor { list-style: none; margin: 0 0 4px; padding: 0; }
+    .license-text ul.kor li { display: flex; gap: 10px; }
+    .license-text ul.kor li + li { margin-top: 6px; }
+    .license-text ul.kor b { flex: 0 0 1.4em; color: var(--ink); }
+    .oss-note p { font-size: 14px; color: var(--ink-2); line-height: 1.8; max-width: 760px; margin: 0 0 10px; }
     .oss-head, .oss-item summary {
       display: grid; grid-template-columns: minmax(130px, 1fr) 1.6fr 1.3fr 22px; gap: 6px 20px;
       align-items: center; font-size: 14px; line-height: 1.6;
@@ -192,120 +199,60 @@
 <section class="glass doc" id="license">
   <span class="label">라이선스</span>
   <h1 class="page-title">라이선스</h1>
-  <p class="lead">신통픽을 쓰는 조건과, 신통픽에 함께 묶인 소프트웨어의 저작권 표시를 모았습니다.</p>
+  <p class="lead">신통픽을 쓰는 조건과, 신통픽에 들어 있는 오픈소스의 저작권 표시를 모았습니다.</p>
   <div class="toc"><a href="#app">신통픽 사용 허가서</a><a href="#oss">오픈소스 고지</a><a href="#data">기관 이름 자료</a></div>
 
   <h2 id="app">신통픽 사용 허가서</h2>
-  <p>신통픽은 무료로 쓸 수 있습니다. 판매와 수정은 허락 없이 할 수 없습니다. 같은 내용이 저장소와 실행 파일에 들어 있는 <code>LICENSE</code> 파일입니다.</p>
-  <div class="plain">신통픽 사용 허가서 (Sintongpick License)
-
-Copyright (c) 2026 신통픽 개발자. All rights reserved.
-
-이 허가서는 신통픽의 소스 코드, 실행 파일, 문서, 화면 사진에 적용됩니다.
-신통픽에 함께 묶인 다른 소프트웨어와 글꼴에는 적용되지 않으며, 각자의 라이선스를
-따릅니다. 자세한 내용은 THIRD_PARTY_NOTICES.md 를 보세요.
-
-1. 허락하는 것
-
-   가. 누구나 신통픽을 무료로 내려받아 쓸 수 있습니다. 학교와 기관의 업무에 써도 됩니다.
-   나. 고치지 않은 원본 그대로의 신통픽을 다른 사람에게 무료로 나눠 줄 수 있습니다.
-       이때 저작권 표시와 이 허가서를 함께 전해야 합니다.
-   다. 공개된 소스 코드를 읽고 공부할 수 있습니다.
-
-2. 허락하지 않는 것
-
-   아래는 개발자의 서면 허락 없이 할 수 없습니다.
-
-   가. 판매. 신통픽을 팔거나 빌려주거나, 대가를 받고 제공하거나, 유료 상품이나
-       서비스에 넣는 것
-   나. 수정. 소스 코드나 실행 파일을 고치거나 번역하거나 일부를 떼어 다른 프로그램에
-       쓰는 것, 그렇게 만든 것을 나누는 것. 법이 허용하는 범위를 벗어난 역컴파일과
-       분해도 포함합니다.
-   다. 저작권 표시와 이 허가서를 지우거나 바꾸는 것
-   라. 신통픽의 이름이나 만든 사람 표기를 써서 고친 프로그램이나 다른 프로그램을
-       신통픽인 것처럼 보이게 하는 것
-
-   소스 코드는 내용을 확인하라고 공개한 것입니다. 공개했다고 해서 위 제한이 풀리지
-   않습니다.
-
-3. 허락받는 방법
-
-   위 2번에 해당하는 일을 하려면 dungst.me@gmail.com 으로 먼저 문의해 메일로 허락을
-   받으세요.
-
-4. 보증 없음
-
-   신통픽은 있는 그대로 제공합니다. 쓰다가 생긴 손해에 대해 법이 허용하는 범위에서
-   책임지지 않습니다. 개발자의 고의 또는 중대한 과실로 생긴 손해는 제외합니다.
-   이용 조건은 이용약관을 따릅니다.
-
-5. 어겼을 때
-
-   이 허가서를 어기면 허락은 자동으로 끝납니다. 그때는 신통픽을 쓰는 것을 멈추고
-   지워야 합니다.
-
-6. 적용 시기
-
-   이 허가서는 v2.3.2 이후에 배포하는 신통픽에 적용합니다.</div>
+  <p>신통픽은 무료로 쓸 수 있고, 판매와 수정은 개발자의 허락을 받아야 합니다. 아래는 저장소와 실행 파일에 들어 있는 <code>LICENSE</code> 파일과 같은 내용입니다.</p>
+  <div class="license-text">
+    <p class="lic-title">신통픽 사용 허가서 (Sintongpick License)</p>
+    <p class="lic-copy">Copyright (c) 2026 신통픽 개발자. All rights reserved.</p>
+    <p>이 허가서는 신통픽의 소스 코드, 실행 파일, 문서에 적용됩니다. 신통픽에 들어 있는 다른 소프트웨어와 글꼴은 각자의 라이선스를 따릅니다. 자세한 내용은 THIRD_PARTY_NOTICES.md 를 보세요.</p>
+    <h3>1. 할 수 있는 일</h3>
+    <ul class="kor"><li><b>가.</b><span>누구나 신통픽을 무료로 내려받아 쓸 수 있습니다. 학교와 기관의 업무에도 쓸 수 있습니다.</span></li><li><b>나.</b><span>고치지 않은 원본을 다른 사람에게 무료로 나눠 줄 수 있습니다. 이때 저작권 표시와 이 허가서를 함께 전해야 합니다.</span></li><li><b>다.</b><span>공개된 소스 코드를 읽고 공부할 수 있습니다.</span></li></ul>
+    <h3>2. 개발자의 허락이 필요한 일</h3>
+    <ul class="kor"><li><b>가.</b><span>판매: 신통픽을 팔거나 빌려주는 일, 대가를 받고 제공하는 일, 유료 상품이나 서비스에 넣는 일</span></li><li><b>나.</b><span>수정: 소스 코드나 실행 파일을 고치거나 번역하는 일, 일부를 떼어 다른 프로그램에 쓰는 일, 그렇게 만든 것을 나눠 주는 일. 법이 허용하는 범위를 넘는 역컴파일과 분해도 포함합니다.</span></li><li><b>다.</b><span>저작권 표시와 이 허가서를 지우거나 바꾸는 일</span></li><li><b>라.</b><span>고친 프로그램이나 다른 프로그램을 신통픽인 것처럼 보이게 하는 일</span></li></ul>
+    <p>소스 코드는 내용을 확인할 수 있게 공개한 것입니다. 공개했다고 해서 위 제한이 없어지지 않습니다.</p>
+    <h3>3. 허락받는 방법</h3>
+    <p>위 2번에 해당하는 일을 하려면 먼저 dungst.me@gmail.com 으로 문의해 메일로 허락을 받으세요.</p>
+    <h3>4. 보증과 책임</h3>
+    <p>신통픽은 있는 그대로 제공합니다. 쓰다가 생긴 손해에 대해 개발자는 법이 허용하는 범위에서 책임지지 않습니다. 다만 개발자의 고의나 중대한 과실로 생긴 손해는 제외합니다. 자세한 이용 조건은 이용약관을 따릅니다.</p>
+    <h3>5. 어겼을 때</h3>
+    <p>이 허가서를 어기면 허락이 자동으로 끝납니다. 그때는 신통픽을 쓰지 말고 지워야 합니다.</p>
+    <h3>6. 적용 시기</h3>
+    <p>이 허가서는 v2.3.2 이후에 배포하는 신통픽부터 적용합니다.</p>
+  </div>
 
   <h2 id="oss">오픈소스 고지</h2>
-  <p>신통픽은 아래 소프트웨어와 글꼴을 바탕으로 만들었고, 대부분은 실행 파일(sintongpick.exe)에 함께 묶여 있습니다. 이 소프트웨어들은 위 사용 허가서가 아니라 각자의 라이선스를 따릅니다. 항목을 누르면 저작권과 라이선스 전문이 나옵니다. 같은 내용이 앱과 함께 받는 <code>THIRD_PARTY_NOTICES.md</code> 에도 있습니다.</p>
+  <p>신통픽에는 아래 소프트웨어와 글꼴이 들어 있습니다. 이들은 신통픽 사용 허가서가 아니라 각자의 라이선스를 따릅니다. 항목을 누르면 저작권 표시와 라이선스 전문이 펼쳐집니다. 같은 내용이 앱과 함께 받는 <code>THIRD_PARTY_NOTICES.md</code> 에도 있습니다.</p>
   <div class="oss-head"><span>이름</span><span>쓰임</span><span>라이선스</span><span></span></div>
     <details class="oss-item">
-      <summary><span class="n">Pretendard</span><span class="u">앱 화면과 이 페이지의 글꼴</span><span class="l">SIL Open Font License 1.1</span></summary>
+      <summary><span class="n">Pretendard</span><span class="u">글꼴 (앱 화면과 웹페이지)</span><span class="l">SIL Open Font License 1.1</span></summary>
       <p class="oss-link"><a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noopener">https://github.com/orioncactus/pretendard</a></p>
-      <pre>Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard),
-with Reserved Font Name Pretendard.
+      <pre>Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard), with Reserved Font Name Pretendard.
 
-This Font Software is licensed under the SIL Open Font License, Version 1.1.
-This license is copied below, and is also available with a FAQ at:
-https://scripts.sil.org/OFL
+This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is copied below, and is also available with a FAQ at: https://scripts.sil.org/OFL
 
 
 -----------------------------------------------------------
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
 -----------------------------------------------------------
 
-PREAMBLE
-The goals of the Open Font License (OFL) are to stimulate worldwide
-development of collaborative font projects, to support the font creation
-efforts of academic and linguistic communities, and to provide a free and
-open framework in which fonts may be shared and improved in partnership
-with others.
+PREAMBLE The goals of the Open Font License (OFL) are to stimulate worldwide development of collaborative font projects, to support the font creation efforts of academic and linguistic communities, and to provide a free and open framework in which fonts may be shared and improved in partnership with others.
 
-The OFL allows the licensed fonts to be used, studied, modified and
-redistributed freely as long as they are not sold by themselves. The
-fonts, including any derivative works, can be bundled, embedded, 
-redistributed and/or sold with any software provided that any reserved
-names are not used by derivative works. The fonts and derivatives,
-however, cannot be released under any other type of license. The
-requirement for fonts to remain under this license does not apply
-to any document created using the fonts or their derivatives.
+The OFL allows the licensed fonts to be used, studied, modified and redistributed freely as long as they are not sold by themselves. The fonts, including any derivative works, can be bundled, embedded, redistributed and/or sold with any software provided that any reserved names are not used by derivative works. The fonts and derivatives, however, cannot be released under any other type of license. The requirement for fonts to remain under this license does not apply to any document created using the fonts or their derivatives.
 
-DEFINITIONS
-"Font Software" refers to the set of files released by the Copyright
-Holder(s) under this license and clearly marked as such. This may
-include source files, build scripts and documentation.
+DEFINITIONS "Font Software" refers to the set of files released by the Copyright Holder(s) under this license and clearly marked as such. This may include source files, build scripts and documentation.
 
-"Reserved Font Name" refers to any names specified as such after the
-copyright statement(s).
+"Reserved Font Name" refers to any names specified as such after the copyright statement(s).
 
-"Original Version" refers to the collection of Font Software components as
-distributed by the Copyright Holder(s).
+"Original Version" refers to the collection of Font Software components as distributed by the Copyright Holder(s).
 
-"Modified Version" refers to any derivative made by adding to, deleting,
-or substituting -- in part or in whole -- any of the components of the
-Original Version, by changing formats or by porting the Font Software to a
-new environment.
+"Modified Version" refers to any derivative made by adding to, deleting, or substituting -- in part or in whole -- any of the components of the Original Version, by changing formats or by porting the Font Software to a new environment.
 
-"Author" refers to any designer, engineer, programmer, technical
-writer or other person who contributed to the Font Software.
+"Author" refers to any designer, engineer, programmer, technical writer or other person who contributed to the Font Software.
 
-PERMISSION &amp; CONDITIONS
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of the Font Software, to use, study, copy, merge, embed, modify,
-redistribute, and sell modified and unmodified copies of the Font
-Software, subject to the following conditions:
+PERMISSION &amp; CONDITIONS Permission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the following conditions:
 
 1) Neither the Font Software nor any of its individual components,
 in Original or Modified Versions, may be sold by itself.
@@ -334,81 +281,36 @@ distributed under any other license. The requirement for fonts to
 remain under this license does not apply to any document created
 using the Font Software.
 
-TERMINATION
-This license becomes null and void if any of the above conditions are
-not met.
+TERMINATION This license becomes null and void if any of the above conditions are not met.
 
-DISCLAIMER
-THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
-OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
-COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
-DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
-OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
+DISCLAIMER THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">Python</span><span class="u">프로그램을 돌리는 바탕</span><span class="l">PSF License</span></summary>
+      <summary><span class="n">Python</span><span class="u">실행 환경</span><span class="l">PSF License</span></summary>
       <p class="oss-link"><a href="https://docs.python.org/3/license.html" target="_blank" rel="noopener">https://docs.python.org/3/license.html</a></p>
-      <pre>Python is licensed under the PSF License Agreement.
-Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
-
-전문: https://docs.python.org/3/license.html</pre>
+      <div class="oss-note"><p>Python is licensed under the PSF License Agreement.</p>
+<p>Copyright (c) 2001 Python Software Foundation; All Rights Reserved.</p>
+<p>라이선스 전문은 <a href="https://docs.python.org/3/license.html" target="_blank" rel="noopener">https://docs.python.org/3/license.html</a> 에서 볼 수 있습니다.</p></div>
     </details>
     <details class="oss-item">
-      <summary><span class="n">Tcl/Tk (tkinter)</span><span class="u">앱 화면을 그리는 부분</span><span class="l">Tcl/Tk License (BSD 계열)</span></summary>
+      <summary><span class="n">Tcl/Tk (tkinter)</span><span class="u">앱 화면 구성</span><span class="l">Tcl/Tk License (BSD 계열)</span></summary>
       <p class="oss-link"><a href="https://www.tcl.tk/software/tcltk/license.html" target="_blank" rel="noopener">https://www.tcl.tk/software/tcltk/license.html</a></p>
-      <pre>This software is copyrighted by the Regents of the University of
-California, Sun Microsystems, Inc., Scriptics Corporation, ActiveState
-Corporation, Apple Inc. and other parties.  The following terms apply to
-all files associated with the software unless explicitly disclaimed in
-individual files.
+      <pre>This software is copyrighted by the Regents of the University of California, Sun Microsystems, Inc., Scriptics Corporation, ActiveState Corporation, Apple Inc. and other parties.  The following terms apply to all files associated with the software unless explicitly disclaimed in individual files.
 
-The authors hereby grant permission to use, copy, modify, distribute,
-and license this software and its documentation for any purpose, provided
-that existing copyright notices are retained in all copies and that this
-notice is included verbatim in any distributions. No written agreement,
-license, or royalty fee is required for any of the authorized uses.
-Modifications to this software may be copyrighted by their authors
-and need not follow the licensing terms described here, provided that
-the new terms are clearly indicated on the first page of each file where
-they apply.
+The authors hereby grant permission to use, copy, modify, distribute, and license this software and its documentation for any purpose, provided that existing copyright notices are retained in all copies and that this notice is included verbatim in any distributions. No written agreement, license, or royalty fee is required for any of the authorized uses. Modifications to this software may be copyrighted by their authors and need not follow the licensing terms described here, provided that the new terms are clearly indicated on the first page of each file where they apply.
 
-IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY PARTY
-FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
-ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION, OR ANY
-DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION, OR ANY DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.  THIS SOFTWARE
-IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
-NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
+THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.  THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
-GOVERNMENT USE: If you are acquiring this software on behalf of the
-U.S. government, the Government shall have only "Restricted Rights"
-in the software and related documentation as defined in the Federal
-Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2).  If you
-are acquiring the software on behalf of the Department of Defense, the
-software shall be classified as "Commercial Computer Software" and the
-Government shall have only "Restricted Rights" as defined in Clause
-252.227-7013 (b) (3) of DFARs.  Notwithstanding the foregoing, the
-authors grant the U.S. Government and others acting in its behalf
-permission to use and distribute the software in accordance with the
-terms specified in this license.</pre>
+GOVERNMENT USE: If you are acquiring this software on behalf of the U.S. government, the Government shall have only "Restricted Rights" in the software and related documentation as defined in the Federal Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2).  If you are acquiring the software on behalf of the Department of Defense, the software shall be classified as "Commercial Computer Software" and the Government shall have only "Restricted Rights" as defined in Clause 252.227-7013 (b) (3) of DFARs.  Notwithstanding the foregoing, the authors grant the U.S. Government and others acting in its behalf permission to use and distribute the software in accordance with the terms specified in this license.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">PyAutoGUI</span><span class="u">마우스와 키보드를 대신 움직임</span><span class="l">BSD 3-Clause</span></summary>
+      <summary><span class="n">PyAutoGUI</span><span class="u">마우스와 키보드 자동 조작</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/asweigart/pyautogui" target="_blank" rel="noopener">https://github.com/asweigart/pyautogui</a></p>
-      <pre>Copyright (c) 2014, Al Sweigart
-All rights reserved.
+      <pre>Copyright (c) 2014, Al Sweigart All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
@@ -421,25 +323,14 @@ modification, are permitted provided that the following conditions are met:
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">PyMsgBox</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <summary><span class="n">PyMsgBox</span><span class="u">PyAutoGUI 구성 요소</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/asweigart/pymsgbox" target="_blank" rel="noopener">https://github.com/asweigart/pymsgbox</a></p>
-      <pre>Copyright (c) 2014, Al Sweigart
-All rights reserved.
+      <pre>Copyright (c) 2014, Al Sweigart All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
@@ -452,25 +343,14 @@ modification, are permitted provided that the following conditions are met:
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">PyGetWindow</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <summary><span class="n">PyGetWindow</span><span class="u">PyAutoGUI 구성 요소</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/asweigart/PyGetWindow" target="_blank" rel="noopener">https://github.com/asweigart/PyGetWindow</a></p>
-      <pre>Copyright (c) 2015, Al Sweigart
-All rights reserved.
+      <pre>Copyright (c) 2015, Al Sweigart All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
@@ -483,25 +363,14 @@ modification, are permitted provided that the following conditions are met:
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">PyRect</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <summary><span class="n">PyRect</span><span class="u">PyAutoGUI 구성 요소</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/asweigart/pyrect" target="_blank" rel="noopener">https://github.com/asweigart/pyrect</a></p>
-      <pre>Copyright (c) 2018, Al Sweigart
-All rights reserved.
+      <pre>Copyright (c) 2018, Al Sweigart All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
@@ -514,25 +383,14 @@ modification, are permitted provided that the following conditions are met:
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">PyScreeze</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <summary><span class="n">PyScreeze</span><span class="u">PyAutoGUI 구성 요소</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/asweigart/pyscreeze" target="_blank" rel="noopener">https://github.com/asweigart/pyscreeze</a></p>
-      <pre>Copyright (c) 2014, Al Sweigart
-All rights reserved.
+      <pre>Copyright (c) 2014, Al Sweigart All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
@@ -545,25 +403,14 @@ modification, are permitted provided that the following conditions are met:
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">PyTweening</span><span class="u">PyAutoGUI 가 함께 쓰는 부품</span><span class="l">BSD 3-Clause</span></summary>
+      <summary><span class="n">PyTweening</span><span class="u">PyAutoGUI 구성 요소</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/asweigart/pytweening" target="_blank" rel="noopener">https://github.com/asweigart/pytweening</a></p>
-      <pre>Copyright (c) 2014, Al Sweigart
-All rights reserved.
+      <pre>Copyright (c) 2014, Al Sweigart All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
@@ -576,25 +423,14 @@ modification, are permitted provided that the following conditions are met:
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
       <summary><span class="n">Pyperclip</span><span class="u">클립보드 복사</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/asweigart/pyperclip" target="_blank" rel="noopener">https://github.com/asweigart/pyperclip</a></p>
-      <pre>Copyright (c) 2014, Al Sweigart
-All rights reserved.
+      <pre>Copyright (c) 2014, Al Sweigart All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
@@ -607,16 +443,7 @@ modification, are permitted provided that the following conditions are met:
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
       <summary><span class="n">openpyxl</span><span class="u">엑셀 파일 읽기와 쓰기</span><span class="l">MIT</span></summary>
@@ -626,54 +453,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 
 Copyright (c) 2010 openpyxl
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">et-xmlfile</span><span class="u">openpyxl 이 함께 쓰는 부품</span><span class="l">MIT</span></summary>
+      <summary><span class="n">et-xmlfile</span><span class="u">openpyxl 구성 요소</span><span class="l">MIT</span></summary>
       <p class="oss-link"><a href="https://foss.heptapod.net/openpyxl/et_xmlfile" target="_blank" rel="noopener">https://foss.heptapod.net/openpyxl/et_xmlfile</a></p>
       <pre>This software is under the MIT Licence
 ======================================
 
 Copyright (c) 2010 openpyxl
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">Pillow</span><span class="u">유리 같은 바탕과 화면 이미지</span><span class="l">MIT-CMU (HPND)</span></summary>
+      <summary><span class="n">Pillow</span><span class="u">화면 이미지 처리</span><span class="l">MIT-CMU (HPND)</span></summary>
       <p class="oss-link"><a href="https://python-pillow.org" target="_blank" rel="noopener">https://python-pillow.org</a></p>
       <pre>The Python Imaging Library (PIL) is
 
@@ -686,100 +487,50 @@ Pillow is the friendly PIL fork. It is
 
 Like PIL, Pillow is licensed under the open source MIT-CMU License:
 
-By obtaining, using, and/or copying this software and/or its associated
-documentation, you agree that you have read, understood, and will comply
-with the following terms and conditions:
+By obtaining, using, and/or copying this software and/or its associated documentation, you agree that you have read, understood, and will comply with the following terms and conditions:
 
-Permission to use, copy, modify and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appears in all copies, and that
-both that copyright notice and this permission notice appear in supporting
-documentation, and that the name of Secret Labs AB or the author not be
-used in advertising or publicity pertaining to distribution of the software
-without specific, written prior permission.
+Permission to use, copy, modify and distribute this software and its documentation for any purpose and without fee is hereby granted, provided that the above copyright notice appears in all copies, and that both that copyright notice and this permission notice appear in supporting documentation, and that the name of Secret Labs AB or the author not be used in advertising or publicity pertaining to distribution of the software without specific, written prior permission.
 
-SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
-SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.
-IN NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL,
-INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
-OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.</pre>
+SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">pywin32</span><span class="u">윈도우 기능 호출</span><span class="l">BSD 3-Clause</span></summary>
+      <summary><span class="n">pywin32</span><span class="u">윈도우 기능 사용</span><span class="l">BSD 3-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/mhammond/pywin32" target="_blank" rel="noopener">https://github.com/mhammond/pywin32</a></p>
-      <pre>Unless stated in the specific source file, this work is
-Copyright (c) 1994-2008, Mark Hammond
-All rights reserved.
+      <pre>Unless stated in the specific source file, this work is Copyright (c) 1994-2008, Mark Hammond All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
-Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
-Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in
-the documentation and/or other materials provided with the distribution.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-Neither name of Mark Hammond nor the name of contributors may be used
-to endorse or promote products derived from this software without
-specific prior written permission.
+Neither name of Mark Hammond nor the name of contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS
-IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
     </details>
     <details class="oss-item">
       <summary><span class="n">comtypes</span><span class="u">소통메신저 목록 읽기</span><span class="l">MIT</span></summary>
       <p class="oss-link"><a href="https://github.com/enthought/comtypes" target="_blank" rel="noopener">https://github.com/enthought/comtypes</a></p>
-      <pre>This software is OSI Certified Open Source Software.
-OSI Certified is a certification mark of the Open Source Initiative.
+      <pre>This software is OSI Certified Open Source Software. OSI Certified is a certification mark of the Open Source Initiative.
 
-Copyright (c) 2006-2013, Thomas Heller.
-Copyright (c) 2014, Comtypes Developers.
-All rights reserved.
+Copyright (c) 2006-2013, Thomas Heller. Copyright (c) 2014, Comtypes Developers. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.</pre>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre>
     </details>
     <details class="oss-item">
       <summary><span class="n">olefile</span><span class="u">한글(HWP) 파일 읽기</span><span class="l">BSD 2-Clause</span></summary>
       <p class="oss-link"><a href="https://github.com/decalage2/olefile" target="_blank" rel="noopener">https://github.com/decalage2/olefile</a></p>
       <pre>LICENSE for the olefile package:
 
-olefile (formerly OleFileIO_PL) is copyright (c) 2005-2023 Philippe Lagadec
-(https://www.decalage.info)
+olefile (formerly OleFileIO_PL) is copyright (c) 2005-2023 Philippe Lagadec (https://www.decalage.info)
 
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
  * Redistributions of source code must retain the above copyright notice, this
    list of conditions and the following disclaimer.
@@ -787,63 +538,34 @@ are permitted provided that the following conditions are met:
    this list of conditions and the following disclaimer in the documentation
    and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ----------
 
-olefile is based on source code from the OleFileIO module of the Python
-Imaging Library (PIL) published by Fredrik Lundh under the following license:
+olefile is based on source code from the OleFileIO module of the Python Imaging Library (PIL) published by Fredrik Lundh under the following license:
 
 The Python Imaging Library (PIL) is
 - Copyright (c) 1997-2009 by Secret Labs AB
 - Copyright (c) 1995-2009 by Fredrik Lundh
 
-By obtaining, using, and/or copying this software and/or its associated
-documentation, you agree that you have read, understood, and will comply with
-the following terms and conditions:
+By obtaining, using, and/or copying this software and/or its associated documentation, you agree that you have read, understood, and will comply with the following terms and conditions:
 
-Permission to use, copy, modify, and distribute this software and its
-associated documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appears in all copies, and that both
-that copyright notice and this permission notice appear in supporting
-documentation, and that the name of Secret Labs AB or the author not be used
-in advertising or publicity pertaining to distribution of the software without
-specific, written prior permission.
+Permission to use, copy, modify, and distribute this software and its associated documentation for any purpose and without fee is hereby granted, provided that the above copyright notice appears in all copies, and that both that copyright notice and this permission notice appear in supporting documentation, and that the name of Secret Labs AB or the author not be used in advertising or publicity pertaining to distribution of the software without specific, written prior permission.
 
-SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
-SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN
-NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL,
-INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.</pre>
+SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL SECRET LABS AB OR THE AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</pre>
     </details>
     <details class="oss-item">
-      <summary><span class="n">PyInstaller</span><span class="u">exe 파일로 묶는 도구 (부트로더가 exe 에 들어감)</span><span class="l">GPL-2.0 이상, 만든 파일에는 제한이 없는 예외 조항</span></summary>
+      <summary><span class="n">PyInstaller</span><span class="u">실행 파일 제작</span><span class="l">GPL-2.0 이상 (예외 조항 적용)</span></summary>
       <p class="oss-link"><a href="https://pyinstaller.org" target="_blank" rel="noopener">https://pyinstaller.org</a></p>
-      <pre>PyInstaller (https://pyinstaller.org).
-GPL-2.0 or later, with a special exception that allows the programs it builds
-to be distributed under any license.
-
-실행 파일을 만드는 도구입니다. 만들어진 실행 파일에는 PyInstaller 의 부트로더가
-들어가며, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.
-
-  - 라이선스 전문: licenses/PyInstaller-COPYING-full.txt</pre>
+      <div class="oss-note"><p>PyInstaller is licensed under GPL-2.0 or later, with a special exception that allows the programs it builds to be distributed under any license.</p>
+<p>신통픽 실행 파일을 만드는 데 사용했습니다. 실행 파일에는 PyInstaller 의 부트로더가 들어 있지만, 위 예외 조항에 따라 신통픽에는 GPL 이 적용되지 않습니다.</p>
+<p>라이선스 전문은 <a href="https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt" target="_blank" rel="noopener">https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt</a> 에서 볼 수 있고, 앱과 함께 받는 licenses 폴더에도 있습니다.</p></div>
     </details>
 
   <h2 id="data">기관 이름 자료</h2>
-  <p>기관 이름 사전은 나이스에서 공개한 공공데이터인 학교기본정보(2026년 8월 31일 기준)와 에듀파인 조직도에 나온 기관 이름을 정리한 것입니다. 학교 이름, 학교급, 기관 이름 같은 사실 정보만 담고 있습니다.</p>
-  <p>소통메신저, 에듀파인, 나이스는 각 제공 기관의 서비스이며 신통픽과는 별개입니다. 사용 방법 화면 사진에는 설명을 위해 이 서비스의 화면 일부가 나오고, 사람 이름은 모두 지어낸 예시입니다.</p>
+  <p>기관 이름 사전은 나이스에서 공개한 공공데이터인 학교기본정보(2026년 8월 31일 기준)와 에듀파인 조직도의 기관 이름을 정리해 만들었습니다. 학교 이름, 학교급, 기관 이름 같은 사실 정보만 담았습니다.</p>
+  <p>소통메신저, 에듀파인, 나이스는 각 운영 기관의 서비스이며 신통픽과 관계가 없습니다. 사용 방법 화면 사진에는 설명을 위해 해당 서비스의 화면 일부가 나오며, 사람 이름은 모두 지어낸 예시입니다.</p>
   <p class="meta">문의: <a href="mailto:dungst.me@gmail.com">dungst.me@gmail.com</a></p>
 </section>
 </main>
