@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>신통픽 사용 방법 영상</title>
+<!--
+  사용 방법 영상의 장면. tools/video/render.js 가 프레임마다 window.renderAt(초) 를 부르고
+  화면을 찍어 MP4 로 묶는다. 시간은 이 파일이 정하지 않고 render.js 가 넘겨준다.
+  그림은 실제 앱을 찍은 assets/landing, assets/guide 를 그대로 쓴다. 사람 이름은 모두 지어낸 것이다.
+  문체 규칙(대시, 화살표, 광고 문구 쓰지 않기)은 랜딩페이지와 같다.
+-->
+<style>
+  @font-face { font-family: 'Pretendard'; font-weight: 400; src: url('../../assets/fonts/Pretendard-Regular.ttf'); }
+  @font-face { font-family: 'Pretendard'; font-weight: 700; src: url('../../assets/fonts/Pretendard-Bold.ttf'); }
+  :root {
+    --primary: #4A53C9; --primary-c: #E1E0FF;
+    --tertiary: #00695C; --tertiary-c: #A7F0E0;
+    --ink: #1A1B27; --ink-2: #464653;
+    --acc: var(--primary); --acc-c: var(--primary-c);
+  }
+  body.susin { --acc: var(--tertiary); --acc-c: var(--tertiary-c); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body {
+    font-family: 'Pretendard', sans-serif; color: var(--ink); word-break: keep-all;
+    background:
+      radial-gradient(520px 420px at 6% 4%, rgba(122, 132, 255, .45), transparent 70%),
+      radial-gradient(540px 420px at 98% 10%, rgba(255, 170, 205, .40), transparent 70%),
+      radial-gradient(600px 460px at 90% 80%, rgba(120, 230, 210, .40), transparent 70%),
+      radial-gradient(480px 420px at 2% 92%, rgba(255, 214, 140, .38), transparent 70%),
+      #EEF0FB;
+  }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+
+  /* 제목 장면 */
+  .title-wrap { position: absolute; left: 96px; top: 150px; right: 96px; }
+  .kicker { font-size: 26px; font-weight: 700; color: var(--acc); letter-spacing: .02em; }
+  .big { font-size: 168px; font-weight: 700; letter-spacing: -.04em; line-height: 1.02; margin-top: 18px; }
+  .sub { font-size: 40px; font-weight: 700; color: var(--ink-2); margin-top: 22px; letter-spacing: -.01em; }
+
+  /* 숫자 장면 */
+  .stat { position: absolute; left: 96px; right: 96px; top: 120px; display: grid;
+          grid-template-columns: 1fr 1fr; gap: 64px; }
+  .stat .n { font-size: 150px; font-weight: 700; letter-spacing: -.05em; line-height: 1; }
+  .stat .n small { font-size: 54px; letter-spacing: -.02em; margin-left: 6px; }
+  .stat .l { font-size: 30px; font-weight: 700; color: var(--ink-2); margin-top: 14px; line-height: 1.4; }
+  .stat .after .n { color: var(--acc); }
+  .stat-note { position: absolute; left: 96px; right: 96px; bottom: 120px; font-size: 32px;
+               font-weight: 700; color: var(--ink); }
+
+  /* 단계 장면 */
+  .num { position: absolute; left: 56px; top: 40px; font-size: 230px; font-weight: 700;
+         letter-spacing: -.06em; color: var(--acc); opacity: .14; line-height: 1; }
+  .text { position: absolute; left: 72px; top: 150px; width: 420px; }
+  .text .kicker { font-size: 24px; }
+  .text h2 { font-size: 54px; font-weight: 700; letter-spacing: -.03em; line-height: 1.15; margin-top: 12px; }
+  .text p { font-size: 27px; font-weight: 400; line-height: 1.6; margin-top: 22px; color: var(--ink); }
+  .text p b { font-weight: 700; color: var(--acc); }
+  .shot { position: absolute; left: 524px; top: 96px; width: 700px; height: 443px; border-radius: 18px;
+          overflow: hidden; background: #fff;
+          box-shadow: 0 24px 60px rgba(40, 44, 110, .28), 0 0 0 1px rgba(255, 255, 255, .8); }
+  .cam { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .cam img { display: block; width: 100%; height: 100%; }
+  .hl { position: absolute; border-radius: 10px; border: 3px solid var(--acc);
+        box-shadow: 0 0 0 4000px rgba(16, 18, 40, .40); opacity: 0; }
+  .chips { position: absolute; right: 70px; top: 150px; width: 680px; display: grid; gap: 26px; }
+  .chip { display: flex; align-items: center; gap: 26px; background: rgba(255, 255, 255, .78); border-radius: 22px;
+          padding: 22px 28px; box-shadow: 0 12px 30px rgba(40, 44, 110, .16); opacity: 0; }
+  .chip .k { font-size: 44px; font-weight: 700; color: var(--acc); width: 60px; }
+  .chip img { image-rendering: auto; height: 64px; }
+  .chip .t { font-size: 28px; font-weight: 700; }
+
+  /* 아래 진행 막대 */
+  .chapters { position: absolute; left: 72px; right: 72px; bottom: 34px; display: flex; gap: 12px; }
+  .chapters div { flex: 1; font-size: 18px; font-weight: 700; color: rgba(70, 70, 83, .55);
+                  border-top: 4px solid rgba(70, 70, 83, .18); padding-top: 10px; }
+  .chapters div.on { color: var(--acc); border-color: var(--acc); }
+  .brand { position: absolute; right: 72px; top: 38px; font-size: 22px; font-weight: 700; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div class="brand" id="brand">신통픽</div>
+<div class="chapters" id="chapters"></div>
+
+<script>
+/* 그림 크기 (가로, 세로). 강조 상자는 이 크기 기준의 좌표다. */
+const SIZES = {
+  'sotong_input.webp': [1360, 860], 'sotong_calib.webp': [1360, 860], 'sotong_auto.webp': [1360, 860],
+  'susin_input.webp': [1360, 860], 'susin_excel.webp': [1360, 860],
+  'sotong_pick.webp': [519, 185], 'sotong_compare.webp': [624, 686], 'sotong_capture.webp': [548, 235],
+  'susin_bulk.webp': [936, 686], 'susin_result.webp': [624, 686],
+};
+
+const VIDEOS = {
+  sotong: {
+    chapters: ['명단 넣기', '위치 캡처', '자동 선택', '비교'],
+    scenes: [
+      { kind: 'title', dur: 4, kicker: '신통픽 사용 방법', big: '소통픽', sub: '소통메신저 수신자를 대신 골라 담습니다' },
+      { kind: 'step', dur: 6.5, ch: 0, num: '01', kicker: '명단 넣기', title: '표를 그대로 붙여넣기',
+        text: '엑셀이나 한글 표를 복사해 붙여넣고 <b>[명단 추출]</b> 을 누릅니다.',
+        img: 'sotong_input.webp', hl: [[164, 336, 514, 596, 0.8], [163, 630, 288, 672, 3.4]] },
+      { kind: 'step', dur: 5.5, ch: 0, num: '01', kicker: '명단 넣기', title: '소속과 이름으로 나뉩니다',
+        text: '직위나 연락처가 섞여 있어도 기관과 이름만 읽습니다. 붉은 줄만 더블클릭해서 고칩니다.',
+        img: 'sotong_input.webp', hl: [[530, 366, 1307, 545, 0.6]] },
+      { kind: 'chips', dur: 6, ch: 1, num: '02', kicker: '위치 캡처', title: '소통메신저에서 누를 세 곳',
+        text: '처음 한 번만 캡처해 두면 다음부터는 바로 시작합니다.',
+        chips: [['4', 'search_box.png', '검색 입력칸'], ['5', 'first_result.png', '검색 결과 첫 줄'],
+                ['6', 'arrow_button.png', '오른쪽 화살표 버튼']] },
+      { kind: 'step', dur: 5.5, ch: 1, num: '02', kicker: '위치 캡처', title: '[캡처 시작] 을 누르고 그 자리를 클릭',
+        text: '세 곳을 모두 캡처하면 <b>[다음, 자동 선택]</b> 이 켜집니다.',
+        img: 'sotong_calib.webp', hl: [[662, 293, 1293, 522, 0.6], [1133, 478, 1278, 512, 3.2]] },
+      { kind: 'step', dur: 6.5, ch: 2, num: '03', kicker: '자동 선택', title: '이름마다 검색하고 담습니다',
+        text: '<b>[자동 선택 시작]</b> 을 누르면 차례로 진행됩니다. 진행 중에는 마우스를 건드리지 마세요.',
+        img: 'sotong_auto.webp', hl: [[164, 514, 358, 556, 0.6], [164, 270, 1293, 375, 3.4]] },
+      { kind: 'step', dur: 5.5, ch: 2, num: '03', kicker: '자동 선택', title: '같은 이름이면 멈춥니다',
+        text: '신통픽이 고르지 않고, 맞는 분을 직접 고른 뒤 <b>[계속]</b> 을 누릅니다.',
+        img: 'sotong_pick.webp', center: true, width: 640 },
+      { kind: 'step', dur: 6.5, ch: 3, num: '04', kicker: '비교', title: '빠진 사람만 다시 담기',
+        text: '끝나면 소통메신저 [선택된 사용자] 와 맞춰 봅니다. 빠진 사람은 버튼 하나로 다시 담습니다.',
+        img: 'sotong_compare.webp', center: true, width: 470 },
+      { kind: 'title', dur: 4.5, kicker: '무료 · 윈도우 · 설치 없이 실행', big: '신통픽', sub: '수신픽 + 소통픽' },
+    ],
+  },
+  susin: {
+    chapters: ['명단 넣기', '확인하기', '엑셀 만들기', '올리기'],
+    scenes: [
+      { kind: 'title', dur: 4, kicker: '신통픽 사용 방법', big: '수신픽', sub: '에듀파인 개인수신그룹 엑셀을 만듭니다' },
+      { kind: 'stat', dur: 6, before: ['120', '번', '수신 기관 30곳을 조직도에서 하나씩 고를 때의 클릭'],
+        after: ['2', '번', '수신그룹을 한 번 등록해 두면 기안할 때마다'],
+        note: '수신픽은 그 수신그룹을 등록할 엑셀을 만들어 줍니다.' },
+      { kind: 'step', dur: 6.5, ch: 0, num: '01', kicker: '명단 넣기', title: '기관 명단을 붙여넣기',
+        text: '줄여 쓴 이름도 정식 기관명으로 바뀝니다. 붙여넣고 <b>[명단 추출]</b> 을 누릅니다.',
+        img: 'susin_input.webp', hl: [[164, 336, 514, 596, 0.6], [530, 386, 1307, 545, 3.2]] },
+      { kind: 'step', dur: 6, ch: 1, num: '02', kicker: '확인하기', title: '애매한 곳은 고르지 않습니다',
+        text: '같은 이름이 여러 곳에 있으면 붉게 남기고, <b>[확인 필요 기관 일괄 수정]</b> 에서 직접 고릅니다.',
+        img: 'susin_input.webp', hl: [[530, 475, 1286, 504, 0.6], [698, 553, 944, 595, 3.2]] },
+      { kind: 'step', dur: 5, ch: 1, num: '02', kicker: '확인하기', title: '한 창에서 차례로',
+        text: '후보를 보고 맞는 기관을 고르거나 엑셀에서 뺍니다.',
+        img: 'susin_bulk.webp', center: true, width: 640 },
+      { kind: 'step', dur: 6.5, ch: 2, num: '03', kicker: '엑셀 만들기', title: '그룹명을 적고 만들기',
+        text: '내 정보는 처음 한 번만 적습니다. 그룹명을 적고 <b>[수신그룹 엑셀 만들기]</b> 를 누릅니다.',
+        img: 'susin_excel.webp', hl: [[164, 280, 721, 453, 0.6], [181, 653, 401, 695, 3.4]] },
+      { kind: 'step', dur: 5.5, ch: 2, num: '03', kicker: '엑셀 만들기', title: '빠진 기관이 없는지 대조',
+        text: '만든 엑셀을 다시 열어, 엑셀에 들어간 기관과 빠진 기관을 사유와 함께 보여 줍니다.',
+        img: 'susin_result.webp', center: true, width: 470 },
+      { kind: 'chips', dur: 7, ch: 3, num: '04', kicker: '올리기', title: '에듀파인에 일괄등록',
+        text: '다음부터는 기안할 때 [수신자 지정] 의 [개인수신그룹] 에서 그룹만 고릅니다.',
+        chips: [['1', 'edufine_settings.png', '에듀파인 오른쪽 위'], ['2', 'edufine_group_menu.png', '개인설정의 왼쪽 메뉴'],
+                ['3', 'edufine_bulk_upload.png', '수신그룹 목록 위'], ['4', 'edufine_browse.png', '신통픽이 만든 엑셀 고르기']] },
+      { kind: 'title', dur: 4.5, kicker: '무료 · 윈도우 · 설치 없이 실행', big: '신통픽', sub: '수신픽 + 소통픽' },
+    ],
+  },
+};
+
+const which = new URLSearchParams(location.search).get('v') || 'sotong';
+const VIDEO = VIDEOS[which];
+document.body.className = which === 'susin' ? 'susin' : 'sotong';
+const stage = document.getElementById('stage');
+const chapters = document.getElementById('chapters');
+VIDEO.chapters.forEach(name => {
+  const div = document.createElement('div');
+  div.textContent = name;
+  chapters.appendChild(div);
+});
+
+function el(tag, cls, html) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (html !== undefined) node.innerHTML = html;
+  return node;
+}
+
+let start = 0;
+VIDEO.scenes.forEach(scene => {
+  scene.start = start;
+  start += scene.dur;
+  const root = el('div', 'scene');
+  scene.root = root;
+  scene.parts = [];
+  if (scene.kind === 'title') {
+    const wrap = el('div', 'title-wrap');
+    [el('div', 'kicker', scene.kicker), el('div', 'big', scene.big), el('div', 'sub', scene.sub)]
+      .forEach((node, i) => { wrap.appendChild(node); scene.parts.push([node, 0.1 + i * 0.18]); });
+    root.appendChild(wrap);
+  } else if (scene.kind === 'stat') {
+    const grid = el('div', 'stat');
+    [['before', scene.before], ['after', scene.after]].forEach(([cls, [n, unit, label]], i) => {
+      const box = el('div', cls, `<div class="n">${n}<small>${unit}</small></div><div class="l">${label}</div>`);
+      grid.appendChild(box);
+      scene.parts.push([box, 0.2 + i * 1.2]);
+    });
+    root.appendChild(grid);
+    const note = el('div', 'stat-note', scene.note);
+    root.appendChild(note);
+    scene.parts.push([note, 2.6]);
+  } else {
+    root.appendChild(el('div', 'num', scene.num));
+    const text = el('div', 'text');
+    [el('div', 'kicker', scene.kicker), el('h2', '', scene.title), el('p', '', scene.text)]
+      .forEach((node, i) => { text.appendChild(node); scene.parts.push([node, 0.1 + i * 0.16]); });
+    root.appendChild(text);
+    if (scene.kind === 'chips') {
+      const list = el('div', 'chips');
+      scene.chips.forEach(([k, src, label], i) => {
+        const chip = el('div', 'chip', `<span class="k">${k}</span><img src="../../assets/guide/${src}"><span class="t">${label}</span>`);
+        list.appendChild(chip);
+        scene.parts.push([chip, 0.7 + i * 0.55]);
+      });
+      root.appendChild(list);
+    } else {
+      const [w, h] = SIZES[scene.img];
+      const shot = el('div', 'shot');
+      const cam = el('div', 'cam');
+      cam.style.width = w + 'px';
+      cam.style.height = h + 'px';
+      const img = el('img');
+      img.src = '../../assets/landing/' + scene.img;
+      cam.appendChild(img);
+      if (scene.center) {
+        // 작은 대화상자는 통째로 보여 준다
+        const width = scene.width || 700;
+        const scale = width / w;
+        shot.style.width = width + 'px';
+        shot.style.height = Math.round(h * scale) + 'px';
+        shot.style.left = (524 + (700 - width) / 2) + 'px';
+        shot.style.top = Math.max(70, Math.round((720 - 80 - h * scale) / 2)) + 'px';
+        scene.cams = [[0, null]];
+        scene.base = scale;
+      } else {
+        scene.base = 700 / w;
+        scene.cams = [[0, null]];
+      }
+      (scene.hl || []).forEach(([x1, y1, x2, y2, at]) => {
+        const box = el('div', 'hl');
+        box.style.left = x1 + 'px';
+        box.style.top = y1 + 'px';
+        box.style.width = (x2 - x1) + 'px';
+        box.style.height = (y2 - y1) + 'px';
+        cam.appendChild(box);
+        scene.hls = scene.hls || [];
+        scene.hls.push([box, at]);
+        scene.cams.push([at - 0.5, [x1, y1, x2, y2]]);
+      });
+      shot.appendChild(cam);
+      root.appendChild(shot);
+      scene.shot = shot;
+      scene.cam = cam;
+      scene.size = [w, h];
+      scene.parts.push([shot, 0.25]);
+    }
+  }
+  stage.appendChild(root);
+});
+window.TOTAL = start;
+
+const ease = x => 1 - Math.pow(1 - Math.min(Math.max(x, 0), 1), 3);
+const smooth = x => { x = Math.min(Math.max(x, 0), 1); return x * x * (3 - 2 * x); };
+const FRAME = [700, 443];
+
+/* 강조 상자가 화면 틀 가운데에 크게 오도록 (배율, x 이동, y 이동) 을 정한다. null 이면 화면 전체. */
+function camFor(scene, rect) {
+  const [w, h] = scene.size;
+  const base = scene.base;
+  if (!rect) return [base, 0, 0];
+  const [x1, y1, x2, y2] = rect;
+  const fw = parseFloat(scene.shot.style.width) || FRAME[0];
+  const fh = parseFloat(scene.shot.style.height) || FRAME[1];
+  let s = Math.min(fw * 0.82 / (x2 - x1), fh * 0.7 / (y2 - y1), 1.25);
+  s = Math.max(s, base);
+  let tx = fw / 2 - (x1 + x2) / 2 * s, ty = fh / 2 - (y1 + y2) / 2 * s;
+  tx = Math.min(0, Math.max(fw - w * s, tx));
+  ty = Math.min(0, Math.max(fh - h * s, ty));
+  return [s, tx, ty];
+}
+
+function camAt(scene, local) {
+  const keys = scene.cams;
+  let state = camFor(scene, keys[0][1]);
+  for (let k = 1; k < keys.length; k++) {
+    const [at, rect] = keys[k];
+    const p = smooth((local - at) / 0.8);
+    if (p <= 0) break;
+    const next = camFor(scene, rect);
+    state = state.map((v, i) => v + (next[i] - v) * p);
+  }
+  return state;
+}
+
+window.renderAt = function (t) {
+  const bars = chapters.children;
+  let current = null;
+  VIDEO.scenes.forEach(scene => {
+    const local = t - scene.start;
+    const on = local >= 0 && local < scene.dur;
+    scene.root.style.opacity = on ? Math.min(ease(local / 0.35), ease((scene.dur - local) / 0.35)) : 0;
+    if (!on) return;
+    current = scene;
+    scene.parts.forEach(([node, at]) => {
+      const p = ease((local - at) / 0.55);
+      node.style.opacity = p;
+      node.style.transform = `translateY(${(1 - p) * 26}px)`;
+    });
+    if (scene.cam) {
+      const [s, tx, ty] = camAt(scene, local);
+      scene.cam.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+    }
+    // 강조 상자: 하나가 나오면 앞의 것은 사라진다 (앱의 사용 가이드처럼 한 번에 한 곳만 밝게)
+    (scene.hls || []).forEach(([box, at], i) => {
+      const next = scene.hls[i + 1];
+      const until = next ? next[1] : scene.dur;
+      const p = ease((local - at - 0.2) / 0.4) * (local < until - 0.5 ? 1 : 0);
+      box.style.opacity = p;
+    });
+  });
+  for (let i = 0; i < bars.length; i++) {
+    bars[i].className = current && current.ch === i ? 'on' : '';
+  }
+  document.getElementById('chapters').style.opacity = current && current.ch !== undefined ? 1 : 0;
+};
+window.renderAt(0);
+</script>
+</body>
+</html>

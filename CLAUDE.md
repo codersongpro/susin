@@ -81,6 +81,12 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
 - 랜딩페이지 화면 캡처는 `assets/landing/*.webp` 이고 `index.html` 에 `data-shot` 으로 박는다.
   앱 화면을 바꾸면 다시 찍고 `python3 tools/embed_guide_images.py --apply` 를 돌린다.
   캡처에는 지어낸 이름만 쓴다. 실제 선생님 이름을 넣지 않는다.
+- 랜딩페이지는 글자 중심(큰 제목, 숫자 띠, 절 번호)이다. 새 절을 넣으면 `class="glass numbered"` 를 붙여
+  번호가 이어지게 한다.
+- 사용 방법 영상은 `assets/video/{susin,sotong}.mp4` 와 포스터 `.jpg` 다. `tools/video/scenes.html` 의 장면을
+  `tools/video/render.js` 가 프레임마다 찍어 만든다 (실제 앱 캡처를 쓰므로 화면을 다시 찍으면 영상도 다시 만든다).
+  `FFMPEG=<ffmpeg 경로> node tools/video/render.js sotong` 처럼 돌린다. ffmpeg 는 pip 의 imageio-ffmpeg 것을 써도 된다.
+  `.vercelignore` 는 assets 중 video 폴더만 내보낸다.
 
 ## 문체
 

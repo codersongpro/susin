@@ -97,3 +97,41 @@ class LandingPageTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LandingVideoTest(unittest.TestCase):
+    """사용 방법 영상이 페이지에 박혀 있고, 파일이 있고, 배포에서 빠지지 않는다."""
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def read(self, *parts):
+        with open(os.path.join(self.root, *parts), encoding='utf-8') as source:
+            return source.read()
+
+    def test_both_videos_and_posters_exist_and_are_small_enough(self):
+        html = self.read('index.html')
+        for name in ('susin', 'sotong'):
+            for ext in ('mp4', 'jpg'):
+                path = f'assets/video/{name}.{ext}'
+                self.assertIn(path, html)
+                full = os.path.join(self.root, path)
+                self.assertTrue(os.path.exists(full), path)
+                # 학교 망에서도 바로 열리게 한 편에 6MB 를 넘기지 않는다
+                self.assertLess(os.path.getsize(full), 6 * 1024 * 1024, path)
+
+    def test_videos_load_only_when_played(self):
+        html = self.read('index.html')
+        self.assertEqual(html.count('<video'), 2)
+        self.assertEqual(html.count('preload="none"'), 2)
+
+    def test_video_folder_is_deployed_but_other_assets_are_not(self):
+        ignore = self.read('.vercelignore').splitlines()
+        self.assertIn('!assets/video/', ignore)
+        self.assertIn('!assets/video/*', ignore)
+        self.assertIn('assets/*', ignore)
+        self.assertLess(ignore.index('assets/*'), ignore.index('!assets/video/'))
+
+    def test_video_scenes_follow_the_writing_rules(self):
+        scenes = self.read('tools', 'video', 'scenes.html')
+        self.assertNotIn('\u2014', scenes)
+        self.assertNotIn('\u2192', scenes)

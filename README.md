@@ -243,7 +243,7 @@ python3 -m unittest discover -s tests
 
 ### 랜딩페이지 배포 (Vercel)
 
-`index.html`, `terms.html`, `license.html` 세 장입니다. 인라인 CSS 와 외부 링크만 쓰므로 다른 파일이 필요 없습니다. 뒤의 두 장은 `tools/build_notices.py` 가 만듭니다.
+`index.html`, `terms.html`, `license.html` 세 장과 사용 방법 영상(`assets/video/`)입니다. 인라인 CSS 와 외부 링크만 쓰므로 영상 말고는 다른 파일이 필요 없습니다. 뒤의 두 장은 `tools/build_notices.py` 가 만듭니다.
 
 **Git 연동 (권장)**: [vercel.com/new](https://vercel.com/new) 에서 이 저장소를 고르고
 Framework Preset 을 `Other`, Build Command 를 비워 두면 끝납니다. 이후 `main` 에 push 할
@@ -257,7 +257,7 @@ vercel          # 미리보기
 vercel --prod   # 운영 배포
 ```
 
-`.vercelignore` 가 HTML 세 장과 `vercel.json` 만 남기고 나머지를 제외합니다.
+`.vercelignore` 가 HTML 세 장, 영상 폴더, `vercel.json` 만 남기고 나머지를 제외합니다.
 빼지 않으면 `outputDirectory` 가 저장소 루트라 앱 소스와 `data/` 의 4MB CSV 까지
 공개 URL 로 나갑니다.
 

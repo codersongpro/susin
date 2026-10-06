@@ -1,9 +1,14 @@
 # 랜딩페이지만 배포한다.
 # outputDirectory 가 저장소 루트라, 빼지 않으면 앱 소스와 데이터가 전부 공개 URL 로
 # 서빙된다 (org_db.json, data/ 의 4MB CSV, 양식 파일까지).
-# 페이지는 외부 링크와 인라인 CSS 만 쓰므로 HTML 파일만 있으면 된다.
+# 페이지는 외부 링크와 인라인 CSS 만 쓰므로 HTML 파일과 사용 방법 영상만 있으면 된다.
 *
 !index.html
 !terms.html
 !license.html
 !vercel.json
+# assets 안에서는 video 폴더만 내보낸다 (글꼴, 양식, 안내 그림은 빼고)
+!assets/
+assets/*
+!assets/video/
+!assets/video/*
