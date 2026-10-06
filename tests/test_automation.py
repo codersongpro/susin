@@ -341,3 +341,35 @@ class SearchCountTest(unittest.TestCase):
                  {'name': '검색 결과(2명)', 'offscreen': False}]
         self.assertEqual(search_count_in(nodes, pattern), 2)
         self.assertIsNone(search_count_in([{'name': '선택된 사용자'}], pattern))
+
+
+class ScrolledListTest(unittest.TestCase):
+    """[선택된 사용자] 를 스크롤하며 여러 번 읽은 것을 잇는다."""
+
+    def test_overlapping_pages_are_joined_once(self):
+        from automation import merge_scrolled_rows
+        seen = ['가 [교사]', '나 [교사]', '다 [교사]', '라 [교사]']
+        now = ['다 [교사]', '라 [교사]', '마 [교사]', '바 [교사]']
+        self.assertEqual(merge_scrolled_rows(seen, now),
+                         ['가 [교사]', '나 [교사]', '다 [교사]', '라 [교사]', '마 [교사]', '바 [교사]'])
+
+    def test_two_people_with_the_same_line_stay_two(self):
+        """같은 이름, 같은 직위 두 사람을 한 사람으로 합치면 안 된다."""
+        from automation import merge_scrolled_rows
+        seen = ['가 [교사]', '김충북 [교사]', '김충북 [교사]']
+        now = ['김충북 [교사]', '김충북 [교사]', '나 [교사]']
+        self.assertEqual(merge_scrolled_rows(seen, now),
+                         ['가 [교사]', '김충북 [교사]', '김충북 [교사]', '나 [교사]'])
+
+    def test_a_page_already_inside_adds_nothing(self):
+        from automation import merge_scrolled_rows
+        seen = ['가', '나', '다', '라']
+        self.assertEqual(merge_scrolled_rows(seen, ['나', '다']), seen)
+        self.assertEqual(merge_scrolled_rows([], ['가']), ['가'])
+
+    def test_anchor_is_inside_the_first_visible_row(self):
+        from automation import selected_rows_anchor
+        x, y = selected_rows_anchor(photo_rows_nodes(2), 1284)
+        self.assertTrue(970 + 339 <= x <= 970 + 600)
+        self.assertTrue(120 + 83 <= y <= 120 + 83 + 49)
+        self.assertIsNone(selected_rows_anchor(photo_rows_nodes(0), 1284))

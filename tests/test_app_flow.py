@@ -1716,7 +1716,7 @@ class AppFlowTest(unittest.TestCase):
         gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (30, 10)]
         read = []
 
-        def nodes_of(uia, hwnd, limit=3000):
+        def nodes_of(uia, hwnd, limit=3000, min_x=None):
             read.append(hwnd)
             return rows
 
@@ -1747,6 +1747,119 @@ class AppFlowTest(unittest.TestCase):
         self.assertIn('강명희', got[1])
         self.assertFalse(any('그룹단위' in row for row in got))
 
+    @staticmethod
+    def _scrolling_list_nodes(names, offset, visible=6):
+        """화면에 보이는 줄만 읽히는 [선택된 사용자] 목록. offset 은 맨 위에 보이는 사람 번호."""
+        nodes = []
+
+        def add(parent, kind, rect, name=''):
+            nodes.append({'id': len(nodes), 'parent': parent, 'type': kind,
+                          'rect': rect, 'name': name, 'offscreen': False})
+            return len(nodes) - 1
+
+        x0, y0 = 970, 120
+        doc = add(-1, 50030, (x0, y0, x0 + 630, y0 + 600))
+        left = add(doc, 50023, (x0 + 10, y0 + 150, x0 + 290, y0 + 530))
+        for k in range(30):
+            add(left, 50024, (x0 + 10, y0 + 150 + k * 12, x0 + 290, y0 + 160 + k * 12),
+                f'조직도{k} [교사(초등)]')
+        add(doc, 50020, (x0 + 339, y0 + 60, x0 + 450, y0 + 78), '선택된 사용자')
+        box = add(doc, 50025, (x0 + 339, y0 + 83, x0 + 615, y0 + 383))
+        for k, name in enumerate(names[offset:offset + visible]):
+            top = y0 + 83 + k * 49
+            row = add(box, 50026, (x0 + 339, top, x0 + 600, top + 49))
+            add(row, 50006, (x0 + 339, top, x0 + 380, top + 49), '프로필 사진')
+            add(row, 50020, (x0 + 385, top, x0 + 520, top + 24), f'{name} [교사(초등)]')
+            add(row, 50020, (x0 + 385, top + 24, x0 + 520, top + 48), f'내선 {100 + offset + k}')
+        return nodes
+
+    def test_compare_scrolls_to_read_everyone_beyond_the_visible_rows(self):
+        """16명이 담겨 있는데 보이는 6명만 읽어 나머지를 '빠짐' 으로 보인 적이 있다."""
+        m = self.app_module
+        names = [f'{family}{given}' for family in '김이박최' for given in ('가람', '나래', '다솜', '라온')]
+        state = {'offset': 4, 'pos': (11, 22)}          # 사용자가 조금 내려 둔 상태에서 시작
+
+        def scroll(clicks):
+            state['offset'] = max(0, min(len(names) - 6, state['offset'] - clicks * 2))
+
+        def move_to(x, y=None):
+            state['pos'] = (x, y)
+
+        fake = types.SimpleNamespace(scroll=scroll, moveTo=move_to,
+                                     position=lambda: state['pos'])
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (10,)]
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes',
+                             side_effect=lambda *a, **k: self._scrolling_list_nodes(names, state['offset'])), \
+                patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
+            got, why = self.app._read_messenger_selected()
+        self.assertEqual(why, '')
+        self.assertEqual([row.split(' ')[0] for row in got], names)
+        self.assertEqual(state['pos'], (11, 22), '마우스를 제자리에 돌려놓지 않았습니다')
+        self.assertEqual(state['offset'], 0, '목록을 맨 위로 돌려놓지 않았습니다')
+
+    def test_scrolling_a_list_that_shows_everyone_counts_each_person_once(self):
+        """목록이 처음부터 다 읽히면 스크롤해도 같은 사람을 두 번 세지 않는다."""
+        m = self.app_module
+        names = [f'{family}{given}' for family in '김이박' for given in ('가람', '나래', '다솜')]
+        fake = types.SimpleNamespace(scroll=lambda clicks: None, moveTo=lambda *a: None,
+                                     position=lambda: (0, 0))
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (10,)]
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes',
+                             side_effect=lambda *a, **k: self._scrolling_list_nodes(names, 0, visible=20)), \
+                patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
+            got, _why = self.app._read_messenger_selected()
+        self.assertEqual(len(got), len(names))
+
+    def test_reading_skips_the_left_panel_so_the_limit_does_not_cut_the_list(self):
+        """왼쪽 조직도는 요소가 수천 개다. 그 속을 읽지 않아야 오른쪽 목록을 끝까지 읽는다."""
+
+        class Rect:
+            def __init__(self, r):
+                self.left, self.top, self.right, self.bottom = r
+
+        class El:
+            def __init__(self, name, rect, kids=()):
+                self.CurrentName, self.CurrentControlType = name, 50000
+                self.CurrentBoundingRectangle, self.CurrentIsOffscreen = Rect(rect), False
+                self.kids = list(kids)
+
+        class Walker:
+            def __init__(self):
+                self.parent_of = {}
+
+            def GetFirstChildElement(self, el):
+                for kid in el.kids:
+                    self.parent_of[id(kid)] = el
+                return el.kids[0] if el.kids else None
+
+            def GetNextSiblingElement(self, el):
+                sibs = self.parent_of[id(el)].kids
+                i = sibs.index(el)
+                return sibs[i + 1] if i + 1 < len(sibs) else None
+
+        left = El('조직도', (0, 0, 300, 500), [El(f'잎{k}', (0, k, 300, k + 1)) for k in range(50)])
+        right = El('선택된 사용자', (400, 0, 700, 500), [El(f'사람{k}', (400, k, 700, k + 1)) for k in range(5)])
+        root = El('창', (0, 0, 700, 500), [left, right])
+        uia = types.SimpleNamespace(ElementFromHandle=lambda h: root, RawViewWalker=Walker())
+        names = [n['name'] for n in self.app._uia_nodes(uia, 1, min_x=350)]
+        self.assertIn('조직도', names)
+        self.assertFalse(any(n.startswith('잎') for n in names))
+        self.assertEqual(sum(n.startswith('사람') for n in names), 5)
+        everything = [n['name'] for n in self.app._uia_nodes(uia, 1)]
+        self.assertEqual(sum(n.startswith('잎') for n in everything), 50)
+
     def test_compare_looks_at_the_next_window_when_the_top_one_has_no_people(self):
         """맨 위 창이 안 뜬 화면(제목 줄만 읽힘)이면 아래 창에서 담긴 사람을 읽는다."""
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
@@ -1755,7 +1868,7 @@ class AppFlowTest(unittest.TestCase):
         gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (30, 10)]
         blank = _photo_rows_nodes(0, with_label=False)
 
-        def nodes_of(uia, hwnd, limit=3000):
+        def nodes_of(uia, hwnd, limit=3000, min_x=None):
             return blank if hwnd == 30 else _photo_rows_nodes(2)
 
         with patch.object(self.app, '_win32gui', return_value=gui), \

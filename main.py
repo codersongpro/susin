@@ -39,6 +39,8 @@ from automation import (
     FAIL_SAME_NAME_SKIPPED,
     count_message_for,
     search_count_in,
+    merge_scrolled_rows,
+    selected_rows_anchor,
     guess_selected_list,
     pick_selected_list,
     person_rows,
@@ -464,7 +466,8 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   다 끝나면 소통메신저 [선택된 사용자] 를 읽어 소통픽 명단과 맞춰 봅니다.
   들어간 사람, 빠진 사람, 소통메신저에만 있는 사람을 나눠 보여 줍니다.
-  스크롤해야 보이는 아래쪽 사람까지 읽습니다.
+  스크롤해야 보이는 아래쪽 사람까지 읽습니다. 이때 마우스가 잠깐 목록 위로 가서
+  목록을 한 칸씩 내리며 읽고, 다 읽으면 제자리로 돌아옵니다.
   빠진 사람이 있으면 [누락된 N명 소통메신저에 추가] 를 누르세요.
   그 사람들만 다시 담고, 다 담은 뒤 다시 맞춰 봅니다.
   [소통메신저와 비교] 를 누르면 언제든 다시 맞춰 볼 수 있습니다.
@@ -4077,8 +4080,12 @@ class App:
             logging.info('UI 자동화를 쓸 수 없습니다: %s', exc)
             return None, str(exc)
 
-    def _uia_nodes(self, uia, hwnd, limit: int = 3000) -> list:
-        """창 안의 요소를 모두 모은다. 이름은 화면에 내보내지 않고 판단에만 쓴다."""
+    def _uia_nodes(self, uia, hwnd, limit: int = 6000, min_x=None) -> list:
+        """창 안의 요소를 모두 모은다. 이름은 화면에 내보내지 않고 판단에만 쓴다.
+
+        min_x 를 주면 그보다 왼쪽에 통째로 있는 요소의 속은 읽지 않는다. 왼쪽 조직도에는
+        요소가 수천 개라, 다 읽다가 개수 제한에 걸려 오른쪽 [선택된 사용자] 를 덜 읽을 수 있다.
+        """
         try:
             root = uia.ElementFromHandle(hwnd)
             walker = uia.RawViewWalker
@@ -4101,6 +4108,9 @@ class App:
             except Exception:
                 continue
             nodes.append(node)
+            left, _top, right, _bottom = node['rect']
+            if min_x is not None and parent != -1 and left < right < min_x:
+                continue
             kids = []
             try:
                 child = walker.GetFirstChildElement(element)
@@ -4111,13 +4121,16 @@ class App:
                 logging.debug('UI 자동화 자식 읽기 실패: %s', exc)
             for kid in reversed(kids):
                 stack.append((kid, node['id']))
+        if stack:
+            logging.warning('UI 자동화: 요소가 %d개를 넘어 나머지는 읽지 않았습니다', limit)
         return nodes
 
-    def _read_uia_nodes(self, uia, window):
+    def _read_uia_nodes(self, uia, window, min_x=None):
         """크롬 화면은 누가 읽으려 할 때 비로소 내용을 내주므로 몇 번 다시 읽는다."""
         nodes, tries = [], 0
         for tries in range(1, 5):
-            nodes = self._uia_nodes(uia, window)
+            nodes = self._uia_nodes(uia, window, min_x=min_x) if min_x is not None \
+                else self._uia_nodes(uia, window)
             if len(nodes) >= 30:
                 break
             time.sleep(0.8)
@@ -4224,12 +4237,13 @@ class App:
         # 맨 위 창에서 담긴 사람을 못 읽으면(아직 안 뜬 화면, 빈 목록 따위) 다음 창을 본다.
         rows, seen_label, used = None, False, 0
         for index, window in enumerate(inside):
-            nodes, _tries = self._read_uia_nodes(uia, window)
+            nodes, _tries = self._read_uia_nodes(uia, window, min_x=point[0])
             found = selected_person_rows(nodes, point[0])
             logging.info('[선택된 사용자] 읽기: %d번째 창, 요소 %d개, 사람 줄 %d개',
                          index + 1, len(nodes), len(found))
             if found:
-                rows, used = found, index
+                rows, used = self._scroll_through_selected(uia, window, point[0], nodes, found), index
+                logging.info('[선택된 사용자] 스크롤하며 읽은 사람 줄 %d개', len(rows))
                 break
             if has_selected_label(nodes):
                 seen_label = True
@@ -4245,6 +4259,64 @@ class App:
             self.compare_note = (f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 {which}을 '
                                  '읽었습니다. 쓰지 않는 창은 닫아 두세요.')
         return rows, ''
+
+    # 스크롤 한 번에 한 칸만 내린다. 목록에 보이는 줄보다 적게 움직여야 앞뒤 화면이 겹쳐
+    # 이어 붙일 수 있다. 두 번 연달아 그대로면 맨 아래에 닿은 것으로 본다.
+    SCROLL_TOP_CLICKS = 60
+    SCROLL_PAUSE = 0.35
+    SCROLL_MAX_STEPS = 120
+
+    def _scroll_through_selected(self, uia, window, split_x, nodes, first):
+        """[선택된 사용자] 목록을 맨 위부터 끝까지 스크롤하며 담긴 사람을 모두 읽는다.
+
+        소통메신저 목록은 화면에 보이는 줄만 읽히는 일이 있다. 16명이 담겨 있는데 보이는
+        6명만 읽어 나머지를 '빠짐' 으로 보인 적이 있다. 목록 위에 마우스를 올려 한 칸씩
+        내리며 읽고, 겹친 줄은 한 번만 센다. 끝나면 목록을 맨 위로 돌리고 마우스를 제자리에 둔다.
+        """
+        if pyautogui is None or not first:
+            return first
+        anchor = selected_rows_anchor(nodes, split_x)
+        if anchor is None:
+            return first
+
+        def read():
+            return selected_person_rows(self._uia_nodes(uia, window, min_x=split_x), split_x)
+
+        try:
+            home = pyautogui.position()
+        except Exception:
+            home = None
+        collected = list(first)
+        try:
+            pyautogui.moveTo(*anchor)
+            pyautogui.scroll(self.SCROLL_TOP_CLICKS)
+            time.sleep(self.SCROLL_PAUSE)
+            last = read()
+            collected = merge_scrolled_rows([], last) if last else list(first)
+            still = 0
+            for _step in range(self.SCROLL_MAX_STEPS):
+                pyautogui.scroll(-1)
+                time.sleep(self.SCROLL_PAUSE)
+                now = read()
+                if not now or now == last:
+                    still += 1
+                    if still >= 2:
+                        break
+                    continue
+                still = 0
+                collected = merge_scrolled_rows(collected, now)
+                last = now
+            pyautogui.scroll(self.SCROLL_TOP_CLICKS)
+        except Exception as exc:
+            logging.info('[선택된 사용자] 스크롤하며 읽기 실패: %s', exc)
+        finally:
+            if home is not None:
+                try:
+                    pyautogui.moveTo(home[0], home[1])
+                except Exception:
+                    pass
+        # 스크롤이 실패해 덜 읽었으면 처음 읽은 것이 더 많을 수 있다
+        return collected if len(collected) >= len(first) else list(first)
 
     def _compare_with_messenger(self, quiet: bool = False):
         """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 누가 들어가고 빠졌는지 보여 준다.

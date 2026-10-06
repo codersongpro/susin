@@ -266,16 +266,10 @@ def _joined_texts(nodes):
     return {node['id']: ' '.join(pieces(node)) for node in nodes}, children
 
 
-def selected_person_rows(nodes, split_x: int) -> list:
-    """[선택된 사용자] 에 담긴 사람의 줄 글. '이름 [직위]' 가 있는 줄만 모은다.
-
-    목록 요소를 먼저 고르면, 담긴 사람이 한두 명일 때 '그룹단위 선택추가' 같은 제목 두 줄을
-    목록으로 잘못 고른다. 그래서 사람 줄을 먼저 찾는다. 오른쪽 화살표 버튼보다 오른쪽에 있는
-    '이름 [직위]' 모양의 가장 작은 요소를 찾고, 그 줄의 사진과 소속까지 한 줄로 묶는다.
-    조직도와 검색 결과(버튼 왼쪽)는 들어오지 않는다. 한 명만 담겨 있어도 찾는다.
-    """
+def _selected_row_nodes(nodes, split_x: int):
+    """selected_person_rows 의 속. (위에서 아래 차례의 줄 요소, 요소별 글) 을 돌려준다."""
     if not nodes:
-        return []
+        return [], {}
     texts, children = _joined_texts(nodes)
     by_id = {node['id']: node for node in nodes}
     label = find_label(nodes, SELECTED_LABEL)
@@ -299,7 +293,7 @@ def selected_person_rows(nodes, split_x: int) -> list:
             continue
         minimal.append(node)
     if not minimal:
-        return []
+        return [], texts
 
     # 한 줄 안에 이름과 상태 메시지가 둘 다 '이름 [직위]' 모양일 수 있다 (예: '담임 [전담]').
     # 사진이나 빼기 단추 같은 것이 함께 있는 한 줄 틀 안에서는 맨 앞 하나만 사람이다.
@@ -345,7 +339,52 @@ def selected_person_rows(nodes, split_x: int) -> list:
             row = parent
         rows[row['id']] = row
     ordered = sorted(rows.values(), key=lambda n: (n['rect'][1], n['rect'][0]))
+    return ordered, texts
+
+
+def selected_person_rows(nodes, split_x: int) -> list:
+    """[선택된 사용자] 에 담긴 사람의 줄 글. '이름 [직위]' 가 있는 줄만 모은다.
+
+    목록 요소를 먼저 고르면, 담긴 사람이 한두 명일 때 '그룹단위 선택추가' 같은 제목 두 줄을
+    목록으로 잘못 고른다. 그래서 사람 줄을 먼저 찾는다. 오른쪽 화살표 버튼보다 오른쪽에 있는
+    '이름 [직위]' 모양의 가장 작은 요소를 찾고, 그 줄의 사진과 소속까지 한 줄로 묶는다.
+    조직도와 검색 결과(버튼 왼쪽)는 들어오지 않는다. 한 명만 담겨 있어도 찾는다.
+
+    화면에 보이는 줄만 내주는 목록이면 여기서는 보이는 줄까지만 나온다. 아래쪽은
+    스크롤하며 읽어 merge_scrolled_rows 로 잇는다.
+    """
+    ordered, texts = _selected_row_nodes(nodes, split_x)
     return [texts[row['id']] for row in ordered]
+
+
+def selected_rows_anchor(nodes, split_x: int):
+    """스크롤할 때 마우스를 올려 둘 자리. 맨 위에 보이는 사람 줄의 가운데. 없으면 None."""
+    ordered, _texts = _selected_row_nodes(nodes, split_x)
+    for row in ordered:
+        left, top, right, bottom = row['rect']
+        if right > left and bottom > top:
+            return (left + right) // 2, (top + bottom) // 2
+    return None
+
+
+def merge_scrolled_rows(seen: list, now: list) -> list:
+    """스크롤 전에 읽은 줄(seen) 뒤에 스크롤 뒤에 읽은 줄(now) 을 잇는다.
+
+    두 번 읽은 화면은 위아래가 겹친다. seen 의 끝과 now 의 앞이 가장 길게 겹치는 곳을 찾아
+    겹친 줄은 한 번만 남긴다. 줄 글이 같은 두 사람(같은 이름, 같은 직위)이 있어도 순서로
+    맞추므로 한 사람으로 합쳐지지 않는다.
+    """
+    seen, now = list(seen), list(now)
+    if not seen:
+        return now
+    for k in range(min(len(seen), len(now)), 0, -1):
+        if seen[-k:] == now[:k]:
+            return seen + now[k:]
+    # now 가 seen 안에 통째로 들어 있으면(목록이 이미 다 보였던 경우) 더할 것이 없다
+    for start in range(len(seen) - len(now) + 1):
+        if seen[start:start + len(now)] == now:
+            return seen
+    return seen + now
 
 
 def has_selected_label(nodes) -> bool:
