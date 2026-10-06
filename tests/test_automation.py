@@ -373,3 +373,65 @@ class ScrolledListTest(unittest.TestCase):
         self.assertTrue(970 + 339 <= x <= 970 + 600)
         self.assertTrue(120 + 83 <= y <= 120 + 83 + 49)
         self.assertIsNone(selected_rows_anchor(photo_rows_nodes(0), 1284))
+
+
+def hidden_rows_nodes(total=16, visible=6, left_hidden=True):
+    """2026-10-06 실제 증상. 16명이 담겨 있는데 화면에는 6명만 보인다.
+
+    크롬 화면은 스크롤해야 보이는 줄의 자리를 (0, 0, 0, 0) 으로 내준다. 왼쪽 조직도에도
+    자리가 (0, 0, 0, 0) 인 '이름 [직위]' 줄이 있다 (펼치지 않은 가지).
+    """
+    nodes = []
+
+    def add(parent, kind, rect, name=''):
+        nodes.append({'id': len(nodes), 'parent': parent, 'type': kind, 'rect': rect,
+                      'name': name, 'offscreen': rect == (0, 0, 0, 0)})
+        return len(nodes) - 1
+
+    x0, y0 = 970, 120
+    doc = add(-1, 50030, (x0, y0, x0 + 630, y0 + 600))
+    tree = add(doc, 50023, (x0 + 10, y0 + 150, x0 + 290, y0 + 530))
+    for k in range(12):
+        rect = (x0 + 10, y0 + 150 + k * 20, x0 + 290, y0 + 170 + k * 20) if k < 6 else (0, 0, 0, 0)
+        add(tree, 50024, rect, f'조직김{k} [교사(초등)]')
+    add(doc, 50020, (x0 + 339, y0 + 60, x0 + 450, y0 + 78), '선택된 사용자')
+    box = add(doc, 50025, (x0 + 339, y0 + 83, x0 + 615, y0 + 383))
+    names = [f'{a}{b}' for a in '권김박이' for b in ('가람', '나래', '다솜', '라온')][:total]
+    for k, name in enumerate(names):
+        if k < visible:
+            top = y0 + 83 + k * 49
+            row_r, photo_r = (x0 + 339, top, x0 + 600, top + 49), (x0 + 339, top, x0 + 380, top + 49)
+            name_r, dept_r = (x0 + 385, top, x0 + 520, top + 24), (x0 + 385, top + 24, x0 + 520, top + 48)
+        else:
+            row_r = photo_r = name_r = dept_r = (0, 0, 0, 0)
+        row = add(box, 50026, row_r)
+        add(row, 50006, photo_r, '프로필 사진')
+        add(row, 50020, name_r, f'{name} [교사(초등)]')
+        add(row, 50020, dept_r, f'내선 {200 + k}')
+    group = add(doc, 50025, (x0 + 339, y0 + 400, x0 + 615, y0 + 417))
+    add(group, 50020, (x0 + 339, y0 + 400, x0 + 450, y0 + 417), '그룹단위 선택추가')
+    return nodes, names
+
+
+class RowsBelowTheFoldTest(unittest.TestCase):
+    """스크롤해야 보이는 줄의 자리가 비어 있어도 목록 상자 안이면 사람이다."""
+
+    def test_all_sixteen_are_read_not_only_the_six_on_screen(self):
+        from automation import selected_rows_seen
+        nodes, names = hidden_rows_nodes()
+        rows, visible = selected_rows_seen(nodes, 1284)
+        self.assertEqual(visible, 6)
+        self.assertEqual([r.split(' ')[0] for r in rows], names)
+        self.assertTrue(all('내선' in r for r in rows), '소속 줄까지 한 줄로 묶어야 합니다')
+
+    def test_hidden_rows_of_the_left_tree_do_not_come_in(self):
+        from automation import selected_person_rows
+        nodes, _names = hidden_rows_nodes()
+        rows = selected_person_rows(nodes, 1284)
+        self.assertFalse(any(r.startswith('조직김') for r in rows))
+
+    def test_when_everything_is_on_screen_nothing_changes(self):
+        from automation import selected_rows_seen
+        nodes, names = hidden_rows_nodes(total=4, visible=4)
+        rows, visible = selected_rows_seen(nodes, 1284)
+        self.assertEqual((len(rows), visible), (4, 4))

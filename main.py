@@ -41,6 +41,7 @@ from automation import (
     search_count_in,
     merge_scrolled_rows,
     selected_rows_anchor,
+    selected_rows_seen,
     guess_selected_list,
     pick_selected_list,
     person_rows,
@@ -4236,14 +4237,24 @@ class App:
         # 여럿이 겹쳐 있으면 맨 위 창부터 읽는다. 자동 선택도 맨 위 창을 누른다.
         # 맨 위 창에서 담긴 사람을 못 읽으면(아직 안 뜬 화면, 빈 목록 따위) 다음 창을 본다.
         rows, seen_label, used = None, False, 0
+        self.compare_read_info = ''
         for index, window in enumerate(inside):
             nodes, _tries = self._read_uia_nodes(uia, window, min_x=point[0])
-            found = selected_person_rows(nodes, point[0])
-            logging.info('[선택된 사용자] 읽기: %d번째 창, 요소 %d개, 사람 줄 %d개',
-                         index + 1, len(nodes), len(found))
+            found, visible = selected_rows_seen(nodes, point[0])
+            logging.info('[선택된 사용자] 읽기: %d번째 창, 요소 %d개, 사람 줄 %d개 (화면에 보인 줄 %d개)',
+                         index + 1, len(nodes), len(found), visible)
             if found:
-                rows, used = self._scroll_through_selected(uia, window, point[0], nodes, found), index
-                logging.info('[선택된 사용자] 스크롤하며 읽은 사람 줄 %d개', len(rows))
+                used = index
+                if len(found) > visible:
+                    # 화면 밖 줄까지 읽혔다. 스크롤할 필요가 없다.
+                    rows = found
+                    self.compare_read_info = (f'목록에서 {len(rows)}명을 읽었습니다 '
+                                              f'(화면에 보인 {visible}명과 스크롤해야 보이는 '
+                                              f'{len(rows) - visible}명).')
+                else:
+                    rows, how = self._scroll_through_selected(uia, window, point[0], nodes, found)
+                    self.compare_read_info = f'목록에서 {len(rows)}명을 읽었습니다 ({how}).'
+                logging.info('[선택된 사용자] %s', self.compare_read_info)
                 break
             if has_selected_label(nodes):
                 seen_label = True
@@ -4253,11 +4264,12 @@ class App:
             return None, ('[선택된 사용자] 목록을 찾지 못했습니다. [사용자 선택] 창이 완전히 '
                           '뜬 다음에 다시 눌러 주세요. 계속 안 되면 [위치 설정] 탭에서 '
                           '6번 자리를 다시 확인해 주세요.')
-        self.compare_note = ''
+        notes = [self.compare_read_info] if self.compare_read_info else []
         if len(inside) > 1:
             which = '맨 위 창' if used == 0 else f'위에서 {used + 1}번째 창'
-            self.compare_note = (f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 {which}을 '
-                                 '읽었습니다. 쓰지 않는 창은 닫아 두세요.')
+            notes.append(f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 {which}을 '
+                         '읽었습니다. 쓰지 않는 창은 닫아 두세요.')
+        self.compare_note = ' '.join(notes)
         return rows, ''
 
     # 스크롤 한 번에 한 칸만 내린다. 목록에 보이는 줄보다 적게 움직여야 앞뒤 화면이 겹쳐
@@ -4274,10 +4286,10 @@ class App:
         내리며 읽고, 겹친 줄은 한 번만 센다. 끝나면 목록을 맨 위로 돌리고 마우스를 제자리에 둔다.
         """
         if pyautogui is None or not first:
-            return first
+            return first, '화면에 보인 줄만 읽음'
         anchor = selected_rows_anchor(nodes, split_x)
         if anchor is None:
-            return first
+            return first, '화면에 보인 줄만 읽음'
 
         def read():
             return selected_person_rows(self._uia_nodes(uia, window, min_x=split_x), split_x)
@@ -4286,7 +4298,13 @@ class App:
             home = pyautogui.position()
         except Exception:
             home = None
+        if home is not None and (home[0] <= 2 or home[1] <= 2):
+            # 긴급 중지로 마우스가 화면 모서리에 있다. 움직이면 안전장치에 걸리고,
+            # 사용자도 멈추려던 참이므로 마우스를 건드리지 않는다.
+            return first, ('마우스가 화면 모서리에 있어 스크롤하지 않았습니다. '
+                           '[소통메신저와 비교] 를 다시 누르면 아래쪽까지 읽습니다')
         collected = list(first)
+        steps = 0
         try:
             pyautogui.moveTo(*anchor)
             pyautogui.scroll(self.SCROLL_TOP_CLICKS)
@@ -4304,11 +4322,13 @@ class App:
                         break
                     continue
                 still = 0
+                steps += 1
                 collected = merge_scrolled_rows(collected, now)
                 last = now
             pyautogui.scroll(self.SCROLL_TOP_CLICKS)
         except Exception as exc:
             logging.info('[선택된 사용자] 스크롤하며 읽기 실패: %s', exc)
+            return max(collected, list(first), key=len), f'스크롤하다 멈춤: {type(exc).__name__}'
         finally:
             if home is not None:
                 try:
@@ -4316,7 +4336,11 @@ class App:
                 except Exception:
                     pass
         # 스크롤이 실패해 덜 읽었으면 처음 읽은 것이 더 많을 수 있다
-        return collected if len(collected) >= len(first) else list(first)
+        rows = collected if len(collected) >= len(first) else list(first)
+        if steps:
+            return rows, f'목록을 {steps}번 내려 가며 읽음'
+        return rows, '스크롤해도 목록이 그대로여서 화면에 보인 줄만 읽음'
+
 
     def _compare_with_messenger(self, quiet: bool = False):
         """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 누가 들어가고 빠졌는지 보여 준다.

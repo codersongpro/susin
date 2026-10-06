@@ -1803,6 +1803,54 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual(state['pos'], (11, 22), '마우스를 제자리에 돌려놓지 않았습니다')
         self.assertEqual(state['offset'], 0, '목록을 맨 위로 돌려놓지 않았습니다')
 
+    def test_compare_reads_rows_below_the_fold_without_moving_the_mouse(self):
+        """16명 중 6명만 보이면 나머지 10명은 자리가 비어 있다. 마우스를 건드리지 않고 다 읽는다."""
+        try:
+            from test_automation import hidden_rows_nodes
+        except ImportError:
+            from tests.test_automation import hidden_rows_nodes
+        m = self.app_module
+        nodes, names = hidden_rows_nodes()
+        moved = []
+        fake = types.SimpleNamespace(scroll=lambda c: moved.append(c), moveTo=lambda *a: moved.append(a),
+                                     position=lambda: (500, 500))
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (10,)]
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', return_value=nodes), \
+                patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
+            got, why = self.app._read_messenger_selected()
+        self.assertEqual(why, '')
+        self.assertEqual(len(got), 16)
+        self.assertEqual(moved, [])
+        self.assertIn('16명을 읽었습니다', self.app.compare_note)
+        self.assertIn('화면에 보인 6명', self.app.compare_note)
+
+    def test_compare_does_not_grab_the_mouse_from_the_corner_after_an_emergency_stop(self):
+        m = self.app_module
+        names = [f'{family}{given}' for family in '김이' for given in ('가람', '나래', '다솜', '라온')]
+        moved = []
+        fake = types.SimpleNamespace(scroll=lambda c: moved.append(c), moveTo=lambda *a: moved.append(a),
+                                     position=lambda: (0, 0))
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui.GetWindowText = lambda h: '사용자 선택'
+        gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
+        gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (10,)]
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes',
+                             side_effect=lambda *a, **k: self._scrolling_list_nodes(names, 0)), \
+                patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
+            got, _why = self.app._read_messenger_selected()
+        self.assertEqual(len(got), 6)
+        self.assertEqual(moved, [])
+        self.assertIn('화면 모서리', self.app.compare_note)
+
     def test_scrolling_a_list_that_shows_everyone_counts_each_person_once(self):
         """목록이 처음부터 다 읽히면 스크롤해도 같은 사람을 두 번 세지 않는다."""
         m = self.app_module

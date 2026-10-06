@@ -266,16 +266,28 @@ def _joined_texts(nodes):
     return {node['id']: ' '.join(pieces(node)) for node in nodes}, children
 
 
+def _empty_rect(node) -> bool:
+    left, top, right, bottom = node['rect']
+    return right <= left or bottom <= top
+
+
 def _selected_row_nodes(nodes, split_x: int):
-    """selected_person_rows 의 속. (위에서 아래 차례의 줄 요소, 요소별 글) 을 돌려준다."""
+    """selected_person_rows 의 속. (위에서 아래 차례의 줄 요소, 요소별 글, 화면에 보인 줄 수).
+
+    먼저 화면에 보이는 사람 줄을 찾고, 그 줄들이 든 목록 상자 안에서 화면 밖에 있는 줄까지
+    모은다. 크롬 화면은 스크롤해야 보이는 줄의 자리를 (0, 0, 0, 0) 으로 내주는 일이 있어,
+    자리로만 거르면 보이는 줄만 남는다. 16명이 담겨 있는데 6명만 읽은 적이 있다.
+    """
     if not nodes:
-        return [], {}
+        return [], {}, 0
     texts, children = _joined_texts(nodes)
     by_id = {node['id']: node for node in nodes}
     label = find_label(nodes, SELECTED_LABEL)
     label_top = label['rect'][1] - 2 if label is not None else None
 
     def on_right(node):
+        if _empty_rect(node):
+            return False
         left, top, right, _bottom = node['rect']
         if (left + right) / 2 < split_x:
             return False
@@ -285,61 +297,106 @@ def _selected_row_nodes(nodes, split_x: int):
         # 맨 앞이 '이름 [직위]' 인 글만 사람 줄이다. 상태 메시지(이름 옆 글)에 든 괄호는 거른다.
         return bool(PERSON_ROW_START.search(texts.get(node['id'], '')))
 
-    minimal = []
-    for node in nodes:
-        if not on_right(node) or not matches(node):
-            continue
-        if any(matches(kid) for kid in children.get(node['id'], [])):
-            continue
-        minimal.append(node)
-    if not minimal:
-        return [], texts
+    def rows_of(eligible):
+        minimal = []
+        for node in nodes:
+            if not eligible(node) or not matches(node):
+                continue
+            if any(matches(kid) for kid in children.get(node['id'], [])):
+                continue
+            minimal.append(node)
+        if not minimal:
+            return []
 
-    # 한 줄 안에 이름과 상태 메시지가 둘 다 '이름 [직위]' 모양일 수 있다 (예: '담임 [전담]').
-    # 사진이나 빼기 단추 같은 것이 함께 있는 한 줄 틀 안에서는 맨 앞 하나만 사람이다.
-    text_like = {50020, 50029}
-    by_parent = {}
-    for node in minimal:
-        by_parent.setdefault(node.get('parent'), []).append(node)
-    drop = set()
-    for parent_id, group in by_parent.items():
-        parent = by_id.get(parent_id)
-        if parent is None or len(group) < 2:
-            continue
-        has_row_parts = any(kid['type'] not in text_like and kid['id'] not in
-                            {g['id'] for g in group} for kid in children.get(parent_id, []))
-        height = max(group[0]['rect'][3] - group[0]['rect'][1], 1)
-        if has_row_parts and parent['rect'][3] - parent['rect'][1] <= max(120, height * 2.6):
-            first = min(group, key=lambda n: (n['rect'][1], n['rect'][0]))
-            drop.update(n['id'] for n in group if n is not first)
-    minimal = [node for node in minimal if node['id'] not in drop]
+        # 한 줄 안에 이름과 상태 메시지가 둘 다 '이름 [직위]' 모양일 수 있다 (예: '담임 [전담]').
+        # 사진이나 빼기 단추 같은 것이 함께 있는 한 줄 틀 안에서는 맨 앞 하나만 사람이다.
+        text_like = {50020, 50029}
+        by_parent = {}
+        for node in minimal:
+            by_parent.setdefault(node.get('parent'), []).append(node)
+        drop = set()
+        for parent_id, group in by_parent.items():
+            parent = by_id.get(parent_id)
+            if parent is None or len(group) < 2:
+                continue
+            has_row_parts = any(kid['type'] not in text_like and kid['id'] not in
+                                {g['id'] for g in group} for kid in children.get(parent_id, []))
+            height = max(group[0]['rect'][3] - group[0]['rect'][1], 1)
+            if has_row_parts and parent['rect'][3] - parent['rect'][1] <= max(120, height * 2.6):
+                first = min(group, key=lambda n: (n['rect'][1], n['rect'][0], n['id']))
+                drop.update(n['id'] for n in group if n is not first)
+        minimal = [node for node in minimal if node['id'] not in drop]
+        minimal_ids = {node['id'] for node in minimal}
 
-    minimal_ids = {node['id'] for node in minimal}
+        def below_count(node):
+            """이 요소 안에 든 사람 줄 수."""
+            total, stack = 0, [node]
+            while stack:
+                cur = stack.pop()
+                if cur['id'] in minimal_ids:
+                    total += 1
+                stack.extend(children.get(cur['id'], []))
+            return total
 
-    def below_count(node):
-        """이 요소 안에 든 사람 줄 수."""
-        total, stack = 0, [node]
-        while stack:
-            cur = stack.pop()
-            if cur['id'] in minimal_ids:
-                total += 1
-            stack.extend(children.get(cur['id'], []))
-        return total
+        rows = {}
+        for node in minimal:
+            height = max(node['rect'][3] - node['rect'][1], 1)
+            row = node
+            while True:
+                parent = by_id.get(row.get('parent'))
+                if parent is None or below_count(parent) != 1:
+                    break
+                if parent['rect'][3] - parent['rect'][1] > max(120, height * 2.6):
+                    break
+                row = parent
+            rows[row['id']] = row
+        return list(rows.values())
 
-    rows = {}
-    for node in minimal:
-        height = max(node['rect'][3] - node['rect'][1], 1)
-        row = node
-        while True:
-            parent = by_id.get(row.get('parent'))
-            if parent is None or below_count(parent) != 1:
-                break
-            if parent['rect'][3] - parent['rect'][1] > max(120, height * 2.6):
-                break
-            row = parent
-        rows[row['id']] = row
-    ordered = sorted(rows.values(), key=lambda n: (n['rect'][1], n['rect'][0]))
-    return ordered, texts
+    visible = rows_of(on_right)
+    if not visible:
+        return [], texts, 0
+    visible = sorted(visible, key=lambda n: (n['rect'][1], n['rect'][0]))
+
+    # 보이는 줄이 든 목록 상자. 그 안이면 자리가 비어 있는(화면 밖) 줄도 사람 줄이다.
+    box = _list_box_of(visible, by_id)
+    if box is None:
+        return visible, texts, len(visible)
+    inside = set()
+    stack = [box['id']]
+    while stack:
+        cur = stack.pop()
+        inside.add(cur)
+        stack.extend(kid['id'] for kid in children.get(cur, []))
+    every = rows_of(lambda n: n['id'] in inside and (on_right(n) or _empty_rect(n) or n.get('offscreen')))
+    if len(every) <= len(visible):
+        return visible, texts, len(visible)
+    # 화면 밖 줄은 자리로 줄을 세울 수 없으므로 화면 읽어 주기가 내준 차례(문서 차례)를 따른다
+    return sorted(every, key=lambda n: n['id']), texts, len(visible)
+
+
+def _list_box_of(rows, by_id):
+    """줄들을 모두 품은 가장 작은 요소. 오른쪽 목록이 아니면(왼쪽 판까지 걸치면) None."""
+    def chain(node):
+        out = []
+        cur = by_id.get(node.get('parent'))
+        while cur is not None:
+            out.append(cur)
+            cur = by_id.get(cur.get('parent'))
+        return out
+
+    first = chain(rows[0])
+    others = [{n['id'] for n in chain(row)} for row in rows[1:]]
+    for candidate in first:
+        if all(candidate['id'] in ids for ids in others):
+            if candidate.get('parent', -1) == -1 or _empty_rect(candidate):
+                return None
+            left, _top, right, _bottom = candidate['rect']
+            row_left = min(row['rect'][0] for row in rows)
+            # 목록 상자는 사람 줄보다 조금 넓을 뿐이다. 창 전체나 왼쪽 판까지 걸친 틀은 아니다
+            if left < row_left - 80:
+                return None
+            return candidate
+    return None
 
 
 def selected_person_rows(nodes, split_x: int) -> list:
@@ -353,13 +410,19 @@ def selected_person_rows(nodes, split_x: int) -> list:
     화면에 보이는 줄만 내주는 목록이면 여기서는 보이는 줄까지만 나온다. 아래쪽은
     스크롤하며 읽어 merge_scrolled_rows 로 잇는다.
     """
-    ordered, texts = _selected_row_nodes(nodes, split_x)
+    ordered, texts, _visible = _selected_row_nodes(nodes, split_x)
     return [texts[row['id']] for row in ordered]
+
+
+def selected_rows_seen(nodes, split_x: int):
+    """(사람 줄 글 목록, 그중 화면에 보인 줄 수). 둘이 다르면 화면 밖 줄까지 읽은 것이다."""
+    ordered, texts, visible = _selected_row_nodes(nodes, split_x)
+    return [texts[row['id']] for row in ordered], visible
 
 
 def selected_rows_anchor(nodes, split_x: int):
     """스크롤할 때 마우스를 올려 둘 자리. 맨 위에 보이는 사람 줄의 가운데. 없으면 None."""
-    ordered, _texts = _selected_row_nodes(nodes, split_x)
+    ordered, _texts, _visible = _selected_row_nodes(nodes, split_x)
     for row in ordered:
         left, top, right, bottom = row['rect']
         if right > left and bottom > top:
