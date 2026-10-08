@@ -125,16 +125,22 @@
   .rule.t em { color: var(--tertiary-l); }
 
   /* F. 끝 */
-  #logo { position: absolute; left: 0; right: 0; top: 196px; text-align: center; font-size: 210px; font-weight: 700;
+  #logo { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font-size: 210px; font-weight: 700;
           letter-spacing: -.06em; line-height: 1; opacity: 0;
           background: linear-gradient(100deg, #fff 0%, #fff 40%, #C9CEFF 50%, #fff 60%, #fff 100%);
           background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
           filter: drop-shadow(0 0 50px rgba(140, 150, 255, .45)); }
-  #logo-sub { position: absolute; left: 0; right: 0; top: 452px; text-align: center; font-size: 40px; font-weight: 700;
+  #logo-sub { position: absolute; left: 0; right: 0; top: 404px; text-align: center; font-size: 40px; font-weight: 700;
               letter-spacing: -.02em; opacity: 0; color: rgba(255,255,255,.7); }
   #logo-sub .s { color: var(--tertiary-l); } #logo-sub .o { color: var(--primary-l); }
-  #logo-meta { position: absolute; left: 0; right: 0; top: 530px; text-align: center; font-size: 24px; font-weight: 700;
+  #logo-meta { position: absolute; left: 0; right: 0; top: 476px; text-align: center; font-size: 24px; font-weight: 700;
                color: rgba(225, 228, 255, .6); opacity: 0; letter-spacing: .02em; }
+  /* 만든 사람 (표기는 랜딩페이지와 같다) */
+  #credit { position: absolute; left: 0; right: 0; top: 566px; text-align: center; opacity: 0; }
+  #credit .line { width: 56px; height: 2px; margin: 0 auto 18px; background: rgba(225, 228, 255, .35); }
+  #credit .k { font-size: 16px; font-weight: 700; letter-spacing: .08em; color: rgba(225, 228, 255, .5); }
+  #credit b { display: block; margin-top: 6px; font-size: 30px; font-weight: 700; letter-spacing: -.02em; color: #fff; }
+  #credit span { display: block; margin-top: 4px; font-size: 19px; font-weight: 400; color: rgba(225, 228, 255, .72); letter-spacing: .01em; }
   .spark { position: absolute; left: 640px; top: 300px; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: 0; }
 </style>
 </head>
@@ -201,6 +207,8 @@
       <div id="logo">신통픽</div>
       <div id="logo-sub"><span class="s">수신픽</span> + <span class="o">소통픽</span></div>
       <div id="logo-meta">무료 &nbsp;·&nbsp; Windows &nbsp;·&nbsp; 설치 없이 실행</div>
+      <div id="credit"><div class="line"></div><div class="k">만든 사람</div>
+        <b>송동석(Dustin)</b><span>Teacher / App developer / Data analyst</span></div>
     </div>
   </div>
   <div id="streak"></div>
@@ -535,6 +543,7 @@ window.renderAt = function (t) {
       backgroundPosition: `${lerp(120, -40, tw(t, 27.8, 29.6, E.inOut))}% 0` });
   rise($('logo-sub'), t, 27.7, 0, 26);
   rise($('logo-meta'), t, 28.4, 0, 18);
+  rise($('credit'), t, CUE.credit, 0, 22);
 };
 
 const fixed = new URLSearchParams(location.search).get('t');

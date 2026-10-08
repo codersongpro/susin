@@ -325,6 +325,9 @@ def build(cues):
     mix.add(fin, final * np.exp(-t * .35), .6, verb=.7)
     mix.add(fin, bell(1318.5, 4.0) * .6 + bell(1975.5, 4.0) * .3, .28, verb=.9)
     mix.add(fin, lowpass_fft(saw(A1, t) * np.exp(-t * .6), 260), .45)
+    # 만든 사람이 나올 때 작은 종소리 두 번
+    mix.add(cues['credit'], bell(1318.5, 1.6), .12, pan=-.2, verb=.7)
+    mix.add(cues['credit'] + .18, bell(1975.5, 1.6), .09, pan=.2, verb=.7)
 
     out = mix.render()[:, :int(total * SR)]
     # 마무리: 낮은 웅웅거림 빼고, 부드럽게 눌러 소리 크기를 맞추고, 끝을 닫는다
