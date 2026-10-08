@@ -87,6 +87,11 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
   `tools/video/render.js` 가 프레임마다 찍어 만든다 (실제 앱 캡처를 쓰므로 화면을 다시 찍으면 영상도 다시 만든다).
   `FFMPEG=<ffmpeg 경로> node tools/video/render.js sotong` 처럼 돌린다. ffmpeg 는 pip 의 imageio-ffmpeg 것을 써도 된다.
   `.vercelignore` 는 assets 중 video 폴더만 내보낸다.
+- 랜딩페이지 맨 앞은 소개 영상 `assets/video/intro.mp4` (1920x1080, 소리 있음, 6MB 아래)다. 장면은 `tools/video/intro.html`,
+  소리는 `tools/video/intro_sound.py` (numpy 로 합성, 남의 음원을 쓰지 않는다), 박자는 둘이 함께 읽는 `tools/video/intro_cues.js`
+  한 곳에 적는다. `node tools/video/render.js intro` 가 찍고 소리를 얹는다. 페이지에서는 소리 없이 저절로 돌고
+  (브라우저가 소리 있는 자동 재생을 막는다) [소리 켜기] 로 켠다. 움직임 줄이기를 켠 사람에게는 저절로 돌리지 않는다.
+  앱 화면을 다시 찍었으면 이 영상도 다시 만든다.
 
 ## 문체
 

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>신통픽 소개 영상</title>
+<!--
+  랜딩페이지 첫 화면에 자동으로 도는 소개 영상의 장면. tools/video/render.js intro 가
+  프레임마다 window.renderAt(초) 를 부르고 찍어 MP4 로 묶은 뒤 intro_sound.py 가 만든 소리를 얹는다.
+  박자는 intro_cues.js 한 곳에서 정한다. 그림은 실제 앱 캡처(assets/landing)이고 이름은 모두 지어낸 것이다.
+  문체 규칙(대시, 화살표, 광고 문구 쓰지 않기)은 랜딩페이지와 같다.
+  확인용: intro.html?t=12.4 처럼 열면 그 순간이 멈춰 보인다.
+-->
+<script src="intro_cues.js"></script>
+<style>
+  @font-face { font-family: 'Pretendard'; font-weight: 400; src: url('../../assets/fonts/Pretendard-Regular.ttf'); }
+  @font-face { font-family: 'Pretendard'; font-weight: 700; src: url('../../assets/fonts/Pretendard-Bold.ttf'); }
+  :root {
+    --primary: #4A53C9; --primary-l: #8E96FF; --primary-c: #E1E0FF;
+    --tertiary: #00695C; --tertiary-l: #4FD8BF; --tertiary-c: #A7F0E0;
+    --night: #0A0C22; --ink: #1A1B27;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; background: var(--night); }
+  body { font-family: 'Pretendard', sans-serif; color: #fff; word-break: keep-all; -webkit-font-smoothing: antialiased; }
+  .abs { position: absolute; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  #world { position: absolute; inset: 0; }
+
+  /* 바탕: 어두운 남색 위에 천천히 떠다니는 빛 세 개와 옅은 격자 */
+  #bg { position: absolute; inset: -80px; background: var(--night); }
+  .orb { position: absolute; width: 760px; height: 760px; border-radius: 50%; filter: blur(70px); opacity: .55; }
+  #orb1 { background: radial-gradient(circle, #5560E8 0%, rgba(85, 96, 232, 0) 68%); }
+  #orb2 { background: radial-gradient(circle, #13B79C 0%, rgba(19, 183, 156, 0) 68%); }
+  #orb3 { background: radial-gradient(circle, #E06AA8 0%, rgba(224, 106, 168, 0) 68%); }
+  #grid { position: absolute; inset: 0;
+          background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+          background-size: 64px 64px; }
+  #vignette { position: absolute; inset: 0; pointer-events: none;
+              background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(4,5,18,.75) 100%); }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #streak { position: absolute; top: -200px; height: 1120px; width: 220px; opacity: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0), rgba(200,210,255,.55), rgba(255,255,255,0));
+            transform: skewX(-18deg); filter: blur(6px); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+
+  /* A. 명단은 한 장인데 */
+  .stream { position: absolute; width: 420px; font-size: 22px; line-height: 44px; color: rgba(200, 206, 255, .16);
+            font-weight: 700; white-space: nowrap; }
+  .a-line { position: absolute; left: 96px; font-size: 92px; font-weight: 700; letter-spacing: -.045em; line-height: 1.05; }
+  .a-line em { font-style: normal; color: var(--primary-l); }
+  .a-line.t em { color: var(--tertiary-l); }
+  #dots { position: absolute; left: 860px; top: 230px; display: grid; grid-template-columns: repeat(6, 34px); gap: 22px; }
+  .dot { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(167, 240, 224, .35); }
+  #count { position: absolute; left: 96px; top: 300px; font-weight: 700; letter-spacing: -.06em; line-height: .9; }
+  #count b { font-size: 250px; font-weight: 700; }
+  #count small { font-size: 72px; letter-spacing: -.02em; margin-left: 14px; color: rgba(255,255,255,.7); }
+  #count-l { position: absolute; left: 104px; top: 560px; font-size: 28px; font-weight: 700; color: rgba(220, 224, 255, .75); }
+
+  /* B. 수신픽 + 소통픽 = 신통픽 */
+  #eq { position: absolute; left: 0; right: 0; top: 118px; display: flex; flex-direction: column; align-items: center; }
+  .eq-w { display: flex; align-items: baseline; gap: 26px; font-size: 128px; font-weight: 700; letter-spacing: -.055em;
+          line-height: 1.04; opacity: 0; }
+  .eq-w i { font-style: normal; font-weight: 400; color: rgba(255,255,255,.55); letter-spacing: 0; margin-right: -6px; }
+  .eq-w span.note { font-size: 24px; font-weight: 700; letter-spacing: 0; color: rgba(255,255,255,.62); width: 0; white-space: nowrap; }
+  #eq1 { color: var(--tertiary-l); }
+  #eq2 { color: var(--primary-l); }
+  #eq3 { color: #fff; text-shadow: 0 0 60px rgba(150, 160, 255, .55); }
+  #tag { position: absolute; left: 0; right: 0; top: 590px; text-align: center; font-size: 30px; font-weight: 700;
+         color: rgba(230, 232, 255, .85); opacity: 0; }
+  .ring { position: absolute; left: 640px; top: 360px; width: 10px; height: 10px; border-radius: 50%;
+          border: 3px solid rgba(255,255,255,.8); opacity: 0; }
+
+  /* C, D. 앱 화면 */
+  .chip { position: absolute; left: 64px; top: 150px; padding: 8px 18px; border-radius: 20px; font-size: 22px; font-weight: 700; opacity: 0; }
+  #c-chip { background: var(--tertiary-c); color: #00201B; }
+  #d-chip { background: var(--primary-c); color: #0A0F6E; }
+  .cap { position: absolute; left: 64px; top: 212px; width: 400px; font-size: 50px; font-weight: 700; letter-spacing: -.04em;
+         line-height: 1.2; opacity: 0; }
+  .cap small { display: block; margin-top: 22px; font-size: 22px; letter-spacing: -.01em; line-height: 1.5; font-weight: 400;
+               color: rgba(225, 228, 255, .78); }
+  .win { position: absolute; left: 474px; top: 104px; width: 760px; height: 481px; border-radius: 18px; overflow: hidden;
+         background: #F3F5FB; opacity: 0;
+         box-shadow: 0 40px 90px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255,255,255,.18), 0 0 80px rgba(120, 130, 255, .18); }
+  .win.t { box-shadow: 0 40px 90px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255,255,255,.18), 0 0 80px rgba(60, 220, 190, .18); }
+  .page { position: absolute; inset: 0; overflow: hidden; }
+  .cam { position: absolute; left: 0; top: 0; width: 1360px; height: 860px; transform-origin: 0 0; }
+  .cam > img { position: absolute; left: 0; top: 0; width: 1360px; height: 860px; }
+  .mask { position: absolute; }
+  .spot { position: absolute; border-radius: 10px; border: 3px solid var(--primary); opacity: 0;
+          box-shadow: 0 0 0 4000px rgba(10, 12, 40, .48); }
+  .spot.t { border-color: var(--tertiary); }
+  .cursor { position: absolute; width: 34px; height: 46px; transform-origin: 0 0; opacity: 0; }
+  .ripple { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%;
+            border: 4px solid var(--primary); opacity: 0; }
+  .ripple.t { border-color: var(--tertiary); }
+  .ovtext { position: absolute; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .pill { display: inline-block; padding: 1px 10px; border-radius: 8px; font-size: 17px; font-weight: 700; margin-left: 10px;
+          vertical-align: 8px; }
+  .pill.ok { background: #BDF0CB; color: #00210D; }
+  .pill.no { background: #F9DEDC; color: #410E0B; }
+  .logline { position: absolute; left: 178px; font-size: 17.5px; font-weight: 400; white-space: nowrap; color: #1B6B3A; }
+  .logline.bad { color: #B3261E; }
+
+  #file { position: absolute; left: 0; top: 0; width: 392px; padding: 22px 24px; border-radius: 20px; opacity: 0;
+          background: rgba(255,255,255,.96); color: var(--ink); box-shadow: 0 30px 70px rgba(0,0,0,.5);
+          display: grid; grid-template-columns: 64px 1fr; gap: 6px 18px; align-items: center; }
+  #file .xl { grid-row: span 2; width: 64px; height: 76px; border-radius: 10px; background: #1D6F42; position: relative; }
+  #file .xl::before { content: 'X'; position: absolute; left: 0; right: 0; top: 18px; text-align: center;
+                      font-size: 34px; font-weight: 700; color: #fff; }
+  #file .xl::after { content: ''; position: absolute; right: 0; top: 0; border-width: 0 16px 16px 0; border-style: solid;
+                     border-color: var(--night) rgba(255,255,255,.55) rgba(255,255,255,.55) var(--night); opacity: 0; }
+  #file b { font-size: 21px; letter-spacing: -.02em; }
+  #file .pills .pill { margin: 0 6px 0 0; vertical-align: 0; font-size: 15px; }
+
+  #dlg { position: absolute; left: 0; top: 0; width: 519px; height: 185px; border-radius: 16px; overflow: hidden;
+         box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.3); opacity: 0; }
+  #dlg img { display: block; width: 519px; height: 185px; }
+
+  /* E. 원칙 */
+  #rules { position: absolute; left: 0; right: 0; top: 168px; text-align: center; }
+  #rules .k { font-size: 26px; font-weight: 700; color: rgba(225, 228, 255, .7); opacity: 0; margin-bottom: 34px; }
+  .rule { font-size: 66px; font-weight: 700; letter-spacing: -.045em; line-height: 1.5; opacity: 0; }
+  .rule em { font-style: normal; color: var(--primary-l); }
+  .rule.t em { color: var(--tertiary-l); }
+
+  /* F. 끝 */
+  #logo { position: absolute; left: 0; right: 0; top: 196px; text-align: center; font-size: 210px; font-weight: 700;
+          letter-spacing: -.06em; line-height: 1; opacity: 0;
+          background: linear-gradient(100deg, #fff 0%, #fff 40%, #C9CEFF 50%, #fff 60%, #fff 100%);
+          background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+          filter: drop-shadow(0 0 50px rgba(140, 150, 255, .45)); }
+  #logo-sub { position: absolute; left: 0; right: 0; top: 452px; text-align: center; font-size: 40px; font-weight: 700;
+              letter-spacing: -.02em; opacity: 0; color: rgba(255,255,255,.7); }
+  #logo-sub .s { color: var(--tertiary-l); } #logo-sub .o { color: var(--primary-l); }
+  #logo-meta { position: absolute; left: 0; right: 0; top: 530px; text-align: center; font-size: 24px; font-weight: 700;
+               color: rgba(225, 228, 255, .6); opacity: 0; letter-spacing: .02em; }
+  .spark { position: absolute; left: 640px; top: 300px; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><div class="orb" id="orb1"></div><div class="orb" id="orb2"></div><div class="orb" id="orb3"></div><div id="grid"></div></div>
+  <div id="world">
+
+    <!-- A -->
+    <div class="scene" id="A">
+      <div class="stream" id="st1"></div>
+      <div class="stream" id="st2"></div>
+      <div class="a-line" id="a1" style="top:250px">명단은 <em>한 장</em>인데</div>
+      <div class="a-line t" id="a2" style="top:250px">수신 기관은<br><em>서른 곳</em></div>
+      <div id="dots"></div>
+      <div id="count"><b id="count-n">0</b><small>번 클릭</small></div>
+      <div id="count-l">조직도에서 한 곳씩 고르면</div>
+    </div>
+
+    <!-- B -->
+    <div class="scene" id="B">
+      <div id="eq">
+        <div class="eq-w" id="eq1">수신픽<span class="note">에듀파인 수신그룹</span></div>
+        <div class="eq-w" id="eq2"><i>+</i>소통픽<span class="note">소통메신저 수신자</span></div>
+        <div class="eq-w" id="eq3"><i>=</i>신통픽</div>
+      </div>
+      <div id="tag">수신자 고르기를 한 앱에서</div>
+      <div class="ring" id="ring1"></div><div class="ring" id="ring2"></div><div class="ring" id="ring3"></div>
+    </div>
+
+    <!-- C. 수신픽 -->
+    <div class="scene" id="C">
+      <div class="chip" id="c-chip">수신픽 · 에듀파인</div>
+      <div class="cap" id="c-cap1">줄여 쓴 이름도<br>정식 기관명으로<small>학성초는 학성초등학교로, 충북외고는 충북외국어고등학교로 바뀝니다.</small></div>
+      <div class="cap" id="c-cap2">같은 이름이 여럿이면<br>사람이 고릅니다<small>행정과는 여러 곳에 있어서 신통픽이 짐작해 넣지 않습니다.</small></div>
+      <div class="cap" id="c-cap3">에듀파인에 올릴<br>엑셀을 바로<small>개인수신그룹 일괄등록 양식에 값만 채웁니다. 빠진 곳은 사유와 함께 보여 줍니다.</small></div>
+      <div class="win t" id="c-win"></div>
+      <div id="file"><div class="xl"></div><b>2026 진천 초등학교.xlsx</b>
+        <div class="pills"><span class="pill ok">들어감 5곳</span><span class="pill no">빠짐 1곳</span></div></div>
+    </div>
+
+    <!-- D. 소통픽 -->
+    <div class="scene" id="D">
+      <div class="chip" id="d-chip">소통픽 · 소통메신저</div>
+      <div class="cap" id="d-cap1">소속과 이름만<br>골라 읽습니다<small>표에 직위나 부서가 섞여 있어도 기관과 이름으로 나눕니다.</small></div>
+      <div class="cap" id="d-cap2">이름마다 검색하고<br>대신 담습니다<small>소통메신저 [사용자 선택] 창에서 한 사람씩 찾아 받는 사람에 넣습니다.</small></div>
+      <div class="cap" id="d-cap3">같은 이름이 둘이면<br>멈추고 묻습니다<small>엉뚱한 분에게 가지 않도록, 맞는 분은 직접 고릅니다.</small></div>
+      <div class="win" id="d-win"></div>
+      <div id="dlg"><img src="../../assets/landing/sotong_pick.webp" alt=""></div>
+    </div>
+
+    <!-- E -->
+    <div class="scene" id="E">
+      <div id="rules">
+        <div class="k" id="rk">공문이 엉뚱한 곳으로 가지 않도록</div>
+        <div class="rule" id="r1"><em>짐작</em>은 확정하지 않습니다</div>
+        <div class="rule t" id="r2"><em>같은 이름</em>은 사람이 고릅니다</div>
+        <div class="rule" id="r3"><em>빠진 곳</em>은 반드시 알립니다</div>
+      </div>
+    </div>
+
+    <!-- F -->
+    <div class="scene" id="F">
+      <div id="logo">신통픽</div>
+      <div id="logo-sub"><span class="s">수신픽</span> + <span class="o">소통픽</span></div>
+      <div id="logo-meta">무료 &nbsp;·&nbsp; Windows &nbsp;·&nbsp; 설치 없이 실행</div>
+    </div>
+  </div>
+  <div id="streak"></div>
+  <div id="vignette"></div>
+  <div id="flash"></div>
+</div>
+
+<script>
+const CUE = window.INTRO_CUES;
+window.TOTAL = CUE.total;
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const E = {
+  out: x => 1 - Math.pow(1 - x, 3),
+  out5: x => 1 - Math.pow(1 - x, 5),
+  inOut: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  inn: x => x * x * x,
+  back: x => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+};
+/* a 초에서 b 초까지 0 에서 1 로 */
+const tw = (t, a, b, ease = E.out) => ease(clamp((t - a) / (b - a)));
+/* 들어왔다 나가는 값: a~a+fi 에 켜지고 b-fo~b 에 꺼진다 */
+const win = (t, a, b, fi = .35, fo = .35) => Math.min(tw(t, a, a + fi), 1 - tw(t, b - fo, b, E.inn));
+function css(node, o, tr, extra) {
+  node.style.opacity = o;
+  if (tr !== undefined) node.style.transform = tr;
+  if (extra) Object.assign(node.style, extra);
+}
+/* 글이 아래에서 흐림을 걷으며 올라온다 */
+function rise(node, t, a, b, dist = 40) {
+  const i = tw(t, a, a + .55, E.out5), o = b ? tw(t, b - .3, b, E.inn) : 0;
+  css(node, i * (1 - o), `translateY(${(1 - i) * dist - o * dist * .6}px)`, { filter: `blur(${(1 - i) * 10 + o * 8}px)` });
+}
+
+/* ── A. 명단 흐름 ── */
+const NAMES = ['충북교육청 장학사 김서연', '진천교육지원청 행정과 이도윤', '가경초 박지후', '학성초 최하은', '충주중 정우진',
+  '새터초 한지민', '학성초', '충북외고', '청주교육지원청 행정과', '음성교육지원청', '미래교육추진단', '행정과',
+  '오송초 윤서아', '청원고 강민준', '덕산중 서예린', '제천교육지원청 학생지원과', '단양초 임하준', '괴산고 조유나'];
+['st1', 'st2'].forEach((id, k) => {
+  const box = $(id);
+  for (let i = 0; i < 40; i++) {
+    const line = document.createElement('div');
+    line.textContent = NAMES[(i * 7 + k * 5) % NAMES.length];
+    box.appendChild(line);
+  }
+});
+for (let i = 0; i < CUE.dots.count; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot';
+  $('dots').appendChild(d);
+}
+
+/* ── C, D. 앱 화면 쪽: 그림 한 장마다 카메라와 덧그림 ── */
+const FRAME = [760, 481];
+const BASE = FRAME[0] / 1360;
+function makePage(parent, src, tone) {
+  const page = document.createElement('div');
+  page.className = 'page';
+  const cam = document.createElement('div');
+  cam.className = 'cam';
+  const img = document.createElement('img');
+  img.src = '../../assets/landing/' + src;
+  cam.appendChild(img);
+  page.appendChild(cam);
+  parent.appendChild(page);
+  return { page, cam, tone, keys: [] };
+}
+function add(page, cls, rect, extra) {
+  const node = document.createElement('div');
+  node.className = cls;
+  if (rect) {
+    const [x1, y1, x2, y2] = rect;
+    Object.assign(node.style, { left: x1 + 'px', top: y1 + 'px', width: (x2 - x1) + 'px', height: (y2 - y1) + 'px' });
+  }
+  if (extra) Object.assign(node.style, extra);
+  page.cam.appendChild(node);
+  return node;
+}
+const CURSOR_SVG = '<svg viewBox="0 0 34 46" width="34" height="46"><path d="M3 2 L3 36 L12 28 L18 42 L24 39 L18 26 L30 26 Z" ' +
+  'fill="#fff" stroke="#14152B" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+function cursorOf(page) {
+  const c = add(page, 'cursor');
+  c.innerHTML = CURSOR_SVG;
+  const r = add(page, 'ripple' + (page.tone === 't' ? ' t' : ''));
+  return [c, r];
+}
+
+/* 수신픽: 명단 입력 */
+const cIn = makePage($('c-win'), 'susin_input.webp', 't');
+cIn.pasteMask = add(cIn, 'mask', [168, 344, 488, 506], { background: '#fff' });
+cIn.rowMask = add(cIn, 'mask', [533, 392, 1284, 542], { background: '#FAFCFE' });
+cIn.badgeMask = add(cIn, 'mask', [626, 298, 862, 330], { background: '#F5F7FB' });
+cIn.noteMask = add(cIn, 'mask', [528, 334, 1309, 380], { background: '#F5F7FB' });
+cIn.spot = add(cIn, 'spot t', [532, 475, 1288, 506]);
+[cIn.cur, cIn.rip] = cursorOf(cIn);
+/* 수신픽: 엑셀 만들기 */
+const cEx = makePage($('c-win'), 'susin_excel.webp', 't');
+cEx.spot = add(cEx, 'spot t', [178, 650, 404, 698]);
+[cEx.cur, cEx.rip] = cursorOf(cEx);
+/* 소통픽: 명단 입력 */
+const dIn = makePage($('d-win'), 'sotong_input.webp', 'p');
+dIn.rowMask = add(dIn, 'mask', [533, 373, 1284, 540], { background: '#FAFCFE' });
+dIn.badgeMask = add(dIn, 'mask', [626, 298, 760, 330], { background: '#F5F7FB' });
+dIn.doneMask = add(dIn, 'mask', [530, 338, 700, 362], { background: '#F5F7FB' });
+/* 소통픽: 자동 선택 */
+const dAu = makePage($('d-win'), 'sotong_auto.webp', 'p');
+dAu.cntMask = add(dAu, 'mask', [178, 280, 520, 334], { background: '#FAFCFE' });
+dAu.cnt = add(dAu, 'ovtext', null, { left: '184px', top: '281px', fontSize: '40px', letterSpacing: '-.02em' });
+dAu.track = add(dAu, 'mask', [184, 344, 1275, 359], { background: '#E5E5F1' });
+dAu.fill = add(dAu, 'mask', [184, 344, 185, 359], { background: '#4C53BE' });
+dAu.logMask = add(dAu, 'mask', [172, 616, 1266, 758], { background: '#fff' });
+const LOG = [['[1/6] 충청북도교육청 김서연  ... ✓', 619], ['[2/6] 가경초등학교 박지후  ... ✓', 643],
+             ['[3/6] 충주중학교 정우진  ... ✓', 666], ['[4/6] 학성초등학교 최하은  ...  ×  사용자 없음', 689]];
+dAu.lines = LOG.map(([text, y], i) => {
+  const line = add(dAu, 'logline' + (i === 3 ? ' bad' : ''), null, { top: y + 'px' });
+  line.textContent = text;
+  return line;
+});
+dAu.spot = add(dAu, 'spot', [163, 512, 360, 558]);
+[dAu.cur, dAu.rip] = cursorOf(dAu);
+
+/* 그림 속 사각형이 화면 틀 가운데에 오도록 (배율, x, y) */
+function camFor(rect) {
+  if (!rect) return [BASE, 0, 0];
+  const [x1, y1, x2, y2] = rect;
+  let s = Math.min(FRAME[0] * .9 / (x2 - x1), FRAME[1] * .8 / (y2 - y1), 1.35);
+  s = Math.max(s, BASE);
+  let tx = FRAME[0] / 2 - (x1 + x2) / 2 * s, ty = FRAME[1] / 2 - (y1 + y2) / 2 * s;
+  tx = Math.min(0, Math.max(FRAME[0] - 1360 * s, tx));
+  ty = Math.min(0, Math.max(FRAME[1] - 860 * s, ty));
+  return [s, tx, ty];
+}
+/* keys: [[시각, 사각형 또는 null], ...] 을 0.7초씩 부드럽게 옮겨 간다 */
+function camAt(keys, t) {
+  let state = camFor(keys[0][1]);
+  for (let k = 1; k < keys.length; k++) {
+    const p = tw(t, keys[k][0], keys[k][0] + .7, E.inOut);
+    if (p <= 0) break;
+    const next = camFor(keys[k][1]);
+    state = state.map((v, i) => v + (next[i] - v) * p);
+  }
+  return state;
+}
+function setCam(pg, keys, t, drift = 0) {
+  const [s, tx, ty] = camAt(keys, t);
+  const z = 1 + drift;
+  pg.scale = s * z;
+  pg.cam.style.transform = `translate(${tx - (FRAME[0] * (z - 1)) / 2}px, ${ty - (FRAME[1] * (z - 1)) / 2}px) scale(${s * z})`;
+}
+/* 커서: path [[시각, x, y], ...], 누르는 시각 click */
+function setCursor(pg, t, path, click, show) {
+  let [x, y] = [path[0][1], path[0][2]];
+  for (let k = 1; k < path.length; k++) {
+    const p = tw(t, path[k - 1][0], path[k][0], E.inOut);
+    if (p <= 0) break;
+    x = lerp(path[k - 1][1], path[k][1], p);
+    y = lerp(path[k - 1][2], path[k][2], p);
+  }
+  const press = click ? (t >= click && t < click + .16 ? .82 : 1) : 1;
+  const inv = 1 / (pg.scale || BASE);
+  css(pg.cur, show, `translate(${x}px, ${y}px) scale(${inv * .95 * press})`);
+  if (click) {
+    const r = clamp((t - click) / .5);
+    const rs = r > 0 && r < 1 ? 1 : 0;
+    css(pg.rip, rs * (1 - r), `translate(${x}px, ${y}px) scale(${(1 + r * 5) * inv})`);
+  }
+}
+/* 위에서 아래로 한 줄씩 보이게: 가림판의 윗변을 내린다 */
+function revealRows(mask, rect, times, rowH, t) {
+  let n = 0;
+  times.forEach(at => { if (t >= at) n += 1; });
+  const last = times[n - 1];
+  const part = n > 0 && n <= times.length ? tw(t, last, last + .12) : 0;
+  const top = rect[1] + (n - 1 + part) * rowH;
+  const y = n === 0 ? rect[1] : Math.min(rect[3], top);
+  mask.style.top = y + 'px';
+  mask.style.height = Math.max(0, rect[3] - y) + 'px';
+}
+function showPages(pages, t, at, dur = .55) {
+  /* 앞 그림은 왼쪽으로 밀려나고 다음 그림이 오른쪽에서 들어온다 */
+  const p = tw(t, at, at + dur, E.inOut);
+  pages[0].page.style.transform = `translateX(${-p * 100}%)`;
+  pages[1].page.style.transform = `translateX(${(1 - p) * 100}%)`;
+}
+
+/* 흔들림과 번쩍임 */
+const HITS = [...CUE.slams.map(t => [t, 9]), ...CUE.rules.map(t => [t, 5]), [CUE.finale, 12], [CUE.error[0], 3]];
+function shake(t) {
+  let x = 0, y = 0;
+  HITS.forEach(([at, amp]) => {
+    const d = t - at;
+    if (d < 0 || d > .45) return;
+    const k = amp * Math.exp(-d * 11);
+    x += Math.sin(d * 95) * k;
+    y += Math.cos(d * 77) * k * .7;
+  });
+  return [x, y];
+}
+
+window.renderAt = function (t) {
+  /* 바탕 */
+  const tealW = win(t, 9, 16, .8, .8), indW = win(t, 16, 24, .8, .8), endW = tw(t, 26.6, 28);
+  css($('orb1'), .35 + indW * .35 + endW * .2, `translate(${180 + Math.sin(t * .35) * 120}px, ${-60 + Math.cos(t * .27) * 90}px) scale(${1 + indW * .25})`);
+  css($('orb2'), .22 + tealW * .45 + endW * .2, `translate(${760 + Math.cos(t * .3) * 140}px, ${260 + Math.sin(t * .22) * 80}px) scale(${1 + tealW * .25})`);
+  css($('orb3'), .18 + win(t, 0, 5, .2, .4) * .1 + endW * .15, `translate(${880 + Math.sin(t * .2 + 1) * 100}px, ${-240 + Math.cos(t * .31) * 70}px)`);
+  $('grid').style.transform = `perspective(900px) rotateX(${8 + Math.sin(t * .2) * 2}deg) translateY(${(t * 18) % 64}px)`;
+  $('grid').style.opacity = .5 + .5 * win(t, 9, 24, 1, 1);
+  const [sx, sy] = shake(t);
+  $('world').style.transform = `translate(${sx}px, ${sy}px)`;
+  let fl = 0;
+  [...CUE.slams, CUE.finale].forEach(at => { const d = t - at; if (d >= 0 && d < .3) fl = Math.max(fl, (1 - d / .3) * (at === CUE.slams[2] || at === CUE.finale ? .38 : .22)); });
+  $('flash').style.opacity = fl;
+  let sk = 0, sp = 0;
+  CUE.whoosh.forEach(at => { const d = t - at + .15; if (d >= 0 && d < .4) { sk = 1; sp = d / .4; } });
+  css($('streak'), sk * Math.sin(sp * Math.PI) * .9, `translateX(${lerp(-300, 1500, E.inOut(sp))}px) skewX(-18deg)`);
+
+  /* A */
+  const aW = win(t, 0, 4.95, .25, .2);
+  const aZoom = tw(t, 4.4, 4.95, E.inn);
+  css($('A'), aW, `scale(${1 + aZoom * .35})`, { filter: `blur(${aZoom * 14}px)` });
+  css($('st1'), 1, `translate(${640}px, ${-t * 70 + 40}px) rotate(-8deg)`);
+  css($('st2'), 1, `translate(${980}px, ${-t * 95 - 200}px) rotate(-8deg)`);
+  rise($('a1'), t, .25, 1.85, 50);
+  rise($('a2'), t, 1.85, 3.0, 50);
+  const dots = $('dots').children;
+  for (let i = 0; i < dots.length; i++) {
+    const at = CUE.dots.start + i * CUE.dots.step;
+    const on = tw(t, at, at + .12);
+    dots[i].style.background = on ? `rgba(79, 216, 191, ${.85 * on})` : 'transparent';
+    dots[i].style.transform = `scale(${1 + (1 - on) * (on > 0 ? .6 : 0)})`;
+    dots[i].style.boxShadow = on ? `0 0 ${18 * on}px rgba(79, 216, 191, .7)` : 'none';
+  }
+  css($('dots'), win(t, 1.85, 3.05, .2, .25), `translateX(${tw(t, 2.8, 3.05, E.inn) * 120}px)`);
+  const cp = clamp((t - CUE.count.start) / (CUE.count.end - CUE.count.start));
+  $('count-n').textContent = Math.round(E.out(cp) * 120);
+  rise($('count'), t, 2.95, 0, 30);
+  rise($('count-l'), t, 3.25, 0, 20);
+
+  /* B */
+  css($('B'), win(t, 4.95, 9.05, .05, .3), `translateX(${-tw(t, 8.7, 9.05, E.inn) * 260}px)`, { filter: `blur(${tw(t, 8.7, 9.05, E.inn) * 12}px)` });
+  ['eq1', 'eq2', 'eq3'].forEach((id, i) => {
+    const at = CUE.slams[i];
+    const p = tw(t, at - .12, at, E.inn);
+    const settle = tw(t, at, at + .5, E.out);
+    const big = 1.9 - .9 * p;
+    css($(id), p, `scale(${(i === 2 ? big * 1.0 : big) + (1 - settle) * .03})`, { filter: `blur(${(1 - p) * 16}px)` });
+    const ring = $('ring' + (i + 1));
+    const r = clamp((t - at) / .7);
+    css(ring, r > 0 && r < 1 ? (1 - r) * .7 : 0, `translate(-50%, -50%) scale(${1 + E.out(r) * 120})`, { borderWidth: (3 - r * 2.5) + 'px' });
+  });
+  $('eq1').querySelector('.note').style.opacity = tw(t, 5.25, 5.7);
+  $('eq2').querySelector('.note').style.opacity = tw(t, 6.25, 6.7);
+  rise($('tag'), t, 7.45, 0, 24);
+
+  /* C. 수신픽 */
+  const cW = win(t, 8.95, 16.05, .25, .3);
+  css($('C'), cW);
+  const enter = tw(t, 9.0, 9.85, E.out5);
+  const leave = tw(t, 15.7, 16.05, E.inn);
+  css($('c-win'), enter * (1 - leave),
+      `perspective(1400px) translate(${(1 - enter) * 260 - leave * 120}px, ${(1 - enter) * 40}px) rotateY(${(1 - enter) * -28}deg) scale(${.86 + .14 * enter - leave * .06})`);
+  rise($('c-chip'), t, 9.15, 15.9, 20);
+  rise($('c-cap1'), t, 9.35, 12.45);
+  rise($('c-cap2'), t, 12.45, 13.8);
+  rise($('c-cap3'), t, 13.8, 15.9);
+  showPages([cIn, cEx], t, 13.75);
+  setCam(cIn, [[0, null], [9.75, [160, 290, 1310, 600]], [12.25, [520, 440, 1300, 540]]], t, tw(t, 9, 16, x => x) * .03);
+  revealRows(cIn.pasteMask, [168, 344, 488, 506], CUE.susinPaste, 26.3, t);
+  revealRows(cIn.rowMask, [533, 392, 1284, 542], CUE.susinRows, 27, t);
+  const pop1 = tw(t, CUE.pops[0], CUE.pops[0] + .25);
+  css(cIn.badgeMask, 1 - pop1);
+  css(cIn.noteMask, 1 - tw(t, 12.2, 12.5));
+  css(cIn.spot, win(t, 12.55, 13.7, .3, .25));
+  setCursor(cIn, t, [[11.9, 1100, 760], [12.4, 760, 492]], null, win(t, 11.95, 13.6, .2, .2));
+  setCam(cEx, [[0, null], [14.15, [140, 560, 760, 760]]], t);
+  css(cEx.spot, win(t, 14.25, 15.4, .25, .3));
+  setCursor(cEx, t, [[13.9, 980, 560], [14.45, 300, 678]], CUE.clicks[0], win(t, 13.95, 15.4, .2, .25));
+  /* 엑셀 파일이 단추에서 튀어나와 오른쪽 아래에 놓인다 */
+  const fp = tw(t, CUE.pops[1], CUE.pops[1] + .6, E.back);
+  const fo = tw(t, 15.7, 16.0, E.inn);
+  css($('file'), clamp(fp * 3) * (1 - fo),
+      `translate(${lerp(560, 860, fp)}px, ${lerp(520, 470, fp) - fo * 30}px) scale(${.4 + .6 * fp}) rotate(${(1 - fp) * -12}deg)`);
+
+  /* D. 소통픽 */
+  css($('D'), win(t, 15.95, 24.05, .25, .35), `scale(${1 + tw(t, 23.6, 24.05, E.inn) * .12})`, { filter: `blur(${tw(t, 23.6, 24.05, E.inn) * 10}px)` });
+  const dEnter = tw(t, 16.0, 16.8, E.out5);
+  css($('d-win'), dEnter, `perspective(1400px) translate(${(1 - dEnter) * 260}px, ${(1 - dEnter) * 40}px) rotateY(${(1 - dEnter) * -28}deg) scale(${.86 + .14 * dEnter})`);
+  rise($('d-chip'), t, 16.15, 23.9, 20);
+  rise($('d-cap1'), t, 16.35, 18.2);
+  rise($('d-cap2'), t, 18.2, 21.35);
+  rise($('d-cap3'), t, 21.35, 23.9);
+  showPages([dIn, dAu], t, 18.1);
+  setCam(dIn, [[0, null], [16.6, [160, 330, 1310, 600]]], t);
+  revealRows(dIn.rowMask, [533, 373, 1284, 540], CUE.sotongRows, 26.6, t);
+  css(dIn.badgeMask, 1 - tw(t, 17.5, 17.75));
+  css(dIn.doneMask, 1 - tw(t, 17.55, 17.8));
+  setCam(dAu, [[0, null], [18.75, [160, 270, 1300, 760]], [21.2, null]], t);
+  let n = 0;
+  CUE.log.forEach(at => { if (t >= at) n += 1; });
+  const ok = Math.min(n, 3), bad = Math.max(0, n - 3);
+  dAu.cnt.innerHTML = `${n} / 6명` + (ok ? `<span class="pill ok">담김 ${ok}</span>` : '') + (bad ? `<span class="pill no">빠짐 ${bad}</span>` : '');
+  const fillTo = n === 0 ? 0 : (n - 1 + tw(t, CUE.log[n - 1], CUE.log[n - 1] + .3)) / 6;
+  dAu.fill.style.width = (1091 * fillTo) + 'px';
+  dAu.lines.forEach((line, i) => {
+    const p = tw(t, CUE.log[i], CUE.log[i] + .28, E.out);
+    line.style.opacity = p;
+    line.style.clipPath = `inset(0 ${100 - p * 100}% 0 0)`;
+  });
+  css(dAu.spot, win(t, 18.35, 18.95, .2, .25));
+  setCursor(dAu, t, [[18.15, 900, 700], [18.5, 262, 536], [19.2, 262, 536], [19.7, 1180, 820]], CUE.clicks[1], win(t, 18.2, 19.7, .15, .3));
+  const dl = tw(t, CUE.alert[0] - .1, CUE.alert[0] + .4, E.back);
+  const dlo = tw(t, 23.55, 23.9, E.inn);
+  css($('dlg'), clamp(dl * 3) * (1 - dlo), `translate(${474 + 380 - 259}px, ${104 + 240 - 92}px) scale(${(.6 + .4 * dl) * 1.08})`);
+  /* 안내창이 뜨면 뒤의 앱 화면을 어둡게 */
+  $('d-win').style.filter = `brightness(${1 - win(t, 21.45, 24.2, .3, .1) * .45})`;
+
+  /* E */
+  css($('E'), win(t, 23.95, 27.0, .1, .3), `scale(${1 + tw(t, 26.7, 27.0, E.inn) * .2})`, { filter: `blur(${tw(t, 26.7, 27.0, E.inn) * 12}px)` });
+  rise($('rk'), t, 23.95, 0, 18);
+  ['r1', 'r2', 'r3'].forEach((id, i) => {
+    const at = CUE.rules[i];
+    const p = tw(t, at - .1, at + .05, E.inn);
+    const dim = i < 2 ? tw(t, CUE.rules[i + 1] - .1, CUE.rules[i + 1] + .3) : 0;
+    css($(id), p * (1 - dim * .62), `scale(${1.5 - .5 * p})`, { filter: `blur(${(1 - p) * 12}px)` });
+  });
+
+  /* F */
+  css($('F'), tw(t, CUE.finale - .05, CUE.finale + .1), `scale(${1 + tw(t, CUE.finale, CUE.total, x => x) * .05})`);
+  const lp = tw(t, CUE.finale - .1, CUE.finale + .08, E.inn);
+  css($('logo'), lp, `scale(${1.6 - .6 * lp})`, { filter: `blur(${(1 - lp) * 18}px) drop-shadow(0 0 50px rgba(140, 150, 255, .45))`,
+      backgroundPosition: `${lerp(120, -40, tw(t, 27.8, 29.6, E.inOut))}% 0` });
+  rise($('logo-sub'), t, 27.7, 0, 26);
+  rise($('logo-meta'), t, 28.4, 0, 18);
+};
+
+const fixed = new URLSearchParams(location.search).get('t');
+window.renderAt(fixed ? parseFloat(fixed) : 0);
+</script>
+</body>
+</html>

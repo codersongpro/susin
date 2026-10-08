@@ -110,7 +110,7 @@ class LandingVideoTest(unittest.TestCase):
 
     def test_both_videos_and_posters_exist_and_are_small_enough(self):
         html = self.read('index.html')
-        for name in ('susin', 'sotong'):
+        for name in ('susin', 'sotong', 'intro'):
             for ext in ('mp4', 'jpg'):
                 path = f'assets/video/{name}.{ext}'
                 self.assertIn(path, html)
@@ -120,9 +120,44 @@ class LandingVideoTest(unittest.TestCase):
                 self.assertLess(os.path.getsize(full), 6 * 1024 * 1024, path)
 
     def test_videos_load_only_when_played(self):
+        """사용 방법 영상 두 편은 누를 때 받는다. 첫 화면 소개 영상 하나만 미리 받는다."""
         html = self.read('index.html')
-        self.assertEqual(html.count('<video'), 2)
+        self.assertEqual(html.count('<video'), 3)
         self.assertEqual(html.count('preload="none"'), 2)
+        self.assertEqual(html.count('preload="auto"'), 1)
+
+    def test_intro_video_opens_the_page_quietly(self):
+        """소개 영상은 페이지 맨 앞에서 소리 없이 돌고, 소리는 사람이 켠다."""
+        html = self.read('index.html')
+        intro = html.index('id="intro"')
+        self.assertLess(intro, html.index('<nav'), '소개 영상이 위쪽 바보다 앞에 있어야 합니다')
+        tag = html[html.index('<video id="intro-video"'):]
+        tag = tag[:tag.index('>')]
+        for attr in ('muted', 'playsinline', 'poster="assets/video/intro.jpg"'):
+            self.assertIn(attr, tag)
+        self.assertNotIn('autoplay', tag, '움직임 줄이기를 켠 사람을 위해 재생은 스크립트가 정한다')
+        self.assertIn('id="intro-sound"', html)
+        self.assertIn('prefers-reduced-motion: reduce)\').matches', html)
+        # 내려가는 단추가 이어 붙는 페이지 본문으로 간다
+        self.assertIn('class="intro-down" href="#top"', html)
+        self.assertIn('<main id="top">', html)
+
+    def test_intro_cues_are_valid_and_inside_the_video(self):
+        """그림(intro.html)과 소리(intro_sound.py)가 함께 읽는 박자표."""
+        text = self.read('tools', 'video', 'intro_cues.js')
+        body = text[text.index('INTRO_CUES'):]
+        cues = json.loads(body[body.index('{'):body.rindex('}') + 1])
+        total = cues['total']
+        times = []
+        for value in cues.values():
+            if isinstance(value, list):
+                times.extend(value)
+            elif isinstance(value, (int, float)) and value is not total and value != cues['bpm']:
+                times.append(value)
+        self.assertTrue(times)
+        for at in times:
+            self.assertGreaterEqual(at, 0)
+            self.assertLess(at, total)
 
     def test_video_folder_is_deployed_but_other_assets_are_not(self):
         ignore = self.read('.vercelignore').splitlines()
@@ -132,6 +167,8 @@ class LandingVideoTest(unittest.TestCase):
         self.assertLess(ignore.index('assets/*'), ignore.index('!assets/video/'))
 
     def test_video_scenes_follow_the_writing_rules(self):
-        scenes = self.read('tools', 'video', 'scenes.html')
-        self.assertNotIn('\u2014', scenes)
-        self.assertNotIn('\u2192', scenes)
+        for name in ('scenes.html', 'intro.html'):
+            scenes = self.read('tools', 'video', name)
+            self.assertNotIn('\u2014', scenes, name)
+            self.assertNotIn('\u2192', scenes, name)
+            self.assertNotIn('지금 바로', scenes, name)
