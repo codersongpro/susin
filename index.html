@@ -386,14 +386,25 @@
       .num-item { padding: 20px 14px; }
     }
 
-    /* ═══ 소개 영상 ═══ 페이지를 열면 화면 전체에서 소리 없이 돌고, 내리면 줄어들며 아래 페이지로 이어진다.
-       영상은 tools/video/intro.html 을 render.js intro 로 찍은 것이다. 바탕색은 영상 바탕과 같다. */
+    /* ═══ 소개 영상 ═══ 페이지를 열면 영상이 화면을 꽉 채우고, 내리면 랜딩페이지(.sheet)가 그 위로 덮으며 올라온다.
+       영상은 tools/video/intro.html 을 render.js intro 로 찍은 것이다. 바탕색은 영상 바탕과 같아서 남는 곳이 티 나지 않는다. */
     #intro { position: relative; height: 100vh; height: 100svh; min-height: 420px; }
-    .intro-stage {
-      position: relative; height: 100%; overflow: hidden; background: #0A0C22;
-      transform-origin: 50% 100%; will-change: transform;
-    }
+    .intro-stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: #0A0C22; }
+    /* 화면이 16:9 보다 넓으면 위아래를 조금 잘라 꽉 채우고, 그보다 좁으면 글이 잘리지 않게 통째로 보인다 */
     #intro video { display: block; width: 100%; height: 100%; object-fit: contain; background: #0A0C22; }
+    @media (min-aspect-ratio: 16/9) { #intro video { object-fit: cover; } }
+    .intro-shade { position: absolute; inset: 0; background: #05060F; opacity: 0; pointer-events: none; }
+    .sheet {
+      position: relative; z-index: 1; padding-top: 4px; border-radius: 32px 32px 0 0;
+      box-shadow: 0 -20px 60px rgba(5, 6, 20, .45);
+      background:
+        radial-gradient(620px 520px at 6% 4%, rgba(122, 132, 255, .50), transparent 70%),
+        radial-gradient(640px 520px at 98% 10%, rgba(255, 170, 205, .45), transparent 70%),
+        radial-gradient(700px 560px at 90% 60%, rgba(120, 230, 210, .40), transparent 70%),
+        radial-gradient(560px 480px at 2% 82%, rgba(255, 214, 140, .40), transparent 70%),
+        #EEF0FB;
+      background-attachment: fixed;
+    }
     .intro-bar { position: absolute; left: 24px; bottom: 24px; display: flex; gap: 10px; }
     .intro-btn {
       display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 22px;
@@ -421,17 +432,12 @@
     #intro.paused .intro-play { display: inline-flex; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
                clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-    /* 세로로 긴 화면: 영상 높이만큼만 쓰고 단추는 영상 아래에 */
-    @media (max-aspect-ratio: 4/5) {
-      #intro { height: auto; min-height: 0; }
-      .intro-stage { height: auto; padding-bottom: 76px; }
-      #intro video { height: auto; aspect-ratio: 16 / 9; }
+    @media (max-width: 640px) {
       .intro-bar { left: 12px; bottom: 16px; }
+      .intro-btn { height: 40px; padding: 0 14px; font-size: 13px; }
       .intro-down { left: auto; right: 14px; bottom: 18px; transform: none; }
       .intro-down span { display: none; }
-    }
-    @media (max-width: 640px) {
-      .intro-btn { height: 40px; padding: 0 14px; font-size: 13px; }
+      .sheet { border-radius: 24px 24px 0 0; }
     }
     @media (prefers-reduced-motion: reduce) { .intro-down svg { animation: none; } }
   </style>
@@ -469,10 +475,12 @@
       <source src="assets/video/intro.mp4" type="video/mp4">
     </video>
     <p id="intro-desc" class="sr-only">
-      32초 소개 영상입니다. 수신 기관 서른 곳을 조직도에서 하나씩 고르면 클릭이 120번 필요하다는 이야기로 시작해,
+      38초 소개 영상입니다. 수신 기관 서른 곳을 조직도에서 하나씩 고르면 클릭이 120번, 소통메신저에서 30명을 찾으면
+      1,800자, 수신 기관 30곳을 찾으면 300자를 쳐야 하고, 하다가 순서가 꼬이면 처음부터 다시 확인해야 한다는 이야기로 시작해,
       수신픽이 줄여 쓴 기관명을 정식 이름으로 바꾸고 에듀파인 수신그룹 엑셀을 만드는 모습과,
       소통픽이 소통메신저에서 이름마다 검색해 담고 같은 이름이 둘이면 멈추는 모습을 보여 줍니다.
     </p>
+    <div class="intro-shade" id="intro-shade"></div>
     <button type="button" class="intro-play" id="intro-play"><svg class="ico"><use href="#i-play"/></svg>영상 재생</button>
     <div class="intro-bar">
       <button type="button" class="intro-btn" id="intro-sound" aria-pressed="false"><svg class="ico"><use href="#i-sound-off"/></svg><span>소리 켜기</span></button>
@@ -481,6 +489,9 @@
     <a class="intro-down" href="#top"><span>내려서 자세히 보기</span><svg class="ico"><use href="#i-chev"/></svg></a>
   </div>
 </header>
+
+<!-- 랜딩페이지 본문: 소개 영상 위로 덮으며 올라온다 -->
+<div class="sheet">
 
 <!-- ═══ 위쪽 바 ═══ -->
 <nav class="glass">
@@ -1256,6 +1267,7 @@
     <span>&nbsp;·&nbsp; <a href="terms.html">이용약관</a> &nbsp;·&nbsp; <a href="license.html">라이선스</a></span>
   </div>
 </footer>
+</div>
 
 <script>
   /* 사용 방법 탭 */
@@ -1291,7 +1303,7 @@
   })();
 
   /* 소개 영상: 소리 없이 저절로 돌고(브라우저가 소리 있는 자동 재생을 막는다), 단추로 소리를 켠다.
-     움직임 줄이기를 켠 사람에게는 저절로 돌리지 않는다. 화면 밖으로 나가면 멈췄다가 돌아오면 잇는다. */
+     움직임 줄이기를 켠 사람에게는 저절로 돌리지 않는다. 본문이 영상을 다 덮으면 멈췄다가 다시 보이면 잇는다. */
   (function () {
     var intro = document.getElementById('intro');
     var video = document.getElementById('intro-video');
@@ -1324,30 +1336,21 @@
 
     if (reduce) intro.classList.add('paused'); else start();
 
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting && !video.paused) { held = true; video.pause(); }
-          else if (entry.isIntersecting && held) { held = false; start(); }
-        });
-      }, { threshold: 0.15 }).observe(intro);
-    }
-
-    // 내리는 만큼 영상 판이 조금 작아지고 모서리가 둥글어지며 아래 페이지로 넘어간다
-    if (!reduce) {
-      var waiting = false;
-      var follow = function () {
-        waiting = false;
-        var p = Math.min(1, Math.max(0, window.scrollY / Math.max(1, intro.offsetHeight)));
-        stage.style.transform = 'scale(' + (1 - p * 0.1) + ')';
-        stage.style.borderRadius = (p * 40) + 'px';
-        stage.style.opacity = String(1 - p * 0.6);
-      };
-      window.addEventListener('scroll', function () {
-        if (!waiting) { waiting = true; window.requestAnimationFrame(follow); }
-      }, { passive: true });
-      follow();
-    }
+    // 본문이 올라오는 만큼 영상을 어둡게 하고, 다 덮이면 멈췄다가 다시 보이면 잇는다
+    var shade = document.getElementById('intro-shade');
+    var waiting = false;
+    var follow = function () {
+      waiting = false;
+      var p = Math.min(1, Math.max(0, window.scrollY / Math.max(1, intro.offsetHeight)));
+      shade.style.opacity = String(p * 0.7);
+      stage.style.visibility = p >= 1 ? 'hidden' : 'visible';
+      if (p >= 1 && !video.paused) { held = true; video.pause(); }
+      else if (p < 1 && held) { held = false; start(); }
+    };
+    window.addEventListener('scroll', function () {
+      if (!waiting) { waiting = true; window.requestAnimationFrame(follow); }
+    }, { passive: true });
+    follow();
   })();
 </script>
 

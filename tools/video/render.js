@@ -17,10 +17,10 @@ const { chromium } = require(playwrightPath);
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const FPS = 30;
-const POSTER_AT = { sotong: 2.6, susin: 2.6, intro: 7.9 };
+const POSTER_AT = { sotong: 2.6, susin: 2.6, intro: 13.9 };
 const PAGES = { intro: 'intro.html' };
 const SCALE = { intro: 1.5 };      // 1280x720 으로 그린 장면을 1.5배로 찍어 1920x1080
-const CRF = { intro: '27' };
+const CRF = { intro: '28' };
 const SOUND = { intro: 'intro_sound.py' };
 
 async function main() {

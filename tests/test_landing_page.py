@@ -138,6 +138,11 @@ class LandingVideoTest(unittest.TestCase):
         self.assertNotIn('autoplay', tag, '움직임 줄이기를 켠 사람을 위해 재생은 스크립트가 정한다')
         self.assertIn('id="intro-sound"', html)
         self.assertIn('prefers-reduced-motion: reduce)\').matches', html)
+        # 영상은 화면에 붙어 있고, 본문(위쪽 바부터 끝까지)이 그 위로 덮으며 올라온다
+        self.assertIn('.intro-stage { position: fixed;', html)
+        sheet = html.index('<div class="sheet">')
+        self.assertLess(intro, sheet)
+        self.assertLess(sheet, html.index('<nav'))
         # 내려가는 단추가 이어 붙는 페이지 본문으로 간다
         self.assertIn('class="intro-down" href="#top"', html)
         self.assertIn('<main id="top">', html)
@@ -158,6 +163,13 @@ class LandingVideoTest(unittest.TestCase):
         for at in times:
             self.assertGreaterEqual(at, 0)
             self.assertLess(at, total)
+        # 끼어드는 장면(타이핑 수, 순서 꼬임)의 시각은 그 장면 안에 있어야 한다
+        insert = cues['insert']
+        self.assertLess(insert['at'], total)
+        for value in insert['cues'].values():
+            for at in (value if isinstance(value, list) else [value]):
+                self.assertGreaterEqual(at, 0)
+                self.assertLess(at, insert['dur'])
 
     def test_video_folder_is_deployed_but_other_assets_are_not(self):
         ignore = self.read('.vercelignore').splitlines()

@@ -57,6 +57,34 @@
   #count small { font-size: 72px; letter-spacing: -.02em; margin-left: 14px; color: rgba(255,255,255,.7); }
   #count-l { position: absolute; left: 104px; top: 560px; font-size: 28px; font-weight: 700; color: rgba(220, 224, 255, .75); }
 
+  /* A 다음: 타이핑 수와 순서가 꼬이는 번거로움 */
+  .ins { position: absolute; inset: 0; opacity: 0; }
+  .ins .k { position: absolute; left: 96px; top: 168px; font-size: 40px; font-weight: 700; letter-spacing: -.035em; }
+  .ins .k em { font-style: normal; color: var(--primary-l); }
+  .ins.t .k em { color: var(--tertiary-l); }
+  .ins .n { position: absolute; left: 90px; top: 236px; font-weight: 700; letter-spacing: -.06em; line-height: 1; }
+  .ins .n b { font-size: 190px; font-weight: 700; }
+  .ins .n small { font-size: 60px; letter-spacing: -.02em; margin-left: 12px; color: rgba(255,255,255,.72); }
+  .ins .l { position: absolute; left: 100px; top: 482px; font-size: 26px; font-weight: 700; color: rgba(220, 224, 255, .72); }
+  .typebox { position: absolute; left: 700px; top: 470px; width: 460px; padding: 18px 22px; border-radius: 18px;
+             background: rgba(20,22,52,.72); border: 1px solid rgba(255,255,255,.22); backdrop-filter: blur(10px); }
+  .typebox .cap2 { font-size: 15px; font-weight: 700; color: rgba(220,224,255,.55); margin-bottom: 10px; }
+  .typebox .field { height: 52px; border-radius: 12px; background: rgba(255,255,255,.94); color: var(--ink);
+                    font-size: 24px; font-weight: 700; line-height: 52px; padding: 0 16px; white-space: nowrap; overflow: hidden; }
+  .typebox .field i { display: inline-block; width: 2px; height: 28px; margin-left: 2px; vertical-align: -5px; background: var(--primary); }
+  .ins.t .typebox .field i { background: var(--tertiary); }
+  .typebox .done { margin-top: 12px; font-size: 18px; font-weight: 700; color: rgba(220,224,255,.7); }
+  .ins .big { position: absolute; left: 96px; top: 240px; font-size: 104px; font-weight: 700; letter-spacing: -.05em; line-height: 1.08; }
+  .ins .big em { font-style: normal; color: #FF8A80; }
+  .checks { position: absolute; left: 800px; top: 190px; width: 380px; display: grid; gap: 12px; }
+  .ck { display: flex; align-items: center; gap: 14px; height: 50px; padding: 0 18px; border-radius: 14px;
+        background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); font-size: 22px; font-weight: 700; }
+  .ck .box { width: 26px; height: 26px; border-radius: 7px; border: 2px solid rgba(255,255,255,.5); position: relative; flex-shrink: 0; }
+  .ck .box::after { content: ''; position: absolute; left: 7px; top: 2px; width: 7px; height: 13px; border: solid #0A0C22;
+                    border-width: 0 3px 3px 0; transform: rotate(45deg); opacity: 0; }
+  .ck .box.on::after { opacity: 1; }
+  .ck .q { margin-left: auto; font-size: 18px; color: #FF8A80; opacity: 0; }
+
   /* B. 수신픽 + 소통픽 = 신통픽 */
   #eq { position: absolute; left: 0; right: 0; top: 118px; display: flex; flex-direction: column; align-items: center; }
   .eq-w { display: flex; align-items: baseline; gap: 26px; font-size: 128px; font-weight: 700; letter-spacing: -.055em;
@@ -158,6 +186,26 @@
       <div id="dots"></div>
       <div id="count"><b id="count-n">0</b><small>번 클릭</small></div>
       <div id="count-l">조직도에서 한 곳씩 고르면</div>
+
+      <div class="ins" id="i1">
+        <div class="k"><em>소통메신저</em>에서 30명을 찾으려면</div>
+        <div class="n"><b id="i1-n">0</b><small>자 타이핑</small></div>
+        <div class="l">소속과 이름을 한 사람씩 쳐서 검색</div>
+        <div class="typebox"><div class="cap2">사용자 검색</div><div class="field"><span id="i1-f"></span><i></i></div>
+          <div class="done" id="i1-d">0 / 30명</div></div>
+      </div>
+      <div class="ins t" id="i2">
+        <div class="k"><em>수신 기관</em> 30곳을 찾으려면</div>
+        <div class="n"><b id="i2-n">0</b><small>자 타이핑</small></div>
+        <div class="l">기관 이름을 한 곳씩 쳐서 검색</div>
+        <div class="typebox"><div class="cap2">기관 검색</div><div class="field"><span id="i2-f"></span><i></i></div>
+          <div class="done" id="i2-d">0 / 30곳</div></div>
+      </div>
+      <div class="ins" id="i3">
+        <div class="k">하다가 순서가 꼬이면</div>
+        <div class="big"><em>처음부터</em><br>다시 확인</div>
+        <div class="checks" id="i3-list"></div>
+      </div>
     </div>
 
     <!-- B -->
@@ -218,7 +266,11 @@
 
 <script>
 const CUE = window.INTRO_CUES;
-window.TOTAL = CUE.total;
+/* 박자표의 시각은 '끼워 넣기 전' 기준이다. insert.at 에서 insert.dur 초 동안 타이핑과 순서 장면이 끼어들고,
+   그 뒤의 모든 장면은 그만큼 늦게 나온다 (intro_sound.py 도 같은 방식으로 옮긴다). */
+const INS = CUE.insert;
+window.TOTAL = CUE.total + INS.dur;
+const baseTime = t => t < INS.at ? t : (t < INS.at + INS.dur ? INS.at : t - INS.dur);
 const $ = id => document.getElementById(id);
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a, b, p) => a + (b - a) * p;
@@ -409,13 +461,13 @@ function shake(t) {
   return [x, y];
 }
 
-window.renderAt = function (t) {
+function renderBase(t, real) {
   /* 바탕 */
   const tealW = win(t, 9, 16, .8, .8), indW = win(t, 16, 24, .8, .8), endW = tw(t, 26.6, 28);
-  css($('orb1'), .35 + indW * .35 + endW * .2, `translate(${180 + Math.sin(t * .35) * 120}px, ${-60 + Math.cos(t * .27) * 90}px) scale(${1 + indW * .25})`);
-  css($('orb2'), .22 + tealW * .45 + endW * .2, `translate(${760 + Math.cos(t * .3) * 140}px, ${260 + Math.sin(t * .22) * 80}px) scale(${1 + tealW * .25})`);
-  css($('orb3'), .18 + win(t, 0, 5, .2, .4) * .1 + endW * .15, `translate(${880 + Math.sin(t * .2 + 1) * 100}px, ${-240 + Math.cos(t * .31) * 70}px)`);
-  $('grid').style.transform = `perspective(900px) rotateX(${8 + Math.sin(t * .2) * 2}deg) translateY(${(t * 18) % 64}px)`;
+  css($('orb1'), .35 + indW * .35 + endW * .2, `translate(${180 + Math.sin(real * .35) * 120}px, ${-60 + Math.cos(real * .27) * 90}px) scale(${1 + indW * .25})`);
+  css($('orb2'), .22 + tealW * .45 + endW * .2, `translate(${760 + Math.cos(real * .3) * 140}px, ${260 + Math.sin(real * .22) * 80}px) scale(${1 + tealW * .25})`);
+  css($('orb3'), .18 + win(t, 0, 5, .2, .4) * .1 + endW * .15, `translate(${880 + Math.sin(real * .2 + 1) * 100}px, ${-240 + Math.cos(real * .31) * 70}px)`);
+  $('grid').style.transform = `perspective(900px) rotateX(${8 + Math.sin(real * .2) * 2}deg) translateY(${(real * 18) % 64}px)`;
   $('grid').style.opacity = .5 + .5 * win(t, 9, 24, 1, 1);
   const [sx, sy] = shake(t);
   $('world').style.transform = `translate(${sx}px, ${sy}px)`;
@@ -430,8 +482,8 @@ window.renderAt = function (t) {
   const aW = win(t, 0, 4.95, .25, .2);
   const aZoom = tw(t, 4.4, 4.95, E.inn);
   css($('A'), aW, `scale(${1 + aZoom * .35})`, { filter: `blur(${aZoom * 14}px)` });
-  css($('st1'), 1, `translate(${640}px, ${-t * 70 + 40}px) rotate(-8deg)`);
-  css($('st2'), 1, `translate(${980}px, ${-t * 95 - 200}px) rotate(-8deg)`);
+  css($('st1'), 1, `translate(${640}px, ${-real * 70 + 40}px) rotate(-8deg)`);
+  css($('st2'), 1, `translate(${980}px, ${-real * 95 - 200}px) rotate(-8deg)`);
   rise($('a1'), t, .25, 1.85, 50);
   rise($('a2'), t, 1.85, 3.0, 50);
   const dots = $('dots').children;
@@ -447,6 +499,13 @@ window.renderAt = function (t) {
   $('count-n').textContent = Math.round(E.out(cp) * 120);
   rise($('count'), t, 2.95, 0, 30);
   rise($('count-l'), t, 3.25, 0, 20);
+  // 끼어드는 장면이 시작되면 120번 클릭은 물러난다
+  const away = tw(real, INS.at - .1, INS.at + .15, E.inn);
+  ['count', 'count-l'].forEach(id => {
+    const node = $(id);
+    node.style.opacity = parseFloat(node.style.opacity) * (1 - away);
+    if (away > 0) node.style.transform += ` translateY(${-away * 40}px)`;
+  });
 
   /* B */
   css($('B'), win(t, 4.95, 9.05, .05, .3), `translateX(${-tw(t, 8.7, 9.05, E.inn) * 260}px)`, { filter: `blur(${tw(t, 8.7, 9.05, E.inn) * 12}px)` });
@@ -544,6 +603,64 @@ window.renderAt = function (t) {
   rise($('logo-sub'), t, 27.7, 0, 26);
   rise($('logo-meta'), t, 28.4, 0, 18);
   rise($('credit'), t, CUE.credit, 0, 22);
+}
+
+/* 끼어드는 장면: s 는 insert.at 부터 잰 초 */
+const TYPED_PEOPLE = ['충주중학교 정우진', '가경초등학교 박지후', '학성초등학교 최하은', '충청북도교육청 김서연', '새터초등학교 한지민', '오송초등학교 윤서아'];
+const TYPED_ORGS = ['학성초등학교', '충북외국어고등학교', '음성교육지원청', '미래교육추진단', '청주교육지원청 행정과', '단양초등학교'];
+const CHECK_ROWS = ['학성초 최하은', '가경초 박지후', '충주중 정우진', '새터초 한지민', '오송초 윤서아'];
+CHECK_ROWS.forEach(name => {
+  const row = document.createElement('div');
+  row.className = 'ck';
+  row.innerHTML = `<span class="box"></span><span>${name}</span><span class="q">이 사람 넣었나?</span>`;
+  $('i3-list').appendChild(row);
+});
+function typing(s, a, b, total, words, field, done, unit, count) {
+  const p = clamp((s - a) / (b - a));
+  const n = Math.round(E.inOut(p) * total);
+  count.textContent = n.toLocaleString('en-US');
+  // 입력칸에는 한 사람(기관)씩 쳐지는 모습을 빠르게 되풀이해 보여 준다
+  const per = (b - a) / words.length;
+  const k = Math.min(words.length - 1, Math.floor(Math.max(0, s - a) / per));
+  const word = words[k];
+  const q = clamp((s - a - k * per) / (per * .8));
+  field.textContent = p > 0 ? word.slice(0, Math.ceil(q * word.length)) : '';
+  done.textContent = `${Math.min(30, Math.round(p * 30))} / 30${unit}`;
+}
+function renderInsert(t) {
+  const s = t - INS.at;
+  const cue = INS.cues;
+  [['i1', .12, cue.typeB[0] - .15], ['i2', cue.typeB[0] - .15, cue.checks[0] - .2], ['i3', cue.checks[0] - .2, INS.dur]].forEach(([id, a, b]) => {
+    const node = $(id);
+    const i = tw(s, a, a + .35, E.out5), o = b < INS.dur ? tw(s, b - .25, b, E.inn) : 0;
+    css(node, i * (1 - o), `translateY(${(1 - i) * 30 - o * 30}px)`, { filter: `blur(${(1 - i) * 8 + o * 8}px)` });
+  });
+  typing(s, cue.typeA[0], cue.typeA[1], 1800, TYPED_PEOPLE, $('i1-f'), $('i1-d'), '명', $('i1-n'));
+  typing(s, cue.typeB[0], cue.typeB[1], 300, TYPED_ORGS, $('i2-f'), $('i2-d'), '곳', $('i2-n'));
+  // 체크가 차례로 켜지다가 한 줄이 헷갈리면, 아래에서 위로 모두 지워진다
+  const rows = $('i3-list').children;
+  for (let i = 0; i < rows.length; i++) {
+    const box = rows[i].querySelector('.box');
+    const on = s >= (cue.checks[i] ?? 99);
+    const wiped = s >= cue.rewind + (rows.length - 1 - i) * .07;
+    const lit = on && !wiped;
+    box.style.background = lit ? '#A7F0E0' : 'transparent';
+    box.style.borderColor = lit ? '#A7F0E0' : 'rgba(255,255,255,.5)';
+    box.classList.toggle('on', lit);
+    const bad = i === 3 && s >= cue.tangle;
+    rows[i].style.borderColor = bad ? 'rgba(255,138,128,.9)' : 'rgba(255,255,255,.16)';
+    rows[i].style.background = bad ? 'rgba(255,138,128,.16)' : 'rgba(255,255,255,.08)';
+    rows[i].querySelector('.q').style.opacity = bad ? tw(s, cue.tangle, cue.tangle + .2) : 0;
+    const shakeX = bad ? Math.sin((s - cue.tangle) * 60) * 6 * Math.exp(-(s - cue.tangle) * 6) : 0;
+    rows[i].style.transform = `translateX(${shakeX}px)`;
+  }
+}
+
+window.renderAt = function (t) {
+  renderBase(baseTime(t), t);
+  // 끼어든 장면이 끝나도 마지막 모습(처음부터 다시 확인)은 남아 첫 장면과 함께 빨려 들어간다
+  if (t >= INS.at - .1) renderInsert(Math.min(t, INS.at + INS.dur));
+  else ['i1', 'i2', 'i3'].forEach(id => { $(id).style.opacity = 0; });
 };
 
 const fixed = new URLSearchParams(location.search).get('t');

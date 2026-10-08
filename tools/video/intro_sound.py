@@ -26,7 +26,35 @@ def load_cues():
     with open(os.path.join(HERE, 'intro_cues.js'), encoding='utf-8') as source:
         text = source.read()
     body = text[text.index('INTRO_CUES'):]
-    return json.loads(body[body.index('{'):body.rindex('}') + 1])
+    return to_real_time(json.loads(body[body.index('{'):body.rindex('}') + 1]))
+
+
+def to_real_time(cues):
+    """박자표는 '끼워 넣기 전' 시각이다. insert.at 이후는 insert.dur 만큼 늦춰 실제 영상 시각으로 바꾼다."""
+    ins = cues['insert']
+    at, dur = ins['at'], ins['dur']
+
+    def real(x):
+        return x + dur if x >= at else x
+
+    out = {}
+    for key, value in cues.items():
+        if key in ('bpm', 'insert'):
+            out[key] = value
+        elif key == 'total':
+            out[key] = value + dur
+        elif isinstance(value, list):
+            out[key] = [real(x) for x in value]
+        elif isinstance(value, dict):
+            out[key] = {k: (real(v) if k in ('start', 'end') else v) for k, v in value.items()}
+        else:
+            out[key] = real(value)
+    # 끼어든 장면 속 시각은 insert.at 부터 잰 값이라 at 만 더한다
+    out['insert'] = {k: ([at + x for x in v] if isinstance(v, list) else at + v) for k, v in ins['cues'].items()}
+    # 솟구치는 소리는 끼어든 장면이 끝난 뒤 첫 장면 바로 앞에서만 짧게 올린다
+    r0, r1 = out['riser']
+    out['riser'] = [max(r0, r1 - 1.6), r1]
+    return out
 
 
 def secs(n):
@@ -170,6 +198,21 @@ def error_buzz():
     return lowpass_fft(square, 2200) * np.exp(-((t % .16) * 9)) * .35
 
 
+def keystroke():
+    t = secs(.035)
+    tick = highpass_fft(RNG.standard_normal(len(t)), 2600) * np.exp(-t * 260)
+    thock = np.sin(2 * np.pi * 180 * t) * np.exp(-t * 160) * .4
+    return tick * .7 + thock
+
+
+def rewind(length):
+    """테이프를 되감듯 높은 데서 낮게 미끄러지는 소리."""
+    t = secs(length)
+    f = 1800 * (0.12 ** (t / length))
+    tone = np.sign(np.sin(2 * np.pi * np.cumsum(f) / SR)) * .3 + np.sin(2 * np.pi * np.cumsum(f * .5) / SR) * .5
+    return lowpass_fft(tone, 3000) * np.sin(np.pi * t / length) ** .7
+
+
 def pop():
     t = secs(.14)
     f = 420 + 900 * t / .14
@@ -244,6 +287,22 @@ def build(cues):
         at = c['start'] + (c['end'] - c['start']) * (1 - (1 - i / c['ticks']) ** 1.6)
         mix.add(at, mouse_click(), .32, pan=RNG.uniform(-.5, .5))
         mix.add(at, pluck(700 + 1700 * i / c['ticks'], .04), .07)
+
+    # 끼어드는 장면: 자판 소리, 체크, 꼬임, 처음으로 되돌아감
+    ins = cues['insert']
+    for key, words, pitch in (('typeA', 30, 1.0), ('typeB', 14, 1.25)):
+        a0, a1 = ins[key]
+        n_keys = int((a1 - a0) * 22)
+        for i in range(n_keys):
+            at = a0 + (a1 - a0) * i / n_keys + RNG.uniform(-.008, .008)
+            mix.add(at, keystroke(), .30 + .08 * RNG.random(), pan=RNG.uniform(-.35, .35))
+        for i in range(words):    # 한 사람(기관)을 다 칠 때마다 작은 소리
+            mix.add(a0 + (a1 - a0) * (i + 1) / words, pluck(1046.5 * pitch, .05), .05)
+        mix.add(a1, bell(1567.98 * pitch, .6), .12, verb=.4)
+    for i, at in enumerate(ins['checks']):
+        mix.add(at, pluck([783.99, 880.0, 987.77, 1046.5, 1174.66][i % 5], .1), .16, pan=.4)
+    mix.add(ins['tangle'], error_buzz(), .4, pan=.4)
+    mix.add(ins['rewind'] - .05, rewind(.55), .45, verb=.3)
 
     r0, r1 = cues['riser']
     mix.add(r0, riser(r1 - r0 - .06), .55, verb=.3)

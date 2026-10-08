@@ -91,6 +91,7 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
   소리는 `tools/video/intro_sound.py` (numpy 로 합성, 남의 음원을 쓰지 않는다), 박자는 둘이 함께 읽는 `tools/video/intro_cues.js`
   한 곳에 적는다. `node tools/video/render.js intro` 가 찍고 소리를 얹는다. 페이지에서는 소리 없이 저절로 돌고
   (브라우저가 소리 있는 자동 재생을 막는다) [소리 켜기] 로 켠다. 움직임 줄이기를 켠 사람에게는 저절로 돌리지 않는다.
+  영상은 화면에 붙어 꽉 차 있고(`.intro-stage` 가 fixed), 위쪽 바부터 끝까지 감싼 `.sheet` 가 내리는 만큼 그 위로 덮으며 올라온다.
   앱 화면을 다시 찍었으면 이 영상도 다시 만든다.
 
 ## 문체
