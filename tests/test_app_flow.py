@@ -1135,13 +1135,45 @@ class AppFlowTest(unittest.TestCase):
 
 
     def test_already_added_person_is_reported_as_duplicate(self):
-        """첫 클릭에서 안내창이 뜨면 돌리기 전부터 담혀 있던 사람이다."""
+        """안내창이 뜨고 누르기 전 목록에도 그 이름이 있었으면 원래 있던 사람이다."""
         self._use_verify()
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_click_add_once',
                              return_value='duplicate') as clicked:
-            self.assertEqual(self.app._do_select('김충북', self.app_module.Counter()), 'duplicate')
+            self.assertEqual(self.app._do_select('김충북', self.app_module.Counter({'김충북': 1})),
+                             'duplicate')
         self.assertEqual(clicked.call_count, 1)
+
+    def test_duplicate_popup_without_the_name_in_the_list_is_not_success(self):
+        """늦게 온 앞 검색 결과를 눌러 안내창이 떠도 담긴 것으로 치지 않는다."""
+        m = self.app_module
+        with patch.object(self.app, '_click_add_once', return_value='duplicate'):
+            self.assertEqual(self.app._do_select('김충북', m.Counter({'정가람': 1})), 'unconfirmed')
+            self.assertEqual(self.app._do_select('김충북', None), 'unreadable')
+
+    def test_result_that_changes_before_the_add_button_is_not_added(self):
+        """결과 줄을 누른 뒤 목록이 다른 사람으로 바뀌면 선택 버튼을 누르지 않는다."""
+        fake = MagicMock()
+        keys = ('result_first_x', 'result_first_y', 'add_button_x', 'add_button_y')
+        saved = {k: self.app.config.data.get(k) for k in keys}
+        self.app.config.data.update(result_first_x=500, result_first_y=300,
+                                    add_button_x=900, add_button_y=600)
+        self.app.stop_flag.clear()
+        try:
+            with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
+                    patch.object(self.app, '_snapshot_dialogs', return_value=set()), \
+                    patch.object(self.app, '_check_click_target'), \
+                    patch.object(self.app_module, 'pyautogui', fake):
+                self.assertEqual(self.app._click_add_once(.1, still_matches=lambda: False), 'changed')
+        finally:
+            self.app.config.data.update(saved)
+        fake.click.assert_called_once_with(500, 300)
+
+    def test_changed_result_is_marked_for_retry_and_run_goes_on(self):
+        from automation import FAIL_SEARCH_STALE
+        item, _asked, _clicked = self._run_one(1, selection='changed')
+        self.assertFalse(item.get('added'))
+        self.assertEqual(item.get('failure_reason'), FAIL_SEARCH_STALE)
 
     def test_click_without_a_list_change_is_not_success(self):
         m = self.app_module

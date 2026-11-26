@@ -4904,7 +4904,7 @@ class App:
                         if result == 'ok':
                             result = 'manual_observed'
                 else:
-                    result = self._do_select(name, before_add)
+                    result = self._do_select(name, before_add, org=org)
                 if result == 'stopped':
                     self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                     break
@@ -4915,7 +4915,7 @@ class App:
                 else:
                     fail += 1
                     reason = {'duplicate': FAIL_DUPLICATE, 'skipped': FAIL_SAME_NAME_SKIPPED,
-                              'manual_observed': reconcile.NAME_ONLY,
+                              'manual_observed': reconcile.NAME_ONLY, 'changed': FAIL_SEARCH_STALE,
                               }.get(result, FAIL_ADD_UNCONFIRMED)
                     self._mark_failed(idx, reason, item)
                     self._log(f'{reason}\n')
@@ -4964,10 +4964,13 @@ class App:
             raise RuntimeError('좌표 오류: 소통메신저 검색창에서 입력이 끊겼습니다')
         pyautogui.press('enter')
 
-    def _click_add_once(self, popup_wait: float = POPUP_WAIT_ADD) -> str:
+    def _click_add_once(self, popup_wait: float = POPUP_WAIT_ADD, still_matches=None) -> str:
         """결과 첫 줄과 선택 버튼을 한 번 누른다.
 
         클릭 여부와 중복 안내를 반환한다. 클릭 결과는 선택 목록에서 확인한다.
+        still_matches 가 있으면 결과 줄을 누른 뒤, 선택 버튼을 누르기 전에 한 번 더 본다.
+        검색 대기를 줄이면 앞 검색의 응답이 늦게 와서 결과 목록을 덮어쓸 수 있다.
+        그 사이에 누르면 엉뚱한 사람이 담기므로, 결과가 바뀌었으면 누르지 않고 'changed' 를 준다.
         """
         rx = self.config.data['result_first_x']
         ry = self.config.data['result_first_y']
@@ -4981,6 +4984,8 @@ class App:
         before = self._snapshot_dialogs()
         if self.stop_flag.is_set():
             return 'stopped'
+        if still_matches is not None and not still_matches():
+            return 'changed'
         self._check_click_target((ax, ay))
         pyautogui.click(ax, ay)
         appeared = self._wait_for_dialog(before, popup_wait)
@@ -5028,10 +5033,18 @@ class App:
             return 'stopped'
         return 'unconfirmed' if readable else 'unreadable'
 
-    def _do_select(self, name, before) -> str:
+    def _do_select(self, name, before, org='') -> str:
         if self.stop_flag.is_set():
             return 'stopped'
-        result = self._click_add_once(POPUP_WAIT_ADD)
+        result = self._click_add_once(
+            POPUP_WAIT_ADD,
+            still_matches=lambda: self._run_on_ui(lambda: self._read_search_count(name, org)) == 1)
+        if result == 'duplicate':
+            # '이미 선택된 사용자' 안내창만 믿지 않는다. 늦게 온 앞 검색 결과를 눌러도
+            # 이 안내창이 뜬다. 누르기 전 목록에 그 이름이 있었을 때만 원래 있던 사람으로 본다.
+            if before is None:
+                return 'unreadable'
+            return 'duplicate' if before.get(name, 0) >= 1 else 'unconfirmed'
         if result != 'clicked':
             return result
         return self._wait_for_added(name, before)
