@@ -187,9 +187,15 @@ def main():
     # 소통메신저와 비교 창도 진짜 tkinter 에서 그려지는지
     compared = reconcile.compare_with_messenger(
         [{'org': '가초', 'name': '갑돌'}, {'org': '나초', 'name': '을순'}],
-        ['갑돌 [교사(초등)] [1학년]'])
+        reconcile.MessengerSnapshot(['갑돌 [교사(초등)] [1학년]'], complete=True))
     window = app_module.MessengerCompareReport(root, compared, 2, on_add=lambda items: None)
     assert [i['name'] for i in window.addable] == ['을순'], window.addable
+    window.destroy()
+    partial = reconcile.compare_with_messenger(
+        [{'org': '가초', 'name': '갑돌'}, {'org': '나초', 'name': '을순'}],
+        reconcile.MessengerSnapshot(['갑돌 [교사(초등)] [1학년]']))
+    window = app_module.MessengerCompareReport(root, partial, 2, on_add=lambda items: None)
+    assert not window.addable, window.addable
     window.destroy()
     print('소통메신저 비교 창 ok')
 

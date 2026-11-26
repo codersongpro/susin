@@ -81,6 +81,10 @@ class ParseOrgsTest(unittest.TestCase):
     def test_person_name_dropped_from_mixed_line(self):
         self.assertEqual(self.names('충주중학교\t박영수'), ['충주중학교'])
 
+    def test_horizontal_excel_cells_are_individual_organizations(self):
+        self.assertEqual(self.names('학성초\t한천초\t백곡초'),
+                         ['학성초등학교', '한천초등학교', '백곡초등학교'])
+
     def test_unresolved_is_reported_not_swallowed(self):
         rows = parse_orgs('있을리없는이름아무개기관')
         self.assertEqual(len(rows), 1)

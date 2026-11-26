@@ -263,6 +263,15 @@ AUTO_GRADES = (GRADE_EXACT, GRADE_ABBR, GRADE_PREFIX)
 
 BULLET_RE = re.compile(r'^\s*(?:[-*•·]|\d+\s*[.)])\s*')
 QUOTE_RE = re.compile(r'^["\'“‘]+|["\'”’]+$')
+DEPARTMENT_END_RE = re.compile(r'^(?:.+부서|.{2,}(?:과|팀|부|실|국|센터|반|분원|담당관))$')
+ORG_PARENT_END_RE = re.compile(
+    r'(?:교육청|지원청|연수원|교육원|연구원|정보원|도서관|본청|수련원|문화원|진흥원|센터)$'
+)
+DEPARTMENT_COLUMNS = frozenset({'부서', '부서명', '소속부서'})
+ORG_COLUMNS = DEPARTMENT_COLUMNS | {
+    '기관', '기관명', '상위기관', '상위기관명', '소속', '소속기관', '소속학교',
+    '소속학교(기관)', '교육지원청', '학교', '학교명',
+}
 
 
 def candidate_orgs(s: str, limit: int = 5) -> list:
@@ -285,7 +294,7 @@ def candidate_orgs(s: str, limit: int = 5) -> list:
     return names
 
 
-def lookup_org_graded(s: str):
+def lookup_org_graded(s: str, *, allow_fuzzy: bool = True):
     """소속명 → (정식명 또는 None, 등급).
 
     lookup_org 와 같은 순서로 찾되 어느 단계에서 맞았는지 함께 알려준다.
@@ -307,7 +316,7 @@ def lookup_org_graded(s: str):
             if kpre == prefix and ksuf == suffix:
                 return v, GRADE_PREFIX
 
-    resolved = lookup_org(s)
+    resolved = lookup_org(s) if allow_fuzzy else None
     if resolved:
         return resolved, GRADE_FUZZY
     return None, GRADE_NONE
@@ -319,42 +328,71 @@ def _clean_line(line: str) -> str:
     return QUOTE_RE.sub('', line).strip()
 
 
-def _org_from_line(line: str, known=None):
-    """한 줄 → (원문, 정식명|None, 등급) 또는 None(건너뜀).
+def _is_department(text: str) -> bool:
+    return bool(DEPARTMENT_END_RE.fullmatch(text)) or text == '병설유치원'
 
-    줄 전체가 바로 해석되면 그것을 쓰고, 아니면 토큰으로 나눠 기관으로 해석되는
-    토큰 중 **마지막** 것을 고른다. 에듀파인 수신기관명이 '충청북도진천교육지원청
-    학성초등학교' 처럼 상위조직 + 조직명 순서라서 뒤쪽이 실제 대상이다.
 
-    사람 이름은 is_person_name 으로 미리 걸러내지 않는다. '오송솔미', '청주중앙'
-    처럼 학교명 접두어도 2~4자 한글이라 사람 이름과 형태가 같기 때문이다.
-    대신 '기관으로 해석되는가'를 필터로 쓰고, 끝까지 해석 안 된 토큰만
-    사람 이름 여부를 따진다.
-    """
-    if not line:
-        return None
+def _org_cells(line: str, columns: list, known: set) -> list:
+    """가로로 놓인 기관은 따로 읽고, 상위 기관 바로 뒤의 부서는 붙여 읽는다."""
+    fields = [_clean_line(field) for field in line.split('\t')]
+    if len(fields) != len(columns):
+        columns = [''] * len(fields)
+    cells = []
+    for pos, (cell, column) in enumerate(zip(fields, columns)):
+        if cell in NON_NAME_WORDS or not cell:
+            continue
+        if column and column not in ORG_COLUMNS:
+            continue
+        if pos and fields[pos - 1] in TITLE_WORDS and is_person_name(cell):
+            continue
+        parent = cells[-1] if cells else ''
+        unlabelled_department = not column and ORG_PARENT_END_RE.search(parent) and (
+            _is_department(cell)
+            or any(name.startswith(cell) and ' ' not in name and _is_department(name)
+                   for name in known)
+        )
+        linked_kindergarten = cell == '병설유치원' and is_org(parent)
+        if parent and (column in DEPARTMENT_COLUMNS or unlabelled_department or linked_kindergarten):
+            cells[-1] += ' ' + cell
+        else:
+            cells.append(cell)
+    return cells
 
-    name, grade = lookup_org_graded(line)
+
+def _org_from_line(line: str, known):
+    """직위와 이름을 빼고, 확인할 기관 경로는 처음부터 끝까지 보존한다."""
+    if line in known:
+        return line, line, GRADE_EXACT
+    name, grade = lookup_org_graded(line, allow_fuzzy=False)
     if grade in AUTO_GRADES:
         return line, name, grade
 
-    # 직위·표 머리글은 기관일 수 없다. 먼저 걷어낸다.
-    # 그러지 않으면 '소속 / 직위 / 성명' 머리글 줄에서 '성명' 이 기관 후보로 남는다.
-    tokens = [t for t in _tokenize(line) if t and t not in NON_NAME_WORDS]
+    all_tokens = [t for t in line.replace(' : ', ' ').split()
+                  if not JUNK_RE.search(t) or _is_department(t)]
+    tokens = [token for pos, token in enumerate(all_tokens)
+              if token not in NON_NAME_WORDS and not (
+                  pos and all_tokens[pos - 1] in TITLE_WORDS and is_person_name(token))]
     if not tokens:
         return None
 
-    best = None
-    for tok in tokens:
-        tok_name, tok_grade = lookup_org_graded(tok)
-        if tok_grade in AUTO_GRADES:
-            best = (tok, tok_name, tok_grade)
-    if best:
-        return best
+    has_title = any(t in TITLE_WORDS for t in all_tokens)
+    anchors = [pos for pos, token in enumerate(tokens)
+               if token in known or is_org(token) or _is_department(token)]
+    parts = []
+    for pos, token in enumerate(tokens):
+        if (token in known or _is_department(token) or not is_person_name(token)
+                or (anchors and anchors[0] < pos < anchors[-1])
+                or (parts and ORG_PARENT_END_RE.search(parts[-1]) and not has_title)):
+            parts.append(token)
+    if len(parts) > 1:
+        target = ' '.join(parts)
+        # 기관으로 보이는 조각을 하나라도 포함한 복합 입력은 전체 경로로 남긴다.
+        # 구성 요소 중 하나만 골라 확정하면 상위 기관이나 다른 지역으로 바뀔 수 있다.
+        if anchors:
+            name, grade = lookup_org_graded(target, allow_fuzzy=False)
+            return target, name, grade
 
-    # 아무것도 확정되지 않았다. 사람 이름처럼 보이는 토큰을 빼고 남는 것을 본다.
-    rest = [t for t in tokens if not is_person_name(t)]
-    target = (rest or tokens)[-1]
+    target = (parts or tokens)[-1]
 
     name, grade = lookup_org_graded(target)
     if grade == GRADE_NONE and (is_person_name(target) or len(tokens) >= 3):
@@ -363,7 +401,7 @@ def _org_from_line(line: str, known=None):
         #   · 후보가 그 말을 통째로 품고 있다 ('오송솔미' → '오송솔미초등학교')
         # 편집거리로만 닮은 것은 버린다 ('이혜원' → '이원초등학교').
         # 오타 난 기관명은 여기 오지 않는다. 그건 fuzzy 로 잡혀 후보와 함께 남는다.
-        if not (known and target in known):
+        if target not in known and not _is_department(target):
             if not any(target in c for c in candidate_orgs(target, limit=5)):
                 return None
     return target, name, grade
@@ -380,27 +418,34 @@ def parse_orgs(text: str, known=None, deduplicate: bool = True) -> list:
     사람 이름만 있는 줄은 건너뛴다.
     해석에 실패한 줄도 grade='none' 으로 남긴다 — 조용히 삼키지 않는다.
     """
+    known = known or set()
     results, seen = [], set()
+    columns = []
     for raw_line in (text or '').splitlines():
         line = _clean_line(raw_line)
         if not line:
             continue
-        # 쉼표·세미콜론으로 여러 기관을 한 줄에 쓴 경우를 먼저 나눈다
-        chunks = [c.strip() for c in re.split(r'[,;]', line) if c.strip()] or [line]
+        labels = [''.join(field.split()) for field in raw_line.split('\t')]
+        if (len(labels) > 1 and any(label in ORG_COLUMNS for label in labels)
+                and all(not label or label in ORG_COLUMNS or label in HEADER_WORDS for label in labels)):
+            columns = labels
+            continue
+        if len(labels) != len(columns):
+            columns = []
+        cells = _org_cells(raw_line, columns, known) if '\t' in raw_line else [line]
+        chunks = [chunk.strip() for cell in cells for chunk in re.split(r'[,;]', cell) if chunk.strip()]
         for chunk in chunks:
             found = _org_from_line(chunk, known)
             if not found:
                 continue
             raw, name, grade = found
-            key = name or f'?{raw}'
+            key = name if grade in AUTO_GRADES and ' ' not in raw else f'?{raw}'
             if deduplicate and key in seen:
                 continue
             seen.add(key)
             results.append({
                 'raw': raw,
-                # 원문 줄 전체. raw 는 해석에 쓰인 토막이라 정보가 깎여 있다.
-                # '청주교육지원청 행정과' 는 raw 가 '청주교육지원청' 이 되어
-                # 부서를 잃는다. 뒤에서 코드 사전으로 다시 볼 때 이 값이 필요하다.
+                # raw 는 명단의 직위와 이름을 뺀 기관 입력이다.
                 'line': chunk,
                 'name': name,
                 'grade': grade,

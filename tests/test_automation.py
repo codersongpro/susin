@@ -435,3 +435,24 @@ class RowsBelowTheFoldTest(unittest.TestCase):
         nodes, names = hidden_rows_nodes(total=4, visible=4)
         rows, visible = selected_rows_seen(nodes, 1284)
         self.assertEqual((len(rows), visible), (4, 4))
+
+
+class SearchRowTest(unittest.TestCase):
+    def test_search_row_must_match_name_and_requested_school(self):
+        from automation import search_row_matches
+
+        def node(index, parent, rect, name):
+            return dict(id=index, parent=parent, rect=rect, name=name, offscreen=False)
+
+        nodes = [
+            node(0, -1, (0, 0, 600, 400), ''),
+            node(1, 0, (0, 100, 300, 145), ''),
+            node(2, 1, (10, 102, 80, 120), '김가람'),
+            node(3, 1, (10, 121, 140, 144), '백곡초등학교'),
+            node(4, 0, (0, 145, 300, 190), '김가람 학성초등학교'),
+        ]
+        self.assertFalse(search_row_matches(nodes, (240, 115), 350, '김가람', ('학성초등학교',)))
+        self.assertTrue(search_row_matches(nodes, (240, 115), 350, '김가람', ('백곡초등학교',)))
+        nodes[2]['name'] = '박가람 [교사]'
+        nodes[3]['name'] = '김가람 백곡초등학교에 문의'
+        self.assertFalse(search_row_matches(nodes, (240, 115), 350, '김가람', ('백곡초등학교',)))

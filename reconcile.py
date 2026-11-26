@@ -11,11 +11,11 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 import edufine
-from automation import FAIL_DUPLICATE
+from automation import FAIL_ADD_UNCONFIRMED, FAIL_DUPLICATE
 from sotong_parser import AUTO_GRADES
 
 # 소통픽: 워커가 결과를 남기지 못한 항목
-NOT_TRIED = '중지되어 시도 안 함'
+NOT_TRIED = '중지 전에 시도하지 못함'
 NOT_CHECKED = '결과를 확인하지 못함'
 
 # 수신픽: 엑셀에 들어가지 못한 사유
@@ -23,7 +23,7 @@ UNCONFIRMED = '확정 안 됨 (후보 중에서 골라야 함)'
 NO_ORG = '기관 미확정'
 NO_CODE = '코드 없음'
 AMBIGUOUS = '동명 기관 여럿'
-NOT_WRITTEN = '엑셀에 써지지 않음'
+NOT_WRITTEN = '엑셀에 들어가지 않음'
 
 
 @dataclass
@@ -165,7 +165,7 @@ def compare_count(expected: int, shown: int, where: str, unit: str, who: str):
     아무 말을 하지 않기 때문이다. 그래서 대조할 목록을 복사하라고 안내한다.
     """
     if shown == expected:
-        return 'match', f'{where} 수와 같습니다. 빠진 {who}이 없습니다.'
+        return 'match', f'{where} 수와 같습니다. 구성원은 명단에서 직접 확인해 주세요.'
     if shown < expected:
         gap = expected - shown
         return 'short', (
@@ -178,11 +178,12 @@ def compare_count(expected: int, shown: int, where: str, unit: str, who: str):
 
 # ── 소통메신저 [선택된 사용자] 와 소통픽 명단 맞춰 보기 ──
 # [선택된 사용자] 한 줄은 '박소통 [교사(초등)] [1학년] 안전/통학버스 ...' 처럼
-# 이름 뒤에 직위가 괄호로 붙고, 학교 이름은 나오지 않는다. 그래서 이름으로만
-# 맞출 수 있다. 같은 이름이 소통픽 명단에 다른 학교로 여럿 있으면 누가
-# 들어갔는지 가릴 수 없으므로 '확인 필요' 로 따로 둔다. 짐작해서 넘기지 않는다.
+# 이름 뒤에 직위가 괄호로 붙는다. 줄 글에 없는 고유 ID와 소속은 따로 읽은 경우에만 쓴다.
 NOT_IN_MESSENGER = '소통메신저에 없음'
-SAME_NAME_UNSURE = '동명이인 확인 필요'
+NAME_ONLY = '이름 일치, 본인 확인 필요'
+READ_INCOMPLETE = '목록 읽기 미완료, 확인 보류'
+NAME_UNAVAILABLE = '이름이 없어 맞춰 보지 못함'
+REVIEW_ONLY = (NAME_ONLY, READ_INCOMPLETE, NAME_UNAVAILABLE, FAIL_ADD_UNCONFIRMED)
 
 # 이름 옆의 글(상태 메시지)은 사람마다 다르다. 내선이 있을 수도 없을 수도 있고, 업무나 학생 수,
 # 맡은 반일 수도 있다. 그 글에 '해님반(208)' 이나 '6학년 [2반]' 처럼 한글 뒤에 괄호가 붙은
@@ -238,99 +239,98 @@ def _plain(text) -> str:
     return re.sub(r'\s+', '', text or '')
 
 
+@dataclass(frozen=True)
+class MessengerRow:
+    """줄 글과 화면에서 별도 필드로 확인한 소속과 사용자 ID."""
+    text: str
+    org: str = ''
+    user_id: str = ''
+
+
+@dataclass(frozen=True)
+class MessengerSnapshot:
+    """한 [사용자 선택] 창에서 읽은 명단과 전체를 읽었는지 여부."""
+    rows: list
+    complete: bool = False
+    window: int | None = None
+    note: str = ''
+
+
 @dataclass
 class MessengerCompare:
-    """소통픽 명단과 소통메신저 [선택된 사용자] 를 맞춰 본 결과.
-
-    inside   들어간 소통픽 항목
-    missing  빠진 소통픽 항목
-    unsure   (이름, 그 이름의 소통픽 항목들, 소통메신저에 있는 수) 동명이인이라 못 가림
-    extra    소통메신저에만 있는 줄 (시작 전부터 있었거나 손으로 넣은 사람)
-    no_name  이름이 없어 맞춰 볼 수 없는 소통픽 항목
-    rows     소통메신저에서 읽은 줄 수
-    """
+    """소통픽 명단과 소통메신저 [선택된 사용자] 를 맞춰 본 결과."""
     inside: list = field(default_factory=list)
     missing: list = field(default_factory=list)
-    unsure: list = field(default_factory=list)
+    name_only: list = field(default_factory=list)
+    pending: list = field(default_factory=list)
     extra: list = field(default_factory=list)
     no_name: list = field(default_factory=list)
     rows: int = 0
+    complete: bool = False
+    window: int | None = None
 
 
-def compare_with_messenger(items, rows) -> MessengerCompare:
-    """소통픽 명단(items) 과 소통메신저에서 읽은 줄(rows) 을 이름으로 맞춘다.
-
-    같은 사람이 명단에 두 번 있으면(학교와 이름이 같으면) 한 사람으로 센다.
-    이름이 같고 학교가 다르면 다른 사람이다. 소통메신저에 그 이름이 사람 수만큼
-    있으면 다 들어간 것이고, 하나도 없으면 다 빠진 것이고, 그 사이면 누가 들어갔는지
-    알 수 없어 확인 필요로 둔다.
-    """
-    result = MessengerCompare(rows=len(rows))
-    found = Counter()
-    rows_by_name = {}
-    for text in rows:
-        name = person_name_from_row(text)
+def compare_with_messenger(items, snapshot: MessengerSnapshot) -> MessengerCompare:
+    """전체를 읽었다는 근거가 있을 때만 명단에 없는 사람을 누락으로 표시한다."""
+    result = MessengerCompare(rows=len(snapshot.rows), complete=snapshot.complete,
+                              window=snapshot.window)
+    observed = [row if isinstance(row, MessengerRow) else MessengerRow(row)
+                for row in snapshot.rows]
+    rows_by_name, rows_by_id = {}, {}
+    for i, row in enumerate(observed):
+        name = person_name_from_row(row.text)
         if name:
-            found[name] += 1
-            rows_by_name.setdefault(name, []).append(text)
+            rows_by_name.setdefault(name, []).append(i)
         else:
-            result.extra.append(text)
+            result.complete = False
+        if row.user_id:
+            rows_by_id.setdefault(row.user_id, []).append(i)
 
-    by_name = {}
+    relevant = set()
+    items = list(items)
+    ids_by_name_and_org = {}
+    for item in items:
+        if item.get('user_id'):
+            key = (_plain(item.get('name')), _plain(item.get('org')))
+            ids_by_name_and_org.setdefault(key, set()).add(item['user_id'])
+    missing_evidence = result.missing if result.complete else result.pending
     for item in items:
         name = _plain(item.get('name'))
-        if not name:
+        user_id = item.get('user_id')
+        identified = rows_by_id.get(user_id, [])
+        same_name = [i for i in rows_by_name.get(name, [])
+                     if not (user_id and observed[i].user_id)]
+        relevant.update(identified)
+        relevant.update(same_name)
+        org = _plain(item.get('org'))
+        distinct_ids = ids_by_name_and_org.get((name, org), ())
+        if identified or (org and len(distinct_ids) <= 1
+                          and any(_plain(observed[i].org) == org for i in same_name)):
+            result.inside.append(item)
+        elif not name:
             result.no_name.append(item)
-            continue
-        by_name.setdefault(name, []).append(item)
-
-    for name, people in by_name.items():
-        distinct = len({_plain(item.get('org')) for item in people})
-        have = found.get(name, 0)
-        if have >= distinct:
-            result.inside.extend(people)
-        elif have == 0:
-            result.missing.extend(people)
+        elif same_name:
+            result.name_only.append(item)
         else:
-            result.unsure.append((name, people, have))
+            missing_evidence.append(item)
 
-    for name, have in found.items():
-        people = by_name.get(name, [])
-        expected = len({_plain(item.get('org')) for item in people})
-        if have > expected:
-            result.extra.extend(rows_by_name[name][expected:])
+    if not result.no_name:
+        result.extra.extend(observed[i].text for indexes in rows_by_name.values()
+                            for i in indexes if i not in relevant)
     return result
 
 
-def same_name_note(people, have: int) -> str:
-    """'동명이인 2명 중 1명만 들어감, 확인 필요'. 같은 학교 같은 이름은 한 사람으로 센다."""
-    count = len({_plain(item.get('org')) for item in people})
-    return f'동명이인 {count}명 중 {have}명만 들어감, 확인 필요'
-
-
 def compare_text(result: MessengerCompare) -> str:
-    """빠진 사람, 확인 필요, 소통메신저에만 있는 사람 순으로 글로 푼다."""
+    """목록 비교의 근거와 명단을 글로 푼다."""
     lines = []
-    if result.missing:
-        lines.append(f'[{NOT_IN_MESSENGER}]  {len(result.missing)}명')
-        lines.extend(f'  {item_label(item)}' for item in result.missing)
-        lines.append('')
-    if result.unsure:
-        count = sum(len(people) for _name, people, _have in result.unsure)
-        lines.append(f'[{SAME_NAME_UNSURE}]  {count}명')
-        for _name, people, have in result.unsure:
-            note = same_name_note(people, have)
-            lines.extend(f'  {item_label(item)}  ({note})' for item in people)
-        lines.append('')
-    if result.no_name:
-        lines.append(f'[이름이 없어 맞춰 보지 못함]  {len(result.no_name)}건')
-        lines.extend(f'  {item_label(item)}' for item in result.no_name)
-        lines.append('')
+    for label, items in ((NOT_IN_MESSENGER, result.missing), (NAME_ONLY, result.name_only),
+                         (READ_INCOMPLETE, result.pending), (NAME_UNAVAILABLE, result.no_name),
+                         ('등록 확인', result.inside)):
+        if items:
+            lines.append(f'[{label}]  {len(items)}명')
+            lines.extend(f'  {item_label(item)}' for item in items)
+            lines.append('')
     if result.extra:
         lines.append(f'[소통메신저에만 있음]  {len(result.extra)}명')
         lines.extend(f'  {person_row_label(text)}' for text in result.extra)
-        lines.append('')
-    if result.inside:
-        lines.append(f'[들어감]  {len(result.inside)}명')
-        lines.extend(f'  {item_label(item)}' for item in result.inside)
     return '\n'.join(lines).strip()

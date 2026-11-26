@@ -8,10 +8,12 @@
 """
 
 import datetime
+import difflib
 import json
 import os
 import re
 import sys
+import tempfile
 
 from app_config import APP_DATA_DIR, CHUNGBUK_OFFICE_CODE
 
@@ -20,7 +22,8 @@ try:
 except ImportError:                                  # pragma: no cover
     openpyxl = None
 
-from sotong_parser import AUTO_GRADES, lookup_org, lookup_org_graded
+from sotong_parser import (AUTO_GRADES, GRADE_ABBR, GRADE_EXACT, GRADE_NONE,
+                           lookup_org_graded, parse_orgs)
 
 SHEET_NAME = '개인수신그룹관리'
 HEADERS = [
@@ -109,7 +112,7 @@ def short_name(full_name: str) -> str:
         return ''
     # 퍼지 추정으로 맞추면 안 된다. '괴산교육도서관' 이 '충청북도교육도서관' 으로
     # 뭉개져 서로 다른 기관이 한 이름으로 묶인다.
-    name, grade = lookup_org_graded(tail)
+    name, grade = lookup_org_graded(tail, allow_fuzzy=False)
     return name if grade in AUTO_GRADES else tail
 
 
@@ -145,23 +148,23 @@ def read_group_workbook(path: str) -> dict:
     return out
 
 
-def read_written_codes(path: str) -> list:
-    """만든 수신그룹 엑셀을 다시 열어 기관코드를 줄마다 읽는다.
-
-    read_group_workbook 은 기관명으로 묶어 같은 기관이 두 줄이면 한 번만 센다.
-    여기서는 실제로 몇 줄이 써졌는지 맞춰 봐야 하므로 줄마다 그대로 돌려준다.
-    """
+def _read_written_recipients(path: str) -> list:
+    """만든 엑셀에서 전체경로와 코드를 줄마다 읽는다."""
     _require_openpyxl()
-    wb = openpyxl.load_workbook(path, data_only=True)
-    ws = wb[SHEET_NAME] if SHEET_NAME in wb.sheetnames else wb.worksheets[0]
-    codes = []
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        if row is None or len(row) <= COL_ORG_CODE:
-            continue
-        code = str(row[COL_ORG_CODE] or '').strip()
-        if CODE_RE.match(code):
-            codes.append(code)
-    return codes
+    wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+    try:
+        ws = wb[SHEET_NAME] if SHEET_NAME in wb.sheetnames else wb.worksheets[0]
+        return [(row[COL_ORG_NAME], row[COL_ORG_CODE])
+                for row in ws.iter_rows(min_row=2, max_col=COL_ORG_NAME + 1, values_only=True)
+                if any(value is not None for value in row)]
+    finally:
+        wb.close()
+
+
+def read_written_codes(path: str) -> list:
+    """만든 수신그룹 엑셀에서 기관코드를 줄마다 읽는다."""
+    codes = [str(code or '').strip() for _, code in _read_written_recipients(path)]
+    return [code for code in codes if CODE_RE.fullmatch(code)]
 
 
 def merge_codes(codes: dict, harvested: dict) -> tuple:
@@ -203,21 +206,26 @@ def index_by_short_name(codes: dict) -> dict:
 def lookup_code(codes: dict, name: str, index: dict = None):
     """이름 → ({'code','fullname'} 또는 None, 동명 후보 전체경로 목록).
 
-    후보가 둘 이상이면 아무것도 고르지 않고 후보만 돌려준다.
-    임의로 하나를 고르면 공문이 엉뚱한 부서로 간다.
+    사전에 있는 전체경로, 짧은 이름, 등록된 별칭으로만 코드를 찾는다.
+    후보가 둘 이상이면 전체경로를 고를 수 있도록 후보만 돌려준다.
     """
     orgs = (codes or {}).get('기관', {})
     if not orgs or not name:
         return None, []
 
-    if name in orgs:                       # 전체경로로 직접 지목
-        return {'code': orgs[name], 'fullname': name}, []
-
     index = index if index is not None else index_by_short_name(codes)
-    matches = index.get(name) or index.get(lookup_org(name) or '') or []
+    name = name.strip()
+    matches = [name] if name in orgs else index.get(name, [])
+    if not matches and len(_tokens(name)) == 1:
+        canon, grade = lookup_org_graded(name, allow_fuzzy=False)
+        if grade in (GRADE_EXACT, GRADE_ABBR):
+            matches = index.get(canon, [])
     if len(matches) == 1:
         full = matches[0]
-        return {'code': orgs[full], 'fullname': full}, []
+        code = orgs.get(full)
+        if isinstance(code, str) and CODE_RE.fullmatch(code):
+            return {'code': code, 'fullname': full}, []
+        return None, []
     return None, list(matches)
 
 
@@ -269,6 +277,20 @@ def build_workbook(rows, meta, out_path, template_path=None):
     return out_path
 
 
+def save_verified_workbook(rows, meta, out_path):
+    """임시 엑셀에 쓴 기관 전체경로와 코드를 확인한 뒤 저장한다."""
+    expected = [(row['fullname'], row['code']) for row in rows]
+    dest_dir = os.path.dirname(os.path.abspath(out_path))
+    with tempfile.TemporaryDirectory(dir=dest_dir) as temporary:
+        draft = os.path.join(temporary, '수신그룹.xlsx')
+        build_workbook(rows, meta, draft)
+        written = _read_written_recipients(draft)
+        if written != expected:
+            raise ValueError('엑셀의 기관 이름이나 코드가 명단과 맞지 않습니다.')
+        os.replace(draft, out_path)
+    return [code for _, code in written]
+
+
 def default_output_name(group_name: str, when=None) -> str:
     when = when or datetime.date.today()
     return f'수신그룹_{safe_filename(group_name)}_{when:%Y%m%d}.xlsx'
@@ -290,7 +312,7 @@ def split_by_code(parsed_rows, codes):
         entry, ambiguous = lookup_code(codes, name, index)
         if entry:
             ready.append({'name': name, 'code': entry['code'],
-                          'fullname': entry['fullname']})
+                          'fullname': entry['fullname'], 'raw': row.get('raw') or name})
         elif ambiguous:
             missing.append(dict(row, reason='동명 기관 여럿', candidates=ambiguous))
         else:
@@ -310,7 +332,7 @@ def _strict_canon(text: str):
     '청주교육지원청 행정과' 가 편집거리로 '충청북도충주교육지원청 행정과' 에 붙는 일이
     실제로 있었다. 청주로 보내려던 공문이 충주로 간다.
     """
-    name, grade = lookup_org_graded(text)
+    name, grade = lookup_org_graded(text, allow_fuzzy=False)
     return name if grade in AUTO_GRADES else None
 
 
@@ -322,7 +344,7 @@ def resolve_org(codes: dict, text: str, index: dict = None):
 
     1) 전체경로와 정확히 일치
     2) 짧은 이름이 한 곳만 가리킴
-    3) 토큰이 전부 들어 있는 전체경로로 좁히기 — 여기서 상위조직 + 부서가 맞물린다
+    3) 끝에서부터 각 기관명이 맞는 전체경로로 좁히기
 
     한 곳으로 좁혀지지 않으면 아무것도 고르지 않고 후보만 돌려준다.
     """
@@ -336,40 +358,34 @@ def resolve_org(codes: dict, text: str, index: dict = None):
 
     index = index if index is not None else index_by_short_name(codes)
 
-    for key in (text, _strict_canon(text) or ''):
-        if not key:
-            continue
-        hits = index.get(key)
-        if hits and len(hits) == 1:
-            return hits[0], []
-
-    # 토큰 좁히기: 각 토큰을 org_db 정식명으로도 펼쳐 놓고, 전부 포함하는 경로를 찾는다
     tokens = _tokens(text)
-    if len(tokens) > 1:
-        wanted = []
-        for tok in tokens:
-            forms = {tok}
-            canon = _strict_canon(tok)
-            if canon:
-                forms.add(canon)
-                forms.update(_tokens(canon))
-            wanted.append(forms)
+    hits = index.get(text, [])
+    if not hits and len(tokens) == 1:
+        hits = index.get(_strict_canon(text), [])
+    elif not hits:
+        wanted = [{tok, _strict_canon(tok)} for tok in tokens]
+        hits = []
+        for full in orgs:
+            parts = _tokens(full)
+            if len(parts) >= len(wanted) and all(
+                    part in forms for part, forms in zip(parts[-len(wanted):], wanted)):
+                hits.append(full)
+    return (hits[0], []) if len(hits) == 1 else (None, sorted(hits))
 
-        narrowed = [
-            full for full in orgs
-            if all(any(form in full for form in forms) for forms in wanted)
-        ]
-        if len(narrowed) == 1:
-            return narrowed[0], []
-        if narrowed:
-            return None, sorted(narrowed)
 
-    # 좁히지 못했다. 짧은 이름 후보라도 보여준다.
-    for key in (text, _strict_canon(text) or ''):
-        hits = index.get(key or '')
-        if hits:
-            return None, sorted(hits)
-    return None, []
+def _department_candidates(codes, text, index):
+    """상위 기관이 맞을 때 그 아래에서만 부서 후보를 찾는다."""
+    parent_text, tail = text.rsplit(' ', 1)
+    parent, _ = resolve_org(codes, parent_text, index)
+    if not parent:
+        return []
+    prefix = parent + ' '
+    children = {full[len(prefix):]: full for full in sorted(codes.get('기관', {}))
+                if full.startswith(prefix)}
+    close = difflib.get_close_matches(tail, children, n=5, cutoff=0.5)
+    if close:
+        return [children[name] for name in close]
+    return [full for full in children.values() if categorise(full) == '부서·기관'][:5]
 
 
 def display_name(codes: dict, full: str, index: dict = None) -> str:
@@ -395,23 +411,21 @@ def apply_codes(rows, codes, index=None):
     """
     index = index if index is not None else index_by_short_name(codes)
     for row in rows:
-        # 원문 줄로 먼저 본다. raw 는 해석에 쓰인 토막이라 부서가 떨어져 나간다.
-        probe = row.get('line') or row.get('raw') or ''
+        probe = row.get('raw') or ''
         full, candidates = resolve_org(codes, probe, index)
-        if not full and not candidates and probe != row.get('raw'):
-            probe = row.get('raw') or ''
-            full, candidates = resolve_org(codes, probe, index)
 
         if full:
             row['name'] = full
             row['grade'] = 'exact'
             row['candidates'] = []
-            row['raw'] = probe
         elif candidates:
             row['name'] = None
             row['grade'] = 'ambiguous'
             row['candidates'] = candidates
-            row['raw'] = probe
+        elif ' ' in probe:
+            row['name'] = None
+            row['grade'] = GRADE_NONE
+            row['candidates'] = _department_candidates(codes, probe, index)
     return rows
 
 
@@ -495,11 +509,17 @@ def parse_and_resolve(text: str, codes: dict, index: dict = None,
 
     앱과 테스트가 같은 경로를 타도록 여기 한 곳에 모아 둔다.
     """
-    from sotong_parser import parse_orgs
     index = index if index is not None else index_by_short_name(codes)
     rows = parse_orgs(
         text,
         known=known_names(codes, index),
-        deduplicate=deduplicate,
+        deduplicate=False,
     )
-    return apply_codes(rows, codes, index)
+    rows = apply_codes(rows, codes, index)
+    if not deduplicate:
+        return rows
+    unique = {}
+    for row in rows:
+        key = row['name'] if row['grade'] in AUTO_GRADES else f"?{row['raw']}"
+        unique.setdefault(key, row)
+    return list(unique.values())

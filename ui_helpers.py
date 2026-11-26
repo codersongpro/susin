@@ -5,7 +5,7 @@ GRADE_MARKS = {
     'abbr':   '',
     'prefix': '',
     'fuzzy':  '[추정, 확인 필요]',
-    'ambiguous': '[같은 이름이 여럿, 골라야 함]',
+    'ambiguous': '[같은 이름이 여럿이라 직접 골라야 함]',
     'none':   '[찾지 못함, 확인 필요]',
 }
 
@@ -21,7 +21,7 @@ def format_item_label(item: dict) -> str:
         shown = item.get('search') or org or raw
         label = shown
         if org and raw and raw not in (org, shown):
-            label = f'{shown}   ← {raw}'
+            label = f'{shown}  (입력 {raw})'
         mark = GRADE_MARKS.get(item.get('grade'), '')
         if mark:
             label = f'{label}      {mark}'
@@ -32,9 +32,6 @@ def format_item_label(item: dict) -> str:
             label = (f'{label}      [입력 {source_count}회 · '
                      f'중복 {source_count - 1}건 제거]')
     else:
-        label = f'[{org}]  {name}' if org else f'{name}  (소속없음)'
+        label = f'[{org}]  {name}' if org else f'{name}  (소속 없음)'
 
-    if reason.startswith('동명이인'):
-        # 실패가 아니라 누가 들어갔는지 모르는 것이다. 이름 옆에 그대로 붙인다.
-        return f'{label}  ({reason})'
-    return f'{label}  (실패: {reason})' if reason else label
+    return f'{label}  ({reason})' if reason else label

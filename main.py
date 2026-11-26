@@ -22,6 +22,7 @@ import sys
 import shutil
 import webbrowser
 import urllib.request
+from collections import Counter
 
 from app_config import (
     APP_DATA_DIR,
@@ -35,11 +36,14 @@ from app_config import (
 )
 import edufine
 from automation import (
+    FAIL_ADD_UNCONFIRMED,
     FAIL_DUPLICATE,
     FAIL_SAME_NAME_SKIPPED,
     count_message_for,
     search_count_in,
+    search_row_matches,
     merge_scrolled_rows,
+    selected_row_set_total,
     selected_rows_anchor,
     selected_rows_seen,
     guess_selected_list,
@@ -68,6 +72,7 @@ import reconcile
 from sotong_parser import (
     AUTO_GRADES,
     GRADE_AMBIGUOUS,
+    abbreviate_school,
     parse_input,
     parse_orgs,
 )
@@ -152,11 +157,10 @@ def key_is_down(vk_code):
 # 소통메신저에서 수신자를 담기까지 누르는 차례. 3·4·5 번이 신통픽이 기억해야 할
 # 자리다. 사용자가 화면에서 바로 찾을 수 있게 같은 번호로 부른다.
 MESSENGER_STEPS = (
-    ('1', '편지 버튼', '소통메신저 오른쪽 위에 있습니다. 누르지 말고 마우스만 올리면 '
-                      '아래로 메뉴가 펼쳐집니다.'),
+    ('1', '편지 버튼', '소통메신저 오른쪽 위의 편지 버튼에 마우스를 올리면 메뉴가 펼쳐집니다.'),
     ('2', '[쪽지작성]', '펼쳐진 메뉴에서 누릅니다.'),
     ('3', '[받는사람 추가] 버튼', '누르면 [사용자 선택] 창이 열립니다.'),
-    ('4', '검색 입력칸', "'소속+이름 또는 이름 검색' 이라고 적힌 칸입니다."),
+    ('4', '검색 입력칸', "'소속+이름 또는 이름 검색'이라고 적힌 칸입니다."),
     ('5', '검색 결과 첫 줄', "'검색 결과(1명)' 아래 첫 번째 사람입니다."),
     ('6', '오른쪽 화살표 버튼', '결과 목록과 [선택된 사용자] 사이에 있는 버튼입니다.'),
 )
@@ -164,7 +168,7 @@ MESSENGER_STEPS = (
 CAPTURE_HINTS = {
     'search_field': "4번  검색 입력칸  ('소속+이름 또는 이름 검색' 칸)",
     'result_first': "5번  검색 결과 첫 줄  ('검색 결과(1명)' 아래 첫 사람)",
-    'add_button': '6번  오른쪽 화살표 버튼  (결과를 [선택된 사용자] 로 옮기는 버튼)',
+    'add_button': '6번  오른쪽 화살표 버튼  (검색 결과를 [선택된 사용자]로 옮기는 버튼)',
 }
 
 EDUFINE_UPLOAD_STEPS = (
@@ -319,8 +323,8 @@ class CaptureDialog(tk.Toplevel):
 
         tk.Label(
             self,
-            text='[캡처 시작] 을 누른 뒤 위에 적힌 자리를 클릭하면 저장됩니다.\n'
-                 '마우스를 옮긴 뒤 Enter 로 확정해도 되고, Esc 로 취소합니다.',
+            text='[캡처 시작]을 누른 뒤 소통메신저의 해당 자리를 클릭하세요.\n'
+                 '그 자리에 마우스를 올리고 Enter 키를 눌러도 됩니다. 취소하려면 Esc 키를 누르세요.',
             font=ui.font(10), justify='center', padx=24, pady=10
         ).pack()
 
@@ -328,13 +332,13 @@ class CaptureDialog(tk.Toplevel):
             # 이 클릭은 소통메신저에서 실제로 사람을 담는다. 그때만 알린다.
             tk.Label(
                 self,
-                text='이 버튼을 누르면 그 사람이 실제로 추가됩니다.\n'
-                     '캡처를 마친 뒤 받는 사람 목록을 확인하세요.',
+                text='오른쪽 화살표 버튼을 클릭하면 선택한 사람이 실제로 추가됩니다.\n'
+                     '캡처를 마친 뒤 [선택된 사용자] 목록을 확인하세요.',
                 font=ui.font(9), justify='center', fg=COLORS['error']
             ).pack()
 
         self.status = tk.Label(
-            self, text='아래 버튼을 클릭하여 캡처를 시작하세요.',
+            self, text='',
             font=ui.font(11, 'bold'), fg=COLORS['warn']
         )
         self.status.pack(pady=6)
@@ -354,7 +358,7 @@ class CaptureDialog(tk.Toplevel):
 
     def _begin(self):
         self.start_btn.config(state='disabled')
-        self.status.config(text='캡처할 자리를 클릭하세요.  Enter 로도 확정 / Esc 취소')
+        self.status.config(text='캡처할 자리를 클릭하거나 Enter 키를 누르세요.')
         self.bind('<Return>', lambda _e: self._confirm())
         self.bind('<Escape>', lambda _e: self.destroy())
 
@@ -390,7 +394,7 @@ class CaptureDialog(tk.Toplevel):
             return
         pos = pyautogui.position()
         self.status.config(
-            text=f'현재 위치: ({pos.x}, {pos.y})  클릭하면 확정 / Esc 취소')
+            text=f'현재 위치 ({pos.x}, {pos.y})  ·  클릭 또는 Enter로 저장  ·  Esc로 취소')
 
         # 소통메신저가 앞에 나와 있어도 클릭과 Enter 가 먹어야 한다.
         if key_is_down(VK_ESCAPE):
@@ -426,7 +430,7 @@ class CaptureDialog(tk.Toplevel):
         # 앱 전체가 멈추는 일이 없어야 한다.
         self.after(1200, self.destroy)
         try:
-            self.status.config(text=f'✓ 캡처 완료: ({pos.x}, {pos.y})', fg=COLORS['ok'])
+            self.status.config(text=f'위치 ({pos.x}, {pos.y})를 캡처했습니다.', fg=COLORS['ok'])
         except tk.TclError as exc:
             logging.info('캡처 완료 표시 실패: %s', exc)
         try:
@@ -449,34 +453,17 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
 ■ 이 프로그램이 하는 일
 ──────────────────────────────────────────────────────
-  붙여넣은 명단을 충북 기관명으로 맞춘 뒤, 두 가지 중 하나로 씁니다.
+  소통픽은 소통메신저 [사용자 선택] 창에서 명단에 적힌 사람을 한 명씩 검색합니다.
+  검색 결과가 한 명이면 이름을 확인합니다. 명단에 소속기관이 있으면 소속도 확인합니다.
+  명단에 적힌 정보와 일치할 때만 자동으로 고릅니다.
+  후보가 여럿이거나 화면에 보이는 결과를 확인할 수 없으면 직접 고를 수 있게 기다립니다.
+  추가 버튼을 누른 뒤에는 같은 창의 [선택된 사용자] 목록에 들어갔는지 확인합니다.
 
-    수신픽   에듀파인 개인수신그룹 일괄등록 엑셀을 만듭니다.
-    소통픽   소통메신저 [사용자 선택] 창에서 수신자를 자동으로 담습니다.
-
-  창 맨 위에서 수신픽과 소통픽 중 쓸 쪽을 고릅니다.
-  고른 쪽에 필요한 단계만 왼쪽에 남습니다.
-
-  소통픽은 이름마다 아래 세 가지를 반복합니다.
-
-    1. 검색 입력칸에 이름을 넣고 검색합니다.
-    2. 검색 결과 첫 번째 줄을 누릅니다.
-    3. 오른쪽 화살표 버튼을 눌러 받는 사람에 추가합니다.
-
-  검색 결과가 없는 사람은 빨간 항목으로 남습니다.
-
-  다 끝나면 소통메신저 [선택된 사용자] 를 읽어 소통픽 명단과 맞춰 봅니다.
-  들어간 사람, 빠진 사람, 소통메신저에만 있는 사람을 나눠 보여 줍니다.
-  스크롤해야 보이는 아래쪽 사람까지 읽습니다. 이때 마우스가 잠깐 목록 위로 가서
-  목록을 한 칸씩 내리며 읽고, 다 읽으면 제자리로 돌아옵니다.
-  빠진 사람이 있으면 [누락된 N명 소통메신저에 추가] 를 누르세요.
-  그 사람들만 다시 담고, 다 담은 뒤 다시 맞춰 봅니다.
-  [소통메신저와 비교] 를 누르면 언제든 다시 맞춰 볼 수 있습니다.
-
-  소통메신저 목록에는 학교 이름이 나오지 않아서 이름으로 맞춥니다.
-  같은 이름이 명단에 여럿인데 일부만 들어 있으면 누가 들어갔는지 알 수 없으므로,
-  이름마다 '(동명이인 2명 중 1명만 들어감, 확인 필요)' 를 붙여 따로 보여 줍니다.
-  모두 들어 있으면 문제가 없는 것으로 보고 넘어갑니다.
+  자동 선택이 끝나면 같은 창의 [선택된 사용자] 목록을 소통픽 명단과 비교합니다.
+  이름만 같은 사람은 [이름 일치, 본인 확인 필요]에 표시합니다.
+  전체 목록을 읽지 못하면 판정할 수 없는 항목은 [목록 읽기 미완료, 확인 보류]에 표시합니다.
+  목록을 다 읽어서 누락이 확인된 사람만 [누락된 N명 소통메신저에 추가]로 다시 담을 수 있습니다.
+  [자동 선택] 탭의 [소통메신저와 비교]를 누르면 다시 비교할 수 있습니다.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -512,16 +499,16 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
   [ 방법 C ]  직접 넣기
     목록 맨 아래 '직접 넣기' 칸에 적고 Enter 를 누르면 명단에 더해집니다.
     소통픽은 '학성초 송충북', 수신픽은 '청주교육지원청 행정과' 처럼 적습니다.
-    쉼표로 나누면 여럿을 한 번에 넣을 수 있고, 이미 있는 것은 다시 넣지 않습니다.
+    쉼표로 나누면 여럿을 한 번에 넣습니다. 이미 명단에 있는 항목은 한 번만 남깁니다.
 
-  소통픽과 수신픽의 명단은 따로 보관됩니다.
+  신통픽은 소통픽과 수신픽의 명단을 따로 보관합니다.
     도구를 바꿔도 각자 넣어 둔 입력 글과 명단이 그대로 남습니다.
     앱을 닫으면 지워집니다. 사람 이름을 PC 에 남기지 않기 위해서입니다.
 
   추출 결과 목록은 이렇게 고칠 수 있습니다.
     · 항목을 더블클릭하면 소속기관과 이름을 직접 고칩니다.
     · Delete 키나 [선택 항목 삭제] 로 고른 항목을 지웁니다.
-    · 빨간 항목은 자동으로 담지 못했거나 확인이 필요한 항목입니다.
+    · 빨간 항목은 표시된 이유를 읽고 확인하세요.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -544,7 +531,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
   마우스 위치를 캡처하는 방법은 모두 같습니다.
     [다시 캡처] 를 누르고 [캡처 시작] 을 누른 뒤, 소통메신저에서 그 자리를 클릭합니다.
-    클릭하는 대신 마우스를 옮기고 Enter 를 눌러도 확정되고, Esc 를 누르면 취소됩니다.
+    클릭 대신 마우스를 옮기고 Enter를 눌러 확정해도 됩니다. Esc를 누르면 취소합니다.
     클릭은 소통메신저에도 전달되므로, 6번 위치를 캡처할 때는 그 사람이 실제로 추가됩니다.
     캡처를 마친 뒤 받는 사람 목록을 확인하세요.
 
@@ -569,19 +556,15 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   [ 검색 설정 ]  (바꾸면 바로 저장됩니다)
-    · 검색 후 대기 시간: 기본값은 0.5초입니다. 자동 선택이 느리면 값을 낮추고,
-      소통메신저가 결과를 늦게 띄워 오류가 나면 1.0~2.0초로 늘립니다.
-      너무 낮추면 결과가 뜨기 전에 다음으로 넘어갑니다.
-    · 수동 확인 모드: 동명이인이 걱정될 때 켭니다.
-      사람마다 검색 결과를 직접 확인하고 [계속] 을 눌러야 다음으로 넘어갑니다.
+    · 검색 후 대기 시간의 기본값은 0.5초입니다. 검색 결과가 늦게 뜨면 조금 늘려 보세요.
+    · 모든 사람을 직접 고르고 싶으면 [수동 확인 모드]를 켜세요.
+      소통메신저에서 맞는 사람을 직접 담고 [계속]을 누르면 다음 사람으로 넘어갑니다.
 
   1. 소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 열어 둡니다.
   2. {APP_NAME}의 [자동 선택] 탭에서 [자동 선택 시작] 을 누릅니다.
-  3. 명단의 이름마다 검색, 결과 첫 줄 클릭, 화살표 버튼 클릭이 차례로 실행됩니다.
-     진행 상황은 로그에 한 줄씩 올라옵니다.
-       ✓  추가됨
-       이유가 적힌 줄  담지 못함 (검색 결과 없음 등)
-  4. 끝나면 담긴 사람 수와 빠진 사람 수가 나옵니다.
+  3. 작업하는 동안 같은 [사용자 선택] 창을 열어 두세요.
+     진행 기록에서 추가를 확인했는지, 직접 확인할 일이 있는지 볼 수 있습니다.
+  4. 작업이 끝나면 비교 결과를 확인하세요.
 
   급히 멈추려면 마우스를 화면 왼쪽 위 모서리로 빠르게 옮기거나 [중지] 를 누릅니다.
 
@@ -590,7 +573,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ■ 자주 묻는 질문
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Q. 소속기관이 '소속없음'으로 표시돼요.
+  Q. 소속기관이 '소속 없음'으로 표시돼요.
   A. 소속기관 이름을 알아보지 못한 경우입니다.
      목록에서 그 항목을 더블클릭해 직접 고치세요.
 
@@ -599,22 +582,20 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
      [위치 설정] 탭에서 세 곳의 마우스 위치를 다시 캡처하고 저장하세요.
 
   Q. 검색은 됐는데 추가가 안 돼요.
-  A. 6번 위치(오른쪽 화살표 버튼)가 잘못 캡처됐을 수 있습니다.
-     그 위치를 다시 캡처하고 저장하세요.
+  A. [선택된 사용자] 목록에 해당 사람이 있는지 먼저 확인하세요.
+     6번 위치가 어긋났다면 [위치 설정]에서 오른쪽 화살표 버튼을 다시 캡처하고 저장하세요.
 
   Q. 검색 결과가 아예 없어요.
-  A. 소통메신저에 등록되지 않은 사용자입니다.
-     그 항목은 로그에 '사용자 없음' 으로 남고 목록에서 빨간색이 됩니다.
+  A. 명단에 적힌 소속기관과 이름을 확인하세요. 등록된 이름이나 소속이 다를 수 있습니다.
 
   Q. 너무 빨라서 오류가 나요.
-  A. [자동 선택] 탭의 '검색 후 대기 시간'을 늘리세요.
-     소통메신저가 느린 컴퓨터는 1.0~2.0초가 맞습니다.
+  A. [자동 선택] 탭의 [검색 설정]에서 검색 후 대기 시간을 조금 늘려 보세요.
 
   Q. 동명이인이 있어서 걱정돼요.
-  A. 검색 결과가 두 명을 넘으면 신통픽이 첫 사람을 누르지 않고 멈춥니다.
-     화면 왼쪽 위에 뜨는 작은 창을 보고 맞는 분을 직접 골라 화살표를 누른 뒤
-     [계속] 을 누르세요. 아무도 담지 않으려면 [건너뛰기] 를 누릅니다.
-     모든 사람마다 멈추고 싶으면 '수동 확인 모드'를 켜세요.
+  A. 검색 결과가 두 명 이상이면 선택을 기다립니다.
+     소통메신저에서 이름과 소속을 보고 맞는 분을 골라 오른쪽 화살표 버튼을 누른 뒤
+     [계속]을 누르세요. 맞는 분을 찾지 못했다면 [건너뛰기]를 누르세요.
+     비교 결과에서 이름만 일치한 분도 소통메신저에서 직접 확인하세요.
 
   Q. HWP 파일이 안 열려요.
   A. 한/글이 설치되어 있지 않으면 일부 파일이 열리지 않습니다.
@@ -625,7 +606,7 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ■ 수신픽: 에듀파인 수신그룹 일괄등록
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  공문 수신 기관이 30곳이면 조직도에서 검색하고, 체크하고, [>>] 를 누르는 일을
+  공문 수신 기관이 30곳이면 조직도에서 검색해 체크하고 [>>]를 누르는 일을
   30번 반복해야 합니다. 타이핑 1800글자, 클릭 120번입니다.
 
   에듀파인에는 [개인설정] 의 [개인수신그룹관리] 에 [일괄등록] 이 있습니다.
@@ -643,33 +624,26 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
       사용자ID   에듀파인 로그인 ID
       사용자명   결재선에 나오는 이름
 
-    등록교육청은 충청북도교육청으로 자동 적용됩니다.
+    등록교육청은 충청북도교육청으로 정해져 있습니다.
     한 번 넣으면 저장되어 다음부터는 적지 않아도 됩니다.
 
 
   2. 기관 명단 넣기
   ──────────────────────────────────────────────────────
     [명단 입력] 탭에 기관 명단을 붙여넣습니다.
-    줄바꿈, 쉼표, 탭 어느 것으로 나눠도 되고 글머리기호와 번호는 떼고 읽습니다.
+    기관명을 줄바꿈이나 쉼표로 나누거나 엑셀에서 여러 칸을 복사해 붙여넣으세요.
+    상위 기관과 부서가 나란한 칸에 있으면 함께 읽습니다.
     몇 곳뿐이면 목록 아래 '직접 넣기' 칸에 기관명을 적고 Enter 를 눌러도 됩니다.
 
       학성초
       한천초, 백곡초
       1. 충북외고
 
-    [명단 추출] 을 누르면 기관이 네 가지로 나뉩니다.
-
-      확정              엑셀에 넣습니다.
-      같은 이름이 여럿  '행정과' 처럼 같은 이름이 여러 곳에 있는 경우입니다.
-      추정              이름이 비슷해서 짐작만 한 경우입니다.
-      찾지 못함         사전에 없는 이름입니다.
-
-    확정이 아닌 것은 더블클릭해서 후보 중에서 고릅니다.
-    추정 상태로는 엑셀에 들어가지 않습니다.
-    엑셀은 올리면 그대로 등록되므로, 틀린 기관이 들어가지 않게 막아 둡니다.
-
-    확인이 필요한 기관은 붉은색으로 표시됩니다.
-    [확인 필요 기관 일괄 수정] 을 누르면 한 창에서 차례로 고칠 수 있습니다.
+    [명단 추출]을 누른 뒤 오른쪽 목록에서 기관을 확인하세요.
+    이름이 비슷한 기관, 같은 이름이 여러 곳에 있는 기관, 찾지 못한 부서는 확인이 필요합니다.
+    붉은색 항목을 더블클릭해 맞는 기관을 고르거나 정확한 기관명 또는 등록된 약칭을 입력하세요.
+    [확인 필요 기관 일괄 수정]을 누르면 한 창에서 차례로 확인할 수 있습니다.
+    기관과 코드를 확인한 항목이 엑셀에 들어갑니다.
     같은 기관을 여러 번 넣으면 기관명과 입력 횟수를 알려 주고 한 번만 남깁니다.
     [추출 기록 보기] 에서는 최근 30회의 추출 결과를 다시 볼 수 있습니다.
 
@@ -690,15 +664,13 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 
       예)  청주 초등학교   ·   행정과   ·   단재 연수부
 
-    부서는 엑셀로 올리세요.
-    좌표로 자동 선택하는 방식은 조직명 칸에 '행정과' 를 쳐서 첫 결과를 고르기 때문에,
-    여러 곳에 있는 부서 이름에서는 엉뚱한 곳이 잡힐 수 있습니다.
+    상위 기관은 찾았는데 부서가 사전에 없으면 입력한 부서명을 남겨 확인을 요청합니다.
+    알려진 이름이 여럿이면 전체 경로를 보고 맞는 부서를 고르세요.
 
 
   4. 엑셀 만들어 올리기
   ──────────────────────────────────────────────────────
-    [수신그룹 엑셀] 탭의 '수신그룹 만들기'에 그룹명을 적고
-    [수신그룹 엑셀 만들기] 를 누릅니다.
+    [수신그룹 엑셀] 탭의 '수신그룹 만들기'에 그룹명을 적습니다.
 
     그룹명은 에듀파인에서 나중에 찾기 쉬운 이름으로 적습니다.
     예) 2026 진천 초등학교, 2학기 업무담당자
@@ -707,9 +679,11 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
     코드가 없는 기관이 있으면 목록으로 알려 줍니다. 말없이 빠지는 기관은 없습니다.
     그런 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.
 
-    엑셀을 만들면 파일을 다시 열어서, 추출한 기관 수와 실제로 써진 줄 수를
-    맞춰 보여 줍니다. 빠진 기관은 사유와 함께 나옵니다.
-    에듀파인에 올린 뒤 수신그룹에 보이는 기관 수를 적으면 모자란지도 알려 줍니다.
+    [엑셀에 들어갈 기관 확인]에서 원래 입력한 이름, 기관의 전체 경로, 기관코드를 확인하세요.
+    확인한 뒤 [수신그룹 엑셀 만들기]를 눌러 저장합니다.
+    신통픽은 만든 엑셀을 다시 열어 기관명과 코드를 확인합니다. 빠진 곳은 이유와 함께 표시합니다.
+    에듀파인에 올린 뒤에는 수신그룹에서 실제로 등록된 기관을 확인하세요.
+    수신그룹에 보이는 기관 수를 [결과 대조]에 입력하면 엑셀의 기관 수와 비교할 수 있습니다.
     창을 닫았다면 [결과 대조] 로 다시 엽니다.
 
     만든 엑셀은 에듀파인에 올립니다. 누르는 차례는 아래와 같습니다.
@@ -771,41 +745,43 @@ GUIDE_STEPS = {
          '명단을 넣은 뒤 [명단 추출]을 누르세요.\n'
          '표에 섞인 직위·연락처·번호는 자동으로 걸러냅니다.'),
         ('input', 'parsed_list', '추출 결과를 확인하세요',
-         '소속없음이나 이름 오류가 있으면 항목을 더블클릭해 고칩니다.\n'
-         '동명이인이 있으면 [자동 선택] 탭에서 수동 확인 모드를 켜 두세요.'),
+         '소속기관이 비어 있거나 이름이 틀리면 항목을 더블클릭해 고치세요.\n'
+         '소속기관을 적어 두면 이름과 함께 검색합니다.'),
         ('calib', 'calibration_panel', '클릭할 위치 세 곳을 캡처하세요',
-         '검색 입력창, 결과 첫 번째 행, 사용자 선택 버튼을 차례로 설정합니다.\n'
+         '검색 입력칸, 검색 결과 첫 줄, 오른쪽 화살표 버튼의 위치를 설정합니다.\n'
          '소통메신저 창을 옮겼다면 위치를 다시 캡처해야 합니다.'),
-        ('auto', 'search_setting_panel', '검색 속도를 정하세요',
-         '검색 후 대기 시간은 느리면 낮추고, 오류가 나면 늘립니다.\n'
-         '동명이인이 걱정되면 수동 확인 모드를 켜 두세요. 바꾸면 바로 저장됩니다.'),
+        ('auto', 'search_setting_panel', '검색 설정을 확인하세요',
+         '검색 결과가 늦게 뜨면 검색 후 대기 시간을 늘려 보세요.\n'
+         '모든 사람을 직접 고르려면 [수동 확인 모드]를 켜세요.'),
         ('auto', 'start_button', '자동 선택을 시작하세요',
          '소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 먼저 열어 두세요.\n'
-         '[자동 선택 시작]을 누르면 명단을 한 명씩 검색합니다.\n'
-         '처음에는 수동 확인 모드로 2~3명만 시험해 보세요.'),
+         '[자동 선택 시작]을 누르면 같은 창에서 한 명씩 검색하고 목록에 추가됐는지 확인합니다.\n'
+         '후보가 여럿이거나 화면에 보이는 결과를 확인할 수 없으면 직접 고를 수 있게 기다립니다.'),
     ],
     TARGET_EDUFINE: [
         ('input', 'input_text', '기관 명단을 넣으세요',
-         '기관명을 이 입력창에 줄바꿈·쉼표·탭으로 구분해 붙여넣습니다.\n'
-         '예: 학성초, 충북외고, 청주교육지원청 행정과'),
+         '기관명을 줄바꿈이나 쉼표로 나누거나 엑셀에서 여러 칸을 복사해 붙여넣으세요.\n'
+         '예) 학성초, 충북외고, 청주교육지원청 행정과'),
         ('input', 'parse_button', '기관을 추출하세요',
          '[명단 추출]을 눌러 입력한 기관을 충북 기관명과 맞춥니다.'),
         ('input', 'parsed_list', '추출 결과를 확인하세요',
-         '같은 이름이 여럿이거나 추정된 기관을 확인합니다.\n'
+         '같은 이름이 여럿이거나 비슷한 이름만 찾았을 때, 또는 부서를 찾지 못했을 때 확인이 필요합니다.\n'
          '확인이 필요한 항목은 더블클릭해 정확한 기관을 고르세요.'),
-        ('input', 'bulk_fix_button', '붉은 기관을 한 번에 수정하세요',
+        ('input', 'bulk_fix_button', '확인이 필요한 기관을 고르세요',
          '확인이 필요한 기관은 붉은색으로 표시됩니다.\n'
          '[확인 필요 기관 일괄 수정]을 누르면 한 창에서 차례로 확정하거나 제외할 수 있습니다.'),
         ('edufine', 'edufine_me_panel', '내 정보를 한 번만 입력하세요',
          '에듀파인 사용자ID와 사용자명을 입력합니다.\n'
-         '등록교육청은 충청북도교육청으로 자동 적용됩니다.'),
+         '등록교육청은 충청북도교육청으로 정해져 있습니다.'),
         ('edufine', 'edufine_group_panel', '수신그룹 이름을 정하세요',
          '그룹명은 나중에 찾기 쉬운 이름으로 적습니다.\n'
-         '예: 2026 진천 초등학교, 2학기 업무담당자\n'
+         '예) 2026 진천 초등학교, 2학기 업무담당자\n'
          '그룹기호는 선택 사항이라 비워 둬도 됩니다.'),
-        ('edufine', 'edufine_make_button', '엑셀을 만들고 올리세요',
+        ('edufine', 'edufine_preview_button', '엑셀에 넣을 기관을 확인하세요',
+         '[엑셀에 들어갈 기관 확인]을 눌러 원래 입력한 이름, 기관의 전체 경로, 기관코드를 비교하세요.'),
+        ('edufine', 'edufine_make_button', '엑셀을 저장하고 올리세요',
          '[수신그룹 엑셀 만들기]를 눌러 파일을 저장합니다.\n'
-         '에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록]에서 올리면 됩니다.'),
+         '저장한 엑셀은 에듀파인 [개인설정]의 [개인수신그룹관리]에서 [일괄등록]으로 올립니다.'),
     ],
 }
 
@@ -965,6 +941,14 @@ class ResultReport(tk.Toplevel):
             self.on_retry()
 
 
+class _UiaNodes(list):
+    """읽기 제한이나 요소 접근 오류가 있었는지 함께 전하는 UI 자동화 요소 목록."""
+
+    def __init__(self, *, complete=True):
+        super().__init__()
+        self.complete = complete
+
+
 class MessengerCompareReport(tk.Toplevel):
     """소통메신저 [선택된 사용자] 와 소통픽 명단을 맞춰 본 결과 창."""
 
@@ -972,34 +956,36 @@ class MessengerCompareReport(tk.Toplevel):
         super().__init__(parent)
         self.result = result
         self.on_add = on_add
-        # 담을 사람: 빠진 사람과, 동명이인이라 들어갔는지 모르는 사람.
-        # 이미 들어 있는 사람을 또 담으면 소통메신저가 '선택된 사용자' 안내만 띄운다.
-        self.addable = list(result.missing) + [
-            item for _name, people, _have in result.unsure for item in people]
+        self.addable = list(result.missing) if result.complete else []
         self.title('소통메신저와 비교')
         self.geometry(f'{ui.px(600)}x{ui.px(660)}')
-        unsure = sum(len(people) for _n, people, _h in result.unsure)
-        short = len(result.missing) + unsure
-        ok = short == 0 and not result.no_name
+        pending = len(result.pending) + len(result.no_name)
+        ok = result.complete and len(result.inside) == total
         bg = PANEL_BG
         self.configure(bg=bg)
 
-        head = (f'O  소통픽 명단 {total}명이 모두 소통메신저에 있습니다' if ok else
-                f'X  소통픽 명단 {total}명 중 {short}명이 소통메신저에 없거나 확인이 필요합니다')
-        tk.Label(self, text=head, bg=COLORS['ok_container'] if ok else COLORS['error_container'],
-            fg=COLORS['on_ok_container'] if ok else COLORS['on_error_container'],
-                 font=ui.font(12, 'bold'), pady=10, wraplength=ui.px(540)).pack(fill='x')
-        summary = (f'소통메신저에서 읽은 사람 {result.rows}명  ·  들어감 {len(result.inside)}명  ·  '
-                   f'빠짐 {len(result.missing)}명  ·  확인 필요 {unsure}명  ·  '
+        if ok:
+            head = f'소통픽 명단 {total}명의 등록을 확인했습니다'
+        elif not result.complete:
+            head = '소통메신저 목록을 끝까지 읽지 못했습니다'
+        else:
+            head = f'소통픽 명단 {total}명을 소통메신저 목록과 비교했습니다'
+        tone = 'ok' if ok else ('error' if result.missing else 'warn')
+        tk.Label(self, text=head, bg=COLORS[f'{tone}_container'],
+                 fg=COLORS[f'on_{tone}_container'], font=ui.font(12, 'bold'),
+                 pady=ui.px(10), wraplength=ui.px(540)).pack(fill='x')
+        summary = (f'읽은 목록 {result.rows}명  ·  등록 확인 {len(result.inside)}명  ·  '
+                   f'누락 확인 {len(result.missing)}명  ·  이름 일치 {len(result.name_only)}명  ·  '
+                   f'확인 보류 {pending}명  ·  '
                    f'소통메신저에만 있음 {len(result.extra)}명')
         tk.Label(self, text=summary, bg=bg, fg=COLORS['on_surface'], font=ui.font(9, 'bold'),
                  wraplength=ui.px(530), justify='left').pack(anchor='w', padx=12, pady=(10, 2))
         tk.Label(
             self,
-            text=('소통메신저 목록에는 학교 이름이 나오지 않아 이름으로 맞췄습니다. '
-                  '같은 이름이 명단에 여럿이면 누가 들어갔는지 가릴 수 없어 확인 필요로 둡니다. '
-                  '읽은 사람 수가 소통메신저에 보이는 수와 다르면 결과를 믿지 마세요.'),
-            bg=bg, fg='#555', font=ui.font(9), wraplength=ui.px(530), justify='left'
+            text=('이름만 일치한 사람은 소통메신저에서 소속을 직접 확인해 주세요. '
+                  '목록 전체를 읽은 뒤 누락이 확인된 사람만 추가할 수 있습니다.'),
+            bg=bg, fg=COLORS['on_surface_variant'], font=ui.font(9),
+            wraplength=ui.px(530), justify='left'
         ).pack(anchor='w', padx=12)
         if note:
             tk.Label(self, text=note, bg=bg, fg=COLORS['warn'], font=ui.font(9, 'bold'),
@@ -1025,7 +1011,7 @@ class MessengerCompareReport(tk.Toplevel):
     def _add(self):
         # 이 창이 소통메신저를 가리면 엉뚱한 곳을 누르므로 먼저 닫는다
         self.destroy()
-        if self.on_add:
+        if self.on_add and self.addable:
             self.on_add(self.addable)
 
 
@@ -1047,7 +1033,8 @@ class ClipboardWalker(tk.Toplevel):
         self.transient(parent)
 
         tk.Label(
-            self, text='에듀파인 조직명 칸에 붙여넣고(Ctrl+V) Enter 를 누른 뒤,\n체크하고 [>>] 를 누르는 일을 반복하세요.',
+            self, text='에듀파인 조직명 칸에 Ctrl+V로 붙여넣고 Enter 키를 누르세요.\n'
+                       '검색 결과에서 맞는 기관을 체크하고 [>>]를 누르세요.',
             bg=PANEL_BG, fg=COLORS['on_surface_variant'], font=ui.font(9), justify='center'
         ).pack(pady=(14, 6))
 
@@ -1064,7 +1051,7 @@ class ClipboardWalker(tk.Toplevel):
         row = tk.Frame(self, bg=PANEL_BG)
         row.pack(pady=14)
 
-        M3Button(row, text='← 이전', command=self.prev, variant='text').pack(side='left', padx=4)
+        M3Button(row, text='이전', command=self.prev, variant='text').pack(side='left', padx=4)
 
         self.next_btn = M3Button(row, text='복사하고 다음  (Enter)', command=self.advance, variant='outlined')
         self.next_btn.pack(side='left', padx=4)
@@ -1085,7 +1072,7 @@ class ClipboardWalker(tk.Toplevel):
     def _render(self):
         if self.idx >= len(self.items):
             self.name_var.set('끝났습니다')
-            self.progress_var.set(f'{len(self.items)} / {len(self.items)}  모두 복사함')
+            self.progress_var.set(f'{len(self.items)}곳의 기관명을 복사했습니다.')
             self.next_btn.config(state='disabled')
             return
         self.next_btn.config(state='normal')
@@ -1450,10 +1437,10 @@ class App:
         self.continue_event = threading.Event()
         self.continue_event.set()
         self.worker_thread = None
+        self._run_dialog_hwnd = None
         self.guide_dialog = None
         # 지난 수신그룹 엑셀 결과. 결과 대조 창을 닫았다가 다시 열 수 있게 둔다.
         self.last_excel_result = None
-        self.compare_note = ''
         # 도구를 바꾸면 쓰던 입력과 명단을 여기 맡겨 둔다 {도구: {...}}
         self.tool_states = {}
 
@@ -1810,7 +1797,7 @@ class App:
         input_card, self.input_text = ui.text_field(left, height=7, wrap='none')
         input_card.grid(row=1, column=0, sticky='nsew')
         self.input_card = input_card
-        tk.Label(left, text='한 줄에 한 사람(기관), 줄 순서대로 들어갑니다.',
+        tk.Label(left, text='표를 붙여넣을 때 열 구분은 그대로 두세요.',
                  font=ui.font(8), fg=COLORS['on_surface_variant'], anchor='w'
                  ).grid(row=2, column=0, sticky='w', padx=6, pady=(4, 6))
         action_frame = tk.Frame(left, bg=PANEL_BG)
@@ -1884,7 +1871,7 @@ class App:
         # 단추들을 놓는 틀. 수신픽 단추는 _apply_target 이 pack/pack_forget 한다.
         self.input_tools = tools
         self.delete_btn.grid(row=1, column=0, sticky='w', pady=(6, 0))
-        tk.Label(right, text='더블클릭으로 수정  ·  Delete 키로 삭제  ·  붉은 줄은 확인이나 선택이 필요합니다',
+        tk.Label(right, text='더블클릭으로 수정 · Delete 키로 삭제 · 붉은 항목은 확인해야 합니다.',
                  font=ui.font(8), fg=COLORS['on_surface_variant'], anchor='w'
                  ).grid(row=5, column=0, sticky='w', padx=4, pady=(4, 0))
 
@@ -1942,8 +1929,10 @@ class App:
         if self.is_edufine():
             review = sum(1 for i in self.names_list if self._org_needs_review(i))
         else:
-            review = sum(1 for i in self.names_list if not i.get('org'))
-        failed = sum(1 for i in self.names_list if i.get('failure_reason'))
+            review = sum(1 for i in self.names_list
+                         if not i.get('org') or i.get('failure_reason') in reconcile.REVIEW_ONLY)
+        failed = sum(1 for i in self.names_list if i.get('failure_reason')
+                     and i['failure_reason'] not in (*reconcile.REVIEW_ONLY, FAIL_DUPLICATE))
         chips = [(f'{total}{unit}', 'neutral'), (f'확실 {total - review}', 'ok')]
         if review:
             chips.append((f'확인 필요 {review}', 'warn'))
@@ -2099,7 +2088,7 @@ class App:
         Chip(head, text='1', kind='info').pack(side='left', padx=(0, 8))
         self._section_title(head, '내 정보 (한 번만 입력)', me.fill).pack(side='left')
         self._field_row(me.body, me.fill, [('사용자ID', '사용자 ID', ''), ('사용자명', '사용자명', '')])
-        tk.Label(me.body, text='등록교육청은 충청북도교육청으로 자동 적용됩니다.', bg=me.fill,
+        tk.Label(me.body, text='등록교육청은 충청북도교육청으로 정해져 있습니다.', bg=me.fill,
                  fg=COLORS['on_surface_variant'], font=ui.font(8), anchor='w'
                  ).grid(row=2, column=0, columnspan=2, sticky='w', pady=(4, 0))
 
@@ -2150,9 +2139,13 @@ class App:
             bg=result.fill, fg=COLORS['on_surface_variant'], font=ui.font(9),
             justify='left', anchor='w', wraplength=380)
         self.edufine_msg.grid(row=1, column=0, sticky='ew')
+        self.edufine_preview_btn = M3Button(
+            result.body, text='엑셀에 들어갈 기관 확인', variant='tonal', size='sm',
+            command=self._preview_edufine_orgs, state='disabled')
+        self.edufine_preview_btn.grid(row=2, column=0, sticky='w', pady=(6, 0))
         # 엑셀에서 빠지는 기관은 반드시 사유와 함께 보여 준다
         self.edufine_left_out = Card(result.body, tone='error', pad=(12, 9))
-        self.edufine_left_out.grid(row=2, column=0, sticky='ew', pady=(8, 0))
+        self.edufine_left_out.grid(row=3, column=0, sticky='ew', pady=(8, 0))
         self.edufine_left_out_text = tk.Label(
             self.edufine_left_out.body, text='', bg=self.edufine_left_out.fill,
             fg=COLORS['on_error_container'], font=ui.font(9), justify='left', anchor='w',
@@ -2166,10 +2159,10 @@ class App:
             size='sm',
             command=self._open_clipboard_walker
         )
-        self.walker_btn.grid(row=3, column=0, sticky='w', pady=(8, 0))
+        self.walker_btn.grid(row=4, column=0, sticky='w', pady=(8, 0))
         tk.Label(result.body, text='코드가 없는 기관은 순차 복사로 조직도에 직접 붙여넣으세요.',
                  bg=result.fill, fg=COLORS['on_surface_variant'], font=ui.font(8),
-                 anchor='w').grid(row=4, column=0, sticky='w', pady=(3, 0))
+                 anchor='w').grid(row=5, column=0, sticky='w', pady=(3, 0))
 
         # 아래: 3 에듀파인에 올리기. 어디를 누르는지 그림으로 보여 준다.
         upload = Card(frame, tone='inner', pad=(18, 14))
@@ -2386,6 +2379,9 @@ class App:
         msg = getattr(self, 'edufine_msg', None)
         chips = getattr(self, 'edufine_chips', None)
         banner = getattr(self, 'edufine_left_out', None)
+        preview = getattr(self, 'edufine_preview_btn', None)
+        if preview is not None:
+            preview.config(state='normal' if self.names_list else 'disabled')
         if chips is not None:
             for child in chips.winfo_children():
                 child.destroy()
@@ -2423,8 +2419,44 @@ class App:
                 if item.get('org') and item.get('grade') in AUTO_GRADES]
 
     def _split_confirmed(self):
-        rows = [{'name': item['org']} for item in self._confirmed_orgs()]
+        rows = [{'name': item['org'], 'raw': item.get('raw')} for item in self._confirmed_orgs()]
         return edufine.split_by_code(rows, self.codes)
+
+    def _preview_edufine_orgs(self):
+        ready, missing = self._split_confirmed()
+        pending = [item for item in self.names_list if item.get('grade') not in AUTO_GRADES]
+        dlg = tk.Toplevel(self.root)
+        dlg.title('엑셀에 들어갈 기관 확인')
+        dlg.geometry(f'{ui.px(850)}x{ui.px(480)}')
+        dlg.transient(self.root)
+        dlg.configure(bg=PANEL_BG)
+
+        body = tk.Frame(dlg, bg=PANEL_BG)
+        body.pack(fill='both', expand=True, padx=ui.px(12), pady=ui.px(12))
+        body.columnconfigure(0, weight=1)
+        body.rowconfigure(0, weight=1)
+        style = ttk.Style(dlg)
+        style.configure('Edufine.Treeview', font=ui.font(9), rowheight=ui.px(25))
+        style.configure('Edufine.Treeview.Heading', font=ui.font(9, 'bold'))
+        columns = ('raw', 'fullname', 'code', 'status')
+        table = ttk.Treeview(body, columns=columns, show='headings', style='Edufine.Treeview')
+        for key, heading, width in zip(columns, ('입력한 기관', '기관 전체경로', '기관코드', '엑셀에 들어가는지'),
+                                       (210, 320, 110, 140)):
+            table.heading(key, text=heading, anchor='w')
+            table.column(key, width=ui.px(width), stretch=key == 'fullname')
+        vertical = ttk.Scrollbar(body, command=table.yview)
+        horizontal = ttk.Scrollbar(body, orient='horizontal', command=table.xview)
+        table.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        table.grid(row=0, column=0, sticky='nsew')
+        vertical.grid(row=0, column=1, sticky='ns')
+        horizontal.grid(row=1, column=0, sticky='ew')
+        for row in ready:
+            table.insert('', 'end', values=(row['raw'], row['fullname'], row['code'], '들어갑니다'))
+        for row in missing:
+            table.insert('', 'end', values=(row.get('raw') or row['name'], row['name'], '', row['reason']))
+        for item in pending:
+            table.insert('', 'end', values=(item.get('raw', ''), '', '', '기관 확인 필요'))
+        M3Button(dlg, text='닫기', command=dlg.destroy, variant='tonal').pack(pady=(0, ui.px(12)))
 
     def _build_group_excel(self):
         self._save_edufine_fields()
@@ -2460,7 +2492,7 @@ class App:
         if not ready:
             messagebox.showwarning(
                 '등록할 기관이 없습니다',
-                '확정된 기관 중 코드를 가진 곳이 하나도 없습니다.')
+                '확정된 기관 중 기관코드가 있는 곳이 하나도 없습니다.')
             return
         if missing:
             lines = '\n'.join(
@@ -2484,23 +2516,15 @@ class App:
             return
 
         try:
-            edufine.build_workbook(ready, dict(self.config.edufine), path)
+            written = edufine.save_verified_workbook(ready, dict(self.config.edufine), path)
+        except PermissionError:
+            logging.exception('수신그룹 엑셀 저장 권한 오류')
+            messagebox.showerror('저장 실패', '엑셀에서 파일을 열어 두었다면 닫고 다시 저장해 주세요. '
+                                 '다른 폴더에 저장해도 됩니다.')
+            return
         except Exception as exc:
             logging.exception('수신그룹 엑셀 생성 실패')
             messagebox.showerror('저장 실패', f'엑셀을 만들지 못했습니다.\n\n{exc}')
-            return
-
-        # 만들려던 목록이 아니라 파일에 실제로 써진 줄과 맞춰 본다.
-        try:
-            written = edufine.read_written_codes(path)
-        except Exception as exc:
-            logging.exception('수신그룹 엑셀 다시 읽기 실패')
-            self.status_var.set(f'수신그룹 엑셀 저장 완료: {len(ready)}곳')
-            messagebox.showwarning(
-                '저장은 했지만 확인하지 못했습니다',
-                f'{len(ready)}곳을 넣어 엑셀을 만들었지만, 다시 열어 확인하지 못했습니다.\n\n'
-                f'{path}\n\n{exc}\n\n'
-                '올리기 전에 엑셀을 열어 줄 수가 맞는지 한 번 보세요.')
             return
 
         tally = reconcile.edufine_tally(self.names_list, self.codes, written)
@@ -2519,9 +2543,10 @@ class App:
             messagebox.showinfo('알림', '아직 만든 수신그룹 엑셀이 없습니다.')
             return
         tally = result['tally']
-        note = (f'엑셀을 다시 열어 {result["rows"]}줄을 확인했습니다.\n{result["path"]}\n\n'
-                '에듀파인 [개인설정 > 개인수신그룹관리 > 일괄등록] 에서 이 파일을 올리세요. '
-                '올린 뒤 수신그룹에 보이는 기관 수를 아래에 적으면 빠진 곳이 있는지 알려 줍니다.')
+        note = (f'엑셀을 다시 열어 {result["rows"]}곳의 기관 전체경로와 코드를 확인했습니다.\n'
+                f'{result["path"]}\n\n'
+                '에듀파인에서 [개인설정]을 열고 [개인수신그룹관리]의 [일괄등록]을 눌러 이 파일을 올리세요. '
+                '올린 뒤 수신그룹에 보이는 기관 수를 아래에 적으면 엑셀의 기관 수와 비교합니다.')
         if any(reason == reconcile.NO_CODE for _item, reason in tally.missing):
             note += '\n코드가 없는 기관은 [코드 없는 기관 순차 복사] 로 조직도에 직접 넣으면 됩니다.'
         ResultReport(
@@ -2586,7 +2611,7 @@ class App:
         delay_box.bind('<FocusOut>', lambda _e: self._save_search_settings())
         delay_box.bind('<Return>', lambda _e: self._save_search_settings())
         tk.Label(
-            setting.body, text='느리면 값을 낮추세요, 단 소통메신저 최소 검색 시간이 필요합니다.',
+            setting.body, text='자동 선택이 느리면 대기 시간을 줄여 보세요. 검색 결과가 뜰 시간은 남겨 두어야 합니다.',
             bg=setting.fill, fg=COLORS['on_surface_variant'], font=ui.font(9), justify='left',
             anchor='w').grid(row=1, column=2, sticky='w', padx=(10, 0))
         self.manual_var = tk.BooleanVar(value=self.config.data.get('manual_confirm', False))
@@ -2657,11 +2682,16 @@ class App:
         for child in row.winfo_children():
             child.destroy()
         added = sum(1 for i in self.names_list if i.get('added'))
-        failed = sum(1 for i in self.names_list if i.get('failure_reason'))
+        reasons = [i.get('failure_reason') for i in self.names_list if not i.get('added')]
+        review = sum(reason in reconcile.REVIEW_ONLY for reason in reasons)
+        failed = sum(bool(reason) and reason not in (*reconcile.REVIEW_ONLY, FAIL_DUPLICATE)
+                     for reason in reasons)
         if added:
             Chip(row, text=f'담김 {added}', kind='ok').pack(side='left', padx=(0, 6))
         if failed:
-            Chip(row, text=f'빠짐 {failed}', kind='err').pack(side='left')
+            Chip(row, text=f'빠짐 {failed}', kind='err').pack(side='left', padx=(0, 6))
+        if review:
+            Chip(row, text=f'확인 필요 {review}', kind='warn').pack(side='left')
 
     # ── 제품별 사용 방법 ────────────────────────
     def _tab_help(self, frame: ttk.Frame, target: str):
@@ -2676,7 +2706,7 @@ class App:
                  fg=COLORS['on_surface'], anchor='w').grid(row=0, column=0, sticky='w')
         video_btn = M3Button(
             head,
-            text='사용법 영상 보기 (YouTube)',
+            text='사용법 영상 보기',
             icon='play',
             command=lambda selected=target: webbrowser.open(GUIDE_VIDEO_URLS[selected]),
             variant='tonal'
@@ -2740,9 +2770,7 @@ class App:
             )
 
     def _refresh_failed_retry_state(self):
-        retryable = any(item.get('failure_reason')
-                        and item.get('failure_reason') != FAIL_DUPLICATE
-                        for item in self.names_list)
+        retryable = bool(self._failed_items())
         states = {'retry_failed_btn': retryable}
         for name, on in states.items():
             btn = getattr(self, name, None)
@@ -2826,7 +2854,7 @@ class App:
         if review:
             lines.append(
                 f'확인 필요 {len(review)}곳입니다. 붉은 항목은 '
-                '[확인 필요 기관 일괄 수정]에서 한 번에 처리하세요.'
+                '[확인 필요 기관 일괄 수정]에서 한 곳씩 확인하세요.'
             )
 
         if lines:
@@ -2933,11 +2961,14 @@ class App:
             return False
         index = edufine.index_by_short_name(self.codes)
         entry, _ = edufine.lookup_code(self.codes, full_name, index)
+        if not entry:
+            return False
+        full_name = entry['fullname']
         item['org'] = full_name
         item['search'] = edufine.display_name(self.codes, full_name, index)
         item['grade'] = 'exact'
         item['candidates'] = []
-        item['code_missing'] = entry is None
+        item['code_missing'] = False
         item.pop('failure_reason', None)
         self._rebuild_parsed_list()
         self._after_list_edit()
@@ -3109,7 +3140,10 @@ class App:
         self.parsed_list.delete(0, 'end')
         for item in self.names_list:
             self.parsed_list.insert('end', self._format_item_label(item))
-            if item.get('failure_reason'):
+            if item.get('failure_reason') in reconcile.REVIEW_ONLY:
+                self.parsed_list.itemconfig('end', {'bg': COLORS['warn_container'],
+                                                    'fg': COLORS['on_warn_container']})
+            elif item.get('failure_reason'):
                 self.parsed_list.itemconfig('end', {'bg': COLORS['error_container'],
                                                     'fg': COLORS['on_error_container']})
             elif self.is_edufine() and self._org_needs_review(item):
@@ -3189,7 +3223,7 @@ class App:
             wb.close()
             self.input_text.delete('1.0', 'end')
             self.input_text.insert('1.0', '\n'.join(lines))
-            self.status_var.set(f'엑셀 로드: {os.path.basename(path)}')
+            self.status_var.set(f'엑셀 파일을 읽었습니다 ({os.path.basename(path)})')
         except Exception as e:
             messagebox.showerror('파일 읽기 실패', f'파일 읽기 실패:\n{e}')
 
@@ -3206,7 +3240,7 @@ class App:
         if text:
             self.input_text.delete('1.0', 'end')
             self.input_text.insert('1.0', text)
-            self.status_var.set(f'HWP 로드: {os.path.basename(path)}')
+            self.status_var.set(f'HWP 파일을 읽었습니다 ({os.path.basename(path)})')
         else:
             messagebox.showwarning(
                 'HWP 읽기 실패',
@@ -3233,6 +3267,7 @@ class App:
             'start_button': self.start_btn,
             'edufine_me_panel': self.edufine_me_panel,
             'edufine_group_panel': self.edufine_group_panel,
+            'edufine_preview_button': self.edufine_preview_btn,
             'edufine_make_button': self.edufine_make_button,
         }
 
@@ -3272,8 +3307,8 @@ class App:
         )
 
     def _automation_is_running(self) -> bool:
-        """소통픽 자동화 워커가 아직 움직이고 있는가."""
-        return bool(self.worker_thread and self.worker_thread.is_alive())
+        """워커의 결과가 화면에 반영될 때까지 같은 실행을 유지한다."""
+        return self.worker_thread is not None
 
     def _block_while_running(self) -> bool:
         """실행 중 명단이나 도구가 바뀌지 않도록 막는다."""
@@ -3407,7 +3442,7 @@ class App:
                 title.config(text='기관 명단을 넣으세요')
                 body.config(text=(
                     '엑셀이나 한글에서 기관명을 복사해 붙여넣거나 파일을 바로 여세요.\n'
-                    '줄바꿈, 쉼표, 탭 어느 것으로 나눠도 됩니다.\n'
+                    '여러 기관은 줄바꿈이나 쉼표로 나눠 적거나, 엑셀에서 여러 칸을 복사해 넣으세요.\n'
                     '예) 학성초, 충북외고, 청주교육지원청 행정과'
                 ))
             else:
@@ -3425,18 +3460,18 @@ class App:
         intro = getattr(self, 'calib_intro', None)
         if intro:
             intro.config(text=(
-                '소통메신저에서 편지 버튼에 마우스를 올려 [쪽지작성] 을 누르고,\n'
-                '[받는사람 추가] 로 [사용자 선택] 창을 열어 두세요.\n'
-                '아래 차례에서 4번 검색 입력칸, 5번 검색 결과 첫 줄, 6번 화살표 버튼의 마우스 위치를 캡처합니다.\n'
-                '[캡처 시작] 을 누른 뒤 그 자리를 클릭하면 위치가 저장됩니다. '
-                'Enter 로도 확정되고 Esc 는 취소입니다.'
+                '소통메신저의 편지 버튼에 마우스를 올리고 [쪽지작성]을 누르세요.\n'
+                '[받는사람 추가]를 눌러 [사용자 선택] 창을 열어 두세요.\n'
+                '4번 검색 입력칸, 5번 검색 결과 첫 줄, 6번 오른쪽 화살표 버튼의 위치를 캡처합니다.\n'
+                '[캡처 시작]을 누른 뒤 그 자리를 클릭하거나 마우스를 올리고 Enter 키를 누르세요. '
+                '취소하려면 Esc 키를 누르세요.'
             ))
         auto_intro = getattr(self, 'auto_intro', None)
         if auto_intro:
             auto_intro.config(text=(
-                '소통메신저 [사용자 선택] 창을 열고 [전체조직] 탭을 켜 두세요.\n'
-                '이름마다 검색하고, 결과 첫 줄을 누르고, 오른쪽 화살표 버튼으로 담습니다.\n'
-                '진행 중에는 마우스를 건드리지 마세요. 마우스를 화면 왼쪽 위 모서리로 옮기면 긴급 중지됩니다.'
+                '소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 열어 두세요.\n'
+                '검색 결과를 확인해 사람을 고른 뒤 같은 창의 선택 목록을 확인합니다.\n'
+                '진행 중에는 마우스를 움직이지 마세요. 급히 멈추려면 화면 왼쪽 위 모서리로 옮기세요.'
             ))
 
         self._refresh_calib_labels()
@@ -3743,10 +3778,8 @@ class App:
             candidates.insert(0, item['org'])
         for c in candidates:
             box.insert('end', c)
-        if candidates:
-            box.selection_set(0)
 
-        typed = tk.StringVar(value=item.get('org') or item.get('raw', ''))
+        typed = tk.StringVar(value=item.get('raw') or item.get('org', ''))
         entry_row = tk.Frame(dlg, bg=PANEL_BG)
         entry_row.pack(fill='x', padx=16, pady=(10, 4))
         tk.Label(entry_row, text='직접 입력', bg=PANEL_BG,
@@ -3760,20 +3793,27 @@ class App:
                 return
             if self._confirm_org_item(item, value):
                 dlg.destroy()
+            else:
+                messagebox.showwarning('기관을 확인해 주세요',
+                                       '사전에서 정확히 찾지 못했습니다. 후보를 고르거나 '
+                                       '기관 전체경로를 적어 주세요.', parent=dlg)
 
-        def take_selected():
+        def fill_selected(_event):
             sel = box.curselection()
             if sel:
-                confirm(box.get(sel[0]))
-            else:
-                confirm(typed.get())
+                typed.set(box.get(sel[0]))
 
-        box.bind('<Double-Button-1>', lambda e: take_selected())
-        entry.bind('<Return>', lambda e: confirm(typed.get()))
+        def take_selected(event):
+            fill_selected(event)
+            confirm(typed.get())
+
+        box.bind('<<ListboxSelect>>', fill_selected)
+        box.bind('<Double-Button-1>', take_selected)
+        entry.bind('<Return>', lambda _e: confirm(typed.get()))
 
         btns = tk.Frame(dlg, bg=PANEL_BG)
         btns.pack(pady=12)
-        M3Button(btns, text='확정', command=take_selected).pack(side='left', padx=4)
+        M3Button(btns, text='확정', command=lambda: confirm(typed.get())).pack(side='left', padx=4)
         M3Button(btns, text='취소', command=dlg.destroy, variant='text').pack(side='left', padx=4)
 
     def _refresh_calib_labels(self):
@@ -3818,7 +3858,7 @@ class App:
         self._go_next_step()
 
     # ── 자동 선택 시작/중지/계속 ───────────────
-    def _start(self, items=None):
+    def _start(self, items=None, *, expected_window=None):
         """자동 선택을 시작한다. items 를 주면 명단은 그대로 두고 그 사람들만 담는다."""
         if self._automation_is_running():
             messagebox.showwarning('이미 실행 중입니다', '진행 중인 자동 선택을 먼저 끝내세요.')
@@ -3836,12 +3876,15 @@ class App:
             return
         if not self._confirm_screen_unchanged():
             return
-        if not self._confirm_dialog_not_moved():
+        window = self._automation_target(expected_window)
+        if window is None:
             return
         run_items = tuple(self.names_list if items is None else items)
         if not run_items:
             messagebox.showinfo('알림', '담을 사람이 없습니다.')
             return
+        self._run_dialog_hwnd = window
+        self._count_hwnd = None
         self.stop_flag.clear()
         self.continue_event.set()
         for item in run_items:
@@ -3884,26 +3927,45 @@ class App:
             f'그래도 지금 이대로 시작할까요?'
         )
 
-    def _confirm_dialog_not_moved(self) -> bool:
-        """[사용자 선택] 창이 위치를 잡을 때 그 자리에 있는지 보고, 아니면 물어본다.
-
-        창을 옮기면 저장한 세 자리가 창 밖을 가리켜 바탕화면이나 다른 창을 누른다.
-        창을 제목으로 찾았는데 화살표 자리가 그 밖에 있을 때만 묻는다. 창을 못
-        찾으면 판단할 근거가 없으므로 묻지 않는다.
-        """
-        point = self._arrow_point()
-        if point is None:
-            return True
+    def _automation_target(self, expected_window=None):
         dialogs = self._messenger_dialogs()
-        if not dialogs or any(self._window_contains(w, point) for w in dialogs):
-            return True
-        return messagebox.askyesno(
-            '[사용자 선택] 창이 옮겨졌습니다',
-            '위치를 캡처할 때와 [사용자 선택] 창의 자리가 다릅니다.\n\n'
-            '이대로 시작하면 저장해 둔 자리가 창 밖을 가리켜 엉뚱한 곳을 누릅니다. '
-            '창을 처음 자리로 옮기거나, [위치 설정] 탭에서 4, 5, 6번을 다시 캡처해 주세요.\n\n'
-            '그래도 지금 이대로 시작할까요?'
-        )
+        window = dialogs[0] if dialogs else None
+        if window is None or (expected_window is not None and window != expected_window):
+            messagebox.showwarning(
+                '사용자 선택 창을 확인해 주세요',
+                '[사용자 선택] 창을 열고 [전체조직] 탭을 선택한 뒤 다시 시작해 주세요. '
+                '비교 후 창을 바꿨다면 명단을 다시 비교해 주세요.')
+            return None
+        try:
+            points = [self._click_point(key) for key in ('search_field', 'result_first', 'add_button')]
+        except (KeyError, TypeError, ValueError):
+            points = []
+        if not points or not all(self._target_at(window, point) for point in points):
+            messagebox.showwarning(
+                '클릭할 위치를 확인해 주세요',
+                '소통메신저 창이 다른 창에 가려져 있거나 저장한 위치와 어긋납니다. '
+                '[사용자 선택] 창이 보이도록 다른 창을 옮기세요. 위치가 어긋나면 세 곳을 다시 캡처해 주세요.')
+            return None
+        return window
+
+    def _click_point(self, key):
+        return int(self.config.data[key + '_x']), int(self.config.data[key + '_y'])
+
+    def _target_at(self, window, point):
+        gui = self._win32gui()
+        if gui is None or not self._window_contains(window, point):
+            return False
+        try:
+            hit = gui.WindowFromPoint(point)
+            return hit == window or gui.IsChild(window, hit)
+        except Exception as exc:
+            logging.debug('클릭할 창을 확인하지 못했습니다: %s', exc)
+            return False
+
+    def _check_click_target(self, point):
+        window = self._run_dialog_hwnd
+        if window is not None and not self._target_at(window, point):
+            raise RuntimeError('좌표 오류: 소통메신저 창이 움직였거나 가려졌습니다')
 
     def _stop(self):
         if not self._automation_is_running():
@@ -3926,32 +3988,30 @@ class App:
         self._log('\n⏹  중지 요청\n')
 
     def _resume(self):
+        win = getattr(self, 'pick_window', None)
+        if win is not None:
+            self.pick_window = None
+            try:
+                win.destroy()
+            except tk.TclError:
+                pass
         self.continue_event.set()
         self.continue_btn.config(state='disabled')
 
     def _failed_items(self) -> list:
-        """받는 사람에 들어가지 못했거나 확인하지 못한 항목."""
-        return [item for item in self.names_list if item.get('failure_reason')]
+        """다시 검색해도 이미 선택한 사람을 재시도할 위험이 없는 항목."""
+        skip = (None, '', FAIL_DUPLICATE, *reconcile.REVIEW_ONLY)
+        return [item for item in self.names_list if item.get('failure_reason') not in skip]
 
     def _retry_failed(self):
-        # 항목을 통째로 가져온다. 예전에는 기관명과 이름만 옮겨서, 따로 만들어 둔
-        # 검색어(search)가 사라진 채 엉뚱하게 검색됐다.
-        failed = []
-        for item in self._failed_items():
-            # 이미 선택된 사용자는 받는 사람에 들어 있다. 다시 돌릴 이유가 없다.
-            if item.get('failure_reason') == FAIL_DUPLICATE:
-                continue
-            copied = dict(item)
-            copied.pop('failure_reason', None)
-            copied.pop('added', None)
-            failed.append(copied)
+        failed = self._failed_items()
         if not failed:
             messagebox.showinfo('알림', '다시 실행할 실패 항목이 없습니다.')
             return
-        self.names_list = failed
-        self._rebuild_parsed_list()
-        self._set_parse_status(f'실패 항목 재실행 준비: {len(failed)}명', COLORS['ok'])
-        self._start()
+        if any(item['failure_reason'] == reconcile.NOT_IN_MESSENGER for item in failed):
+            self._add_missing_to_messenger(failed, window=getattr(self, '_last_compare_window', None))
+            return
+        self._start(failed)
 
     def _selected_count(self):
         """소통메신저 [선택된 사용자] 목록에 담긴 사람 수. 못 세면 None.
@@ -4021,15 +4081,17 @@ class App:
         # 맨 위 창이 앞에 오도록 화면에 쌓인 순서대로 늘어놓는다.
         visible = self._snapshot_dialogs()
         order = [h for h in self._windows_in_z_order() if h in visible]
-        order += sorted(h for h in visible if h not in order)
-        found = []
-        for hwnd in order:
+        found = set()
+        for hwnd in visible:
             try:
                 if MESSENGER_DIALOG_TITLE in (gui.GetWindowText(hwnd) or ''):
-                    found.append(hwnd)
+                    found.add(hwnd)
             except Exception:
                 continue
-        return found
+        if len(found) <= 1:
+            return list(found)
+        ranked = [hwnd for hwnd in order if hwnd in found]
+        return ranked if len(ranked) == len(found) else []
 
     def _windows_in_z_order(self) -> list:
         """최상위 창을 화면에 쌓인 순서(맨 위부터)로. 못 읽으면 빈 목록."""
@@ -4081,7 +4143,8 @@ class App:
             logging.info('UI 자동화를 쓸 수 없습니다: %s', exc)
             return None, str(exc)
 
-    def _uia_nodes(self, uia, hwnd, limit: int = 6000, min_x=None) -> list:
+    def _uia_nodes(self, uia, hwnd, limit: int = 6000, min_x=None, *,
+                   include_set_metadata=False, max_seconds=None) -> list:
         """창 안의 요소를 모두 모은다. 이름은 화면에 내보내지 않고 판단에만 쓴다.
 
         min_x 를 주면 그보다 왼쪽에 통째로 있는 요소의 속은 읽지 않는다. 왼쪽 조직도에는
@@ -4092,10 +4155,11 @@ class App:
             walker = uia.RawViewWalker
         except Exception as exc:
             logging.info('UI 자동화로 창을 열지 못했습니다: %s', exc)
-            return []
-        nodes = []
+            return _UiaNodes(complete=False)
+        nodes = _UiaNodes()
         stack = [(root, -1)]
-        while stack and len(nodes) < limit:
+        deadline = time.monotonic() + max_seconds if max_seconds is not None else float('inf')
+        while stack and len(nodes) < limit and time.monotonic() < deadline:
             element, parent = stack.pop()
             try:
                 rect = element.CurrentBoundingRectangle
@@ -4107,37 +4171,55 @@ class App:
                     'offscreen': bool(element.CurrentIsOffscreen),
                 }
             except Exception:
+                nodes.complete = False
                 continue
             nodes.append(node)
             left, _top, right, _bottom = node['rect']
             if min_x is not None and parent != -1 and left < right < min_x:
                 continue
+            if include_set_metadata and node['type'] in (50007, 50026, 50029):
+                # UIA can infer a set size from the rendered siblings. Only use the ARIA
+                # attributes declared by the provider, which still describe virtual lists.
+                try:
+                    attrs = element.GetCurrentPropertyValue(30102)  # UIA_AriaPropertiesPropertyId
+                except Exception:
+                    attrs = None
+                if isinstance(attrs, str):
+                    for key, value in re.findall(r'(?:^|;)\s*(posinset|setsize)=([0-9]{1,6})(?=;|$)', attrs):
+                        node['set_position' if key == 'posinset' else 'set_size'] = int(value)
             kids = []
             try:
                 child = walker.GetFirstChildElement(element)
-                while child:
+                while child and time.monotonic() < deadline:
                     kids.append(child)
                     child = walker.GetNextSiblingElement(child)
+                if child:
+                    nodes.complete = False
             except Exception as exc:
+                nodes.complete = False
                 logging.debug('UI 자동화 자식 읽기 실패: %s', exc)
             for kid in reversed(kids):
                 stack.append((kid, node['id']))
         if stack:
-            logging.warning('UI 자동화: 요소가 %d개를 넘어 나머지는 읽지 않았습니다', limit)
+            nodes.complete = False
+            logging.debug('UI 자동화 읽기 한도에 도달했습니다 (%d개 읽음)', len(nodes))
         return nodes
 
-    def _read_uia_nodes(self, uia, window, min_x=None):
+    def _read_uia_nodes(self, uia, window, min_x=None, *, include_set_metadata=False):
         """크롬 화면은 누가 읽으려 할 때 비로소 내용을 내주므로 몇 번 다시 읽는다."""
         nodes, tries = [], 0
         for tries in range(1, 5):
-            nodes = self._uia_nodes(uia, window, min_x=min_x) if min_x is not None \
-                else self._uia_nodes(uia, window)
-            if len(nodes) >= 30:
+            kwargs = {'min_x': min_x} if min_x is not None else {}
+            if include_set_metadata:
+                kwargs['include_set_metadata'] = True
+            nodes = self._uia_nodes(uia, window, **kwargs)
+            if len(nodes) >= 30 or (include_set_metadata and has_selected_label(nodes)):
                 break
-            time.sleep(0.8)
+            if tries < 4:
+                time.sleep(0.8)
         return nodes, tries
 
-    def _read_search_count(self):
+    def _read_search_count(self, expected_name=None, expected_org=''):
         """소통메신저 '검색 결과(N명)' 의 N. 화면 읽어 주기로 읽고, 못 읽으면 None.
 
         화면 스레드에서만 부른다. 화면 읽어 주기 객체가 이 스레드에서 만들어졌다.
@@ -4147,20 +4229,35 @@ class App:
         point = self._arrow_point()
         dialogs = [w for w in self._messenger_dialogs()
                    if point is None or self._window_contains(w, point)]
-        if not dialogs:
+        window = self._run_dialog_hwnd
+        if not dialogs or (window is not None and window not in dialogs):
             return None
         uia, _why = self._uia()
         if uia is None:
             return None
-        nodes, _tries = self._read_uia_nodes(uia, dialogs[0])
-        return search_count_in(nodes, SEARCH_COUNT_RE)
+        nodes = self._uia_nodes(uia, window if window is not None else dialogs[0], max_seconds=0.9)
+        if not getattr(nodes, 'complete', True):
+            return None
+        visible = [node for node in nodes if not node.get('offscreen')]
+        count = search_count_in(visible, SEARCH_COUNT_RE)
+        if count != 1 or expected_name is None:
+            return count
+        # A visible count of one may still describe the previous search. Check the
+        # name in the visible result row before using its saved click position.
+        x, y = self._click_point('result_first')
+        split_x = point[0] if point else x + RESULT_SCAN_WIDTH
+        affiliations = {expected_org, abbreviate_school(expected_org)} if expected_org else ()
+        return 1 if search_row_matches(visible, (x, y), split_x, expected_name, affiliations) else None
 
     def _run_on_ui(self, fn, timeout: float = 5.0):
         """워커 스레드에서 fn 을 화면 스레드로 넘겨 부르고 결과를 받는다. 늦으면 None."""
         done = threading.Event()
+        expired = threading.Event()
         box = {}
 
         def call():
+            if expired.is_set():
+                return
             try:
                 box['value'] = fn()
             except Exception as exc:
@@ -4170,31 +4267,34 @@ class App:
 
         self.root.after(0, call)
         if not done.wait(timeout):
+            expired.set()
             return None
         return box.get('value')
 
-    def _ask_pick(self, name: str, count: int):
-        """검색 결과가 여럿일 때 맨 위에 작은 창을 띄워 고르게 한다. 화면 스레드에서 부른다."""
+    def _ask_pick(self, name: str, count: int | None):
+        """검색 결과 하나를 확인하지 못했을 때 직접 선택을 요청한다."""
+        if self.stop_flag.is_set():
+            return
         self.pick_choice = None
+        reason = f'검색 결과 {count}명' if count and count > 1 else '검색 결과를 확인하지 못했습니다'
         self.status_var.set(
-            f'동명이인 확인: {name}  ·  검색 결과 {count}명. 소통메신저에서 맞는 분을 골라 '
+            f'{name} · {reason}. 소통메신저에서 맞는 분을 골라 '
             f'화살표를 누른 뒤 [계속] 을 누르세요')
         self.continue_btn.config(state='normal')
         win = tk.Toplevel(self.root)
-        win.title('동명이인 확인')
+        win.title('검색 결과 확인')
         try:
             win.attributes('-topmost', True)
             win.geometry('+20+20')
         except tk.TclError as exc:
             logging.debug('동명이인 창 위치 설정 실패: %s', exc)
-        tk.Label(win, text=f'{name}  ·  검색 결과 {count}명, 직접 골라 주세요',
+        tk.Label(win, text=f'{name} · {reason}',
                  bg=COLORS['warn_container'], fg=COLORS['on_warn_container'], font=ui.font(11, 'bold'),
                  padx=12, pady=8).pack(fill='x')
         tk.Label(
             win,
-            text=('같은 이름이 여럿이라 신통픽이 고르지 않았습니다.\n'
-                  '소통메신저 검색 결과에서 맞는 분을 누르고 오른쪽 화살표를 누른 뒤\n'
-                  '[계속] 을 누르세요. 아무도 담지 않으려면 [건너뛰기] 를 누르세요.'),
+            text=('소통메신저에서 이름과 소속을 확인해 주세요. 맞는 분을 고르고 오른쪽 화살표를 '
+                  '누른 뒤 [계속]을 누르세요. 맞는 분이 없다면 [건너뛰기]를 누르세요.'),
             font=ui.font(9), justify='left', padx=12, pady=8
         ).pack(anchor='w')
         row = tk.Frame(win)
@@ -4202,21 +4302,53 @@ class App:
 
         def choose(choice):
             self.pick_choice = choice
-            try:
-                win.destroy()
-            except tk.TclError:
-                pass
             self._resume()
 
-        M3Button(row, text='계속 (골라서 담았음)', command=lambda: choose('continue')).pack(side='left')
+        win.protocol('WM_DELETE_WINDOW', lambda: choose('skip'))
+        M3Button(row, text='계속', command=lambda: choose('continue')).pack(side='left')
         M3Button(row, text='건너뛰기', command=lambda: choose('skip'), variant='text').pack(side='left', padx=6)
         self.pick_window = win
 
-    def _read_messenger_selected(self):
-        """소통메신저 [선택된 사용자] 목록의 줄 글을 읽는다.
+    _SELECTED_COUNT_RE = re.compile(r'선택된 사용자\s*\(\s*([0-9]{1,6})\s*명\s*\)')
 
-        돌려주는 값은 (줄 글 목록, 못 읽은 이유). 읽으면 이유는 빈 글이다.
-        """
+    def _selected_heading_totals(self, point, nodes):
+        totals = set()
+        parents = {node['id']: node['type'] for node in nodes}
+        for node in nodes:
+            left, top, right, bottom = node['rect']
+            if (node.get('offscreen') or left < point[0] or top >= point[1]
+                    or right <= left or bottom <= top):
+                continue
+            parent_type = parents.get(node['parent'])
+            if not ((node['type'] == 50034 and parent_type in (50030, 50032, 50033))
+                    or (node['type'] == 50020 and parent_type == 50034)):
+                continue
+            match = self._SELECTED_COUNT_RE.fullmatch((node.get('name') or '').strip())
+            if match:
+                totals.add(int(match.group(1)))
+        return totals
+
+    def _selected_total(self, window, point, nodes):
+        """표준 목록이나 접근성 정보에서 확인한 전체 인원수. 알 수 없으면 None."""
+        native = [child for child in self._child_controls(window)
+                  if pick_selected_list([child], *point)]
+        totals = self._selected_heading_totals(point, nodes)
+        if len(native) == 1:
+            hwnd, class_name, _rect = native[0]
+            try:
+                visible = self._win32gui().IsWindowVisible(hwnd)
+            except Exception:
+                visible = False
+            count = self._count_items(hwnd, class_name) if visible else None
+            if count is not None:
+                totals.add(count)
+        set_total = selected_row_set_total(nodes, point[0])
+        if set_total is not None:
+            totals.add(set_total)
+        return next(iter(totals)) if len(totals) == 1 else None
+
+    def _read_messenger_selected(self, *, expected_window=None):
+        """작업 창 하나의 [선택된 사용자] 명단과 읽기 범위를 돌려준다."""
         if self._win32gui() is None:
             return None, '이 PC 에서는 창을 들여다보는 기능(pywin32)을 쓸 수 없습니다.'
         point = self._arrow_point()
@@ -4230,61 +4362,50 @@ class App:
         if not inside:
             return None, ('[사용자 선택] 창이 위치를 캡처할 때와 다른 곳에 있습니다. '
                           '창을 옮기셨다면 [위치 설정] 에서 4, 5, 6번을 다시 캡처해 주세요.')
+        window = inside[0]
+        bound = expected_window or getattr(self, '_run_dialog_hwnd', None)
+        changed = ('비교할 [사용자 선택] 창이 바뀌었습니다. 쓰지 않는 창을 닫고 '
+                   '[소통메신저와 비교] 를 다시 눌러 주세요.')
+        if bound is not None and window != bound:
+            return None, changed
         uia, why = self._uia()
         if uia is None:
             return None, (f'화면 읽어 주기를 쓸 수 없습니다 ({why}). '
                           '개발용 실행.bat 을 다시 누르면 필요한 것을 깝니다.')
-        # 여럿이 겹쳐 있으면 맨 위 창부터 읽는다. 자동 선택도 맨 위 창을 누른다.
-        # 맨 위 창에서 담긴 사람을 못 읽으면(아직 안 뜬 화면, 빈 목록 따위) 다음 창을 본다.
-        rows, seen_label, used = None, False, 0
-        self.compare_read_info = ''
-        for index, window in enumerate(inside):
-            nodes, _tries = self._read_uia_nodes(uia, window, min_x=point[0])
-            found, visible = selected_rows_seen(nodes, point[0])
-            logging.info('[선택된 사용자] 읽기: %d번째 창, 요소 %d개, 사람 줄 %d개 (화면에 보인 줄 %d개)',
-                         index + 1, len(nodes), len(found), visible)
-            if found:
-                used = index
-                if len(found) > visible:
-                    # 화면 밖 줄까지 읽혔다. 스크롤할 필요가 없다.
-                    rows = found
-                    self.compare_read_info = (f'목록에서 {len(rows)}명을 읽었습니다 '
-                                              f'(화면에 보인 {visible}명과 스크롤해야 보이는 '
-                                              f'{len(rows) - visible}명).')
-                else:
-                    rows, how = self._scroll_through_selected(uia, window, point[0], nodes, found)
-                    self.compare_read_info = f'목록에서 {len(rows)}명을 읽었습니다 ({how}).'
-                logging.info('[선택된 사용자] %s', self.compare_read_info)
-                break
-            if has_selected_label(nodes):
-                seen_label = True
-                if rows is None:
-                    rows, used = [], index           # 목록이 비어 있는 창일 수 있다
-        if not rows and not seen_label:
+        nodes, _tries = self._read_uia_nodes(uia, window, min_x=point[0], include_set_metadata=True)
+        rows, visible = selected_rows_seen(nodes, point[0])
+        total = self._selected_total(window, point, nodes)
+        seen_label = has_selected_label(nodes) or bool(self._selected_heading_totals(point, nodes))
+        read_complete = getattr(nodes, 'complete', True) and len(rows) == total
+        if not seen_label and not (total == 0 and not rows):
             return None, ('[선택된 사용자] 목록을 찾지 못했습니다. [사용자 선택] 창이 완전히 '
                           '뜬 다음에 다시 눌러 주세요. 계속 안 되면 [위치 설정] 탭에서 '
                           '6번 자리를 다시 확인해 주세요.')
-        notes = [self.compare_read_info] if self.compare_read_info else []
+        notes = []
+        if not getattr(nodes, 'complete', True):
+            notes.append('화면 읽기 오류나 읽기 한도로 명단 일부만 읽었습니다.')
+        elif len(rows) > visible:
+            notes.append(f'목록에서 {len(rows)}명을 읽었습니다 (화면에 보인 {visible}명 포함).')
+        elif rows and not read_complete:
+            rows, how = self._scroll_through_selected(uia, window, point[0], nodes, rows)
+            notes.append(how)
+        if not read_complete:
+            notes.append('전체 인원을 확인할 수 없어 읽은 범위에서만 비교했습니다.' if total is None else
+                         f'목록 전체 {total}명 중 확인할 수 있었던 범위에서만 비교했습니다.')
+        windows_now = [w for w in self._messenger_dialogs() if self._window_contains(w, point)]
+        if not windows_now or windows_now[0] != window:
+            return None, changed
         if len(inside) > 1:
-            which = '맨 위 창' if used == 0 else f'위에서 {used + 1}번째 창'
-            notes.append(f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 {which}을 '
+            notes.append(f'[사용자 선택] 창이 {len(inside)}개 겹쳐 열려 있어 맨 위 창을 '
                          '읽었습니다. 쓰지 않는 창은 닫아 두세요.')
-        self.compare_note = ' '.join(notes)
-        return rows, ''
+        return reconcile.MessengerSnapshot(rows, read_complete, window, ' '.join(notes)), ''
 
-    # 스크롤 한 번에 한 칸만 내린다. 목록에 보이는 줄보다 적게 움직여야 앞뒤 화면이 겹쳐
-    # 이어 붙일 수 있다. 두 번 연달아 그대로면 맨 아래에 닿은 것으로 본다.
     SCROLL_TOP_CLICKS = 60
     SCROLL_PAUSE = 0.35
-    SCROLL_MAX_STEPS = 120
+    SCROLL_MAX_STEPS = 24
 
     def _scroll_through_selected(self, uia, window, split_x, nodes, first):
-        """[선택된 사용자] 목록을 맨 위부터 끝까지 스크롤하며 담긴 사람을 모두 읽는다.
-
-        소통메신저 목록은 화면에 보이는 줄만 읽히는 일이 있다. 16명이 담겨 있는데 보이는
-        6명만 읽어 나머지를 '빠짐' 으로 보인 적이 있다. 목록 위에 마우스를 올려 한 칸씩
-        내리며 읽고, 겹친 줄은 한 번만 센다. 끝나면 목록을 맨 위로 돌리고 마우스를 제자리에 둔다.
-        """
+        """스크롤하며 추가로 보이는 줄을 모은다. 목록의 끝과 전체 인원은 추정하지 않는다."""
         if pyautogui is None or not first:
             return first, '화면에 보인 줄만 읽음'
         anchor = selected_rows_anchor(nodes, split_x)
@@ -4292,7 +4413,17 @@ class App:
             return first, '화면에 보인 줄만 읽음'
 
         def read():
-            return selected_person_rows(self._uia_nodes(uia, window, min_x=split_x), split_x)
+            new_nodes = self._uia_nodes(uia, window, min_x=split_x)
+            if not getattr(new_nodes, 'complete', True):
+                return []
+            return selected_person_rows(new_nodes, split_x)
+
+        def over_selected_window():
+            try:
+                gui = self._win32gui()
+                return gui.GetForegroundWindow() == window and self._target_at(window, anchor)
+            except Exception:
+                return False
 
         try:
             home = pyautogui.position()
@@ -4303,43 +4434,47 @@ class App:
             # 사용자도 멈추려던 참이므로 마우스를 건드리지 않는다.
             return first, ('마우스가 화면 모서리에 있어 스크롤하지 않았습니다. '
                            '[소통메신저와 비교] 를 다시 누르면 아래쪽까지 읽습니다')
+        if home is None or not over_selected_window():
+            return first, '선택된 목록이 가려져 있어 화면 읽기에서 찾은 줄만 사용했습니다.'
         collected = list(first)
-        steps = 0
         try:
             pyautogui.moveTo(*anchor)
             pyautogui.scroll(self.SCROLL_TOP_CLICKS)
             time.sleep(self.SCROLL_PAUSE)
             last = read()
-            collected = merge_scrolled_rows([], last) if last else list(first)
+            if not last:
+                return first, '스크롤한 뒤 목록을 읽지 못했습니다.'
+            collected = last
             still = 0
             for _step in range(self.SCROLL_MAX_STEPS):
+                if not over_selected_window() or pyautogui.position() != anchor:
+                    return collected, '비교 도중 창 또는 마우스 위치가 바뀌었습니다.'
                 pyautogui.scroll(-1)
                 time.sleep(self.SCROLL_PAUSE)
                 now = read()
-                if not now or now == last:
+                if not now:
+                    return collected, '스크롤한 뒤 목록을 읽지 못했습니다.'
+                if now == last:
                     still += 1
                     if still >= 2:
                         break
                     continue
                 still = 0
-                steps += 1
                 collected = merge_scrolled_rows(collected, now)
                 last = now
-            pyautogui.scroll(self.SCROLL_TOP_CLICKS)
+            if over_selected_window() and pyautogui.position() == anchor:
+                pyautogui.scroll(self.SCROLL_TOP_CLICKS)
         except Exception as exc:
             logging.info('[선택된 사용자] 스크롤하며 읽기 실패: %s', exc)
-            return max(collected, list(first), key=len), f'스크롤하다 멈춤: {type(exc).__name__}'
+            return max(collected, first, key=len), '스크롤 도중 목록 읽기를 멈췄습니다.'
         finally:
-            if home is not None:
-                try:
-                    pyautogui.moveTo(home[0], home[1])
-                except Exception:
-                    pass
-        # 스크롤이 실패해 덜 읽었으면 처음 읽은 것이 더 많을 수 있다
-        rows = collected if len(collected) >= len(first) else list(first)
-        if steps:
-            return rows, f'목록을 {steps}번 내려 가며 읽음'
-        return rows, '스크롤해도 목록이 그대로여서 화면에 보인 줄만 읽음'
+            try:
+                if pyautogui.position() == anchor:
+                    pyautogui.moveTo(*home)
+            except Exception:
+                pass
+        rows = max(collected, first, key=len)
+        return rows, f'스크롤하며 {len(rows)}줄을 읽었습니다.'
 
 
     def _compare_with_messenger(self, quiet: bool = False):
@@ -4354,17 +4489,21 @@ class App:
         if self._automation_is_running():
             messagebox.showwarning('실행 중입니다', '자동 선택이 끝난 뒤에 비교해 주세요.')
             return None
+        previous_status = self.status_var.get()
         self.status_var.set('소통메신저 명단을 읽는 중입니다...')
         try:
             self.root.update_idletasks()
         except Exception:
             pass
-        self.compare_note = ''
-        rows, why = self._read_messenger_selected()
-        if rows is None:
+        snapshot, why = self._read_messenger_selected()
+        if snapshot is None:
+            stale_missing = [item for item in self.names_list
+                             if item.get('failure_reason') == reconcile.NOT_IN_MESSENGER]
+            if stale_missing:
+                self._mark_compare_result(reconcile.MessengerCompare(pending=stale_missing))
             if quiet:
                 self.status_var.set(
-                    self.status_var.get()
+                    previous_status
                     + '  ·  소통메신저 명단은 읽지 못했습니다 ([소통메신저와 비교] 로 다시 시도)')
                 return None
             self.status_var.set('소통메신저 명단을 읽지 못했습니다')
@@ -4372,28 +4511,50 @@ class App:
                 return None
             messagebox.showwarning('소통메신저 명단을 읽지 못했습니다', why)
             return None
-        result = reconcile.compare_with_messenger(self.names_list, rows)
+        result = reconcile.compare_with_messenger(self.names_list, snapshot)
         self._mark_compare_result(result)
         # 파일 로그에는 이름 없이 수만 남긴다
-        logging.info('소통메신저 비교: 읽은 줄 %s, 들어감 %s, 빠짐 %s, 확인 필요 %s, 메신저에만 %s',
-                     result.rows, len(result.inside), len(result.missing),
-                     sum(len(p) for _n, p, _h in result.unsure), len(result.extra))
+        logging.info('소통메신저 비교: 전체 읽기=%s, 읽은 줄=%s, 등록 확인=%s, 누락 확인=%s, '
+                     '이름 일치=%s, 확인 보류=%s', result.complete, result.rows, len(result.inside),
+                     len(result.missing), len(result.name_only), len(result.pending))
+        label = '소통메신저 비교' if result.complete else '소통메신저 목록 읽기 미완료'
         self.status_var.set(
-            f'소통메신저 비교  ·  들어감 {len(result.inside)}명  ·  빠짐 {len(result.missing)}명')
+            f'{label}  ·  등록 확인 {len(result.inside)}명  ·  누락 확인 {len(result.missing)}명'
+            f'  ·  이름 일치 {len(result.name_only)}명'
+            f'  ·  확인 보류 {len(result.pending) + len(result.no_name)}명')
         MessengerCompareReport(self.root, result, len(self.names_list),
-                               on_add=self._add_missing_to_messenger, note=self.compare_note)
+                               on_add=lambda items: self._add_missing_to_messenger(items, window=result.window),
+                               note=snapshot.note)
         return result
 
-    def _add_missing_to_messenger(self, items):
-        """비교에서 빠진 사람만 소통메신저에 담는다. 명단은 그대로 둔다.
-
-        끝나면 _done 이 다시 비교해 정말 다 들어갔는지 보여 준다.
-        """
+    def _add_missing_to_messenger(self, items, *, window):
+        """같은 창을 다시 읽어 여전히 누락된 사람만 담는다."""
+        if self._automation_is_running():
+            messagebox.showwarning('실행 중입니다', '자동 선택이 끝난 뒤에 추가해 주세요.')
+            return
+        requested = {id(item) for item in items}
+        candidates = [item for item in self.names_list if id(item) in requested]
+        if not candidates:
+            return
+        snapshot, why = self._read_messenger_selected(expected_window=window) if window else (None, '')
+        if snapshot is None:
+            self._mark_compare_result(reconcile.MessengerCompare(pending=candidates))
+            messagebox.showwarning('목록 다시 읽기 필요', why or '[소통메신저와 비교] 를 다시 눌러 주세요.')
+            return
+        current = reconcile.compare_with_messenger(candidates, snapshot)
+        self._mark_compare_result(current)
+        if not current.complete:
+            messagebox.showwarning('목록 읽기 미완료',
+                                   '소통메신저 목록 전체를 읽은 뒤 추가할 사람을 다시 확인해 주세요.')
+            return
+        if not current.missing:
+            messagebox.showinfo('알림', '다시 추가할 수 있는 누락 항목이 없습니다.')
+            return
         try:
             self.nb.select(self.messenger_tabs[1][0])     # 진행 상황이 보이는 탭
         except Exception as exc:
             logging.debug('자동 선택 탭으로 옮기지 못했습니다: %s', exc)
-        self._start(list(items))
+        self._start(current.missing, expected_window=window)
 
     def _offer_comtypes_install(self, why: str, then) -> bool:
         """화면 읽어 주기 부품(comtypes)이 없으면 지금 깔지 묻는다.
@@ -4455,22 +4616,21 @@ class App:
         return True
 
     def _mark_compare_result(self, result):
-        """비교 결과를 명단에 남긴다. 빠진 사람은 빨갛게, 들어간 사람은 빨간 표시를 지운다.
-
-        그래야 [실패 항목만 다시 실행] 이 빠진 사람만 다시 담는다.
-        """
+        """등록을 확인했거나 전체 목록에서 누락을 확인한 경우에만 실행 결과를 갱신한다."""
+        self._last_compare_window = result.window
         for item in result.inside:
             item['added'] = True
             item.pop('failure_reason', None)
         for item in result.missing:
             item.pop('added', None)
             item['failure_reason'] = reconcile.NOT_IN_MESSENGER
-        for _name, people, have in result.unsure:
-            note = reconcile.same_name_note(people, have)
+        for people, note in ((result.name_only, reconcile.NAME_ONLY),
+                             (result.pending, reconcile.READ_INCOMPLETE),
+                             (result.no_name, reconcile.NAME_UNAVAILABLE)):
             for item in people:
-                item.pop('added', None)
                 item['failure_reason'] = note
         self._rebuild_parsed_list()
+        self._refresh_auto_chips()
 
     def _probe_uia(self, window, point):
         """웹 화면 속 [선택된 사용자] 목록을 화면 읽어 주기로 찾는다.
@@ -4568,7 +4728,7 @@ class App:
         except Exception as exc:
             logging.debug('목록 항목 수를 묻지 못했습니다: %s', exc)
             return None
-        return count if isinstance(count, int) and count >= 0 else None
+        return count if _ok and isinstance(count, int) and count >= 0 else None
 
     def _probe_messenger_lists(self):
         """소통메신저 목록을 셀 수 있는지 확인하고, 본 것을 보여 준다.
@@ -4672,6 +4832,7 @@ class App:
         manual = self.config.data.get('manual_confirm', False)
         total = len(run_items)
         no_result_streak = 0
+        halted = False
 
         for idx, item in enumerate(run_items):
             if self.stop_flag.is_set():
@@ -4714,53 +4875,54 @@ class App:
                     continue
                 no_result_streak = 0
 
-                if manual:
+                before_add = self._run_on_ui(self._read_add_observation)
+                many = None if manual else self._run_on_ui(lambda: self._read_search_count(name, org))
+                if not manual and idx == 0 and many in (None, 0) and not self.stop_flag.wait(0.25):
+                    # 처음 열리는 메신저의 접근성 정보가 한 박자 늦게 준비될 수 있다.
+                    many = self._run_on_ui(lambda: self._read_search_count(name, org))
+                if self.stop_flag.is_set():
+                    self._mark_failed(idx, FAIL_MANUAL_STOP, item)
+                    break
+                if manual or many != 1:
                     self.continue_event.clear()
-                    self.root.after(0, lambda n=name: self._show_continue(n))
+                    if self.stop_flag.is_set():
+                        self._mark_failed(idx, FAIL_MANUAL_STOP, item)
+                        break
+                    if manual:
+                        self.root.after(0, lambda n=name: self._show_continue(n))
+                    else:
+                        self._log('직접 선택을 기다립니다. ')
+                        self.root.after(0, lambda n=search_str, k=many: self._ask_pick(n, k))
                     self.continue_event.wait()
                     if self.stop_flag.is_set():
                         self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                         break
-                    ok += 1
-                    item['added'] = True
-                    self._log('✓\n')
+                    if not manual and self.pick_choice == 'skip':
+                        result = 'skipped'
+                    else:
+                        result = self._wait_for_added(name, before_add)
+                        if result == 'ok':
+                            result = 'manual_observed'
                 else:
-                    # 검색 결과가 여럿이면 첫 사람을 누르지 않고 사람이 고르게 한다
-                    many = self._run_on_ui(self._read_search_count)
-                    if many is not None and many >= 2:
-                        self._log(f'멈춤  (검색 결과 {many}명, 직접 고르기 기다림) ')
-                        self.continue_event.clear()
-                        self.root.after(0, lambda n=search_str, k=many: self._ask_pick(n, k))
-                        self.continue_event.wait()
-                        if self.stop_flag.is_set():
-                            self._log('\n')
-                            self._mark_failed(idx, FAIL_MANUAL_STOP, item)
-                            break
-                        if getattr(self, 'pick_choice', None) == 'skip':
-                            fail += 1
-                            self._log('건너뜀\n')
-                            self._mark_failed(idx, FAIL_SAME_NAME_SKIPPED, item)
-                            self._update_progress(idx + 1, total)
-                            continue
-                        ok += 1
-                        item['added'] = True
-                        self._log('✓  (직접 고름)\n')
-                        self._update_progress(idx + 1, total)
-                        continue
-                    result = self._do_select()
-                    if result == 'stopped':
-                        self._log('\n')
-                        self._mark_failed(idx, FAIL_MANUAL_STOP, item)
-                        break
-                    if result == 'duplicate':
-                        fail += 1
-                        self._log('✗  이미 선택된 사용자\n')
-                        self._mark_failed(idx, FAIL_DUPLICATE, item)
-                        self._update_progress(idx + 1, total)
-                        continue
+                    result = self._do_select(name, before_add)
+                if result == 'stopped':
+                    self._mark_failed(idx, FAIL_MANUAL_STOP, item)
+                    break
+                if result == 'ok':
                     ok += 1
                     item['added'] = True
-                    self._log('✓\n')
+                    self._log('✓ 선택 목록에서 추가를 확인했습니다\n')
+                else:
+                    fail += 1
+                    reason = {'duplicate': FAIL_DUPLICATE, 'skipped': FAIL_SAME_NAME_SKIPPED,
+                              'manual_observed': reconcile.NAME_ONLY,
+                              }.get(result, FAIL_ADD_UNCONFIRMED)
+                    self._mark_failed(idx, reason, item)
+                    self._log(f'{reason}\n')
+                    if result == 'unconfirmed' and not manual and many == 1:
+                        halted = True
+                        self._update_progress(idx + 1, total)
+                        break
             except pyautogui.FailSafeException:
                 self._log('\n✗  긴급 중지 (화면 모서리)\n')
                 self._mark_failed(idx, FAIL_MANUAL_STOP, item)
@@ -4770,11 +4932,15 @@ class App:
                 fail += 1
                 self._log(f'✗  ({e})\n')
                 self._mark_failed(idx, failure_reason_from_error(e), item)
+                if self._run_dialog_hwnd is not None:
+                    halted = True
+                    self._update_progress(idx + 1, total)
+                    break
 
             self._update_progress(idx + 1, total)
             time.sleep(0.1)
 
-        stopped = self.stop_flag.is_set()
+        stopped = self.stop_flag.is_set() or halted
         self.root.after(0, lambda: self._done(ok, fail, stopped, run_items))
 
     def _do_search(self, search_str: str):
@@ -4783,19 +4949,25 @@ class App:
         if x is None or y is None:
             raise RuntimeError('좌표 오류: 검색 입력창 위치 미설정')
         delay = self.config.data.get('search_delay', 0.5) * 0.3
+        self._check_click_target((x, y))
         pyautogui.click(x, y)
         time.sleep(delay)
+        self._check_click_target((x, y))
+        window = self._run_dialog_hwnd
+        if window is not None and self._win32gui().GetForegroundWindow() != window:
+            raise RuntimeError('좌표 오류: 소통메신저 검색창에 입력할 수 없습니다')
         pyautogui.hotkey('ctrl', 'a')
         pyperclip.copy(search_str)
         pyautogui.hotkey('ctrl', 'v')
         time.sleep(delay)
+        if window is not None and self._win32gui().GetForegroundWindow() != window:
+            raise RuntimeError('좌표 오류: 소통메신저 검색창에서 입력이 끊겼습니다')
         pyautogui.press('enter')
 
-    def _click_add_once(self, popup_wait: float = POPUP_WAIT_ADD) -> bool:
+    def _click_add_once(self, popup_wait: float = POPUP_WAIT_ADD) -> str:
         """결과 첫 줄과 선택 버튼을 한 번 누른다.
 
-        이미 선택된 사용자라는 안내창이 떴으면 True. 그 사람이 받는 사람에
-        들어 있다는 뜻이다.
+        클릭 여부와 중복 안내를 반환한다. 클릭 결과는 선택 목록에서 확인한다.
         """
         rx = self.config.data['result_first_x']
         ry = self.config.data['result_first_y']
@@ -4803,32 +4975,66 @@ class App:
         ay = self.config.data['add_button_y']
         if None in (rx, ry, ax, ay):
             raise RuntimeError('좌표 오류: 결과 또는 선택 버튼 위치 미설정')
+        self._check_click_target((rx, ry))
         pyautogui.click(rx, ry)
         time.sleep(0.15)
         before = self._snapshot_dialogs()
+        if self.stop_flag.is_set():
+            return 'stopped'
+        self._check_click_target((ax, ay))
         pyautogui.click(ax, ay)
         appeared = self._wait_for_dialog(before, popup_wait)
         if not appeared:
-            return False
+            return 'clicked'
         duplicate = self._is_duplicate_popup(appeared)
-        # 무슨 안내창인지와 상관없이 닫는다. 열린 채로 두면 다음 클릭이 다 막힌다.
-        self._close_dialogs(appeared)
-        return duplicate
+        if duplicate and self._close_dialogs(appeared):
+            return 'duplicate'
+        return 'unconfirmed'
 
-    def _do_select(self) -> str:
-        """결과 첫 줄을 누르고 선택 버튼을 눌러 받는 사람에 추가한다.
+    def _read_add_observation(self):
+        """같은 창의 선택 목록을 스크롤 없이 읽어 이름별 수를 센다."""
+        window, point = self._run_dialog_hwnd, self._arrow_point()
+        if window is None or point is None or not self._window_contains(window, point):
+            return None
+        uia, _why = self._uia()
+        if uia is None:
+            return None
+        nodes = self._uia_nodes(uia, window, min_x=point[0], include_set_metadata=True, max_seconds=0.9)
+        if not getattr(nodes, 'complete', True):
+            return None
+        rows = selected_person_rows(nodes, point[0])
+        total = self._selected_total(window, point, nodes)
+        if total is None or total != len(rows):
+            return None
+        names = [reconcile.person_name_from_row(row) for row in rows]
+        return Counter(names) if all(names) else None
 
-        추가됐는지 되짚어 확인하지는 않는다. 확인하려면 사람마다 선택 버튼을
-        한 번 더 눌러야 해서 시간이 두 배로 든다. 그래서 빼 두었다.
-        대신 끝난 뒤 [선택된 사용자] 목록을 세어 들어간 수와 맞춰 본다(_selected_count).
+    def _wait_for_added(self, name, before):
+        if before is None:
+            return 'unreadable'
+        expected = before + Counter({name: 1})
+        deadline = time.monotonic() + 1.5
+        readable = False
+        while not self.stop_flag.is_set():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            after = self._run_on_ui(self._read_add_observation, timeout=remaining)
+            if after == expected:
+                return 'ok'
+            readable |= after is not None
+            self.stop_flag.wait(min(0.15, remaining))
+        if self.stop_flag.is_set():
+            return 'stopped'
+        return 'unconfirmed' if readable else 'unreadable'
 
-        이미 선택된 사용자였다면 '선택된 사용자 입니다.' 안내창이 뜬다.
-        그때는 중복으로 남긴다.
-        """
-        time.sleep(0.2)
-        if self._click_add_once(POPUP_WAIT_ADD):
-            return 'duplicate'      # 명단을 돌리기 전부터 받는 사람에 있던 사람
-        return 'ok'
+    def _do_select(self, name, before) -> str:
+        if self.stop_flag.is_set():
+            return 'stopped'
+        result = self._click_add_once(POPUP_WAIT_ADD)
+        if result != 'clicked':
+            return result
+        return self._wait_for_added(name, before)
 
     _win32gui_warned = False
 
@@ -4899,8 +5105,19 @@ class App:
         안 됐다고 표시된다.
         """
         deadline = time.monotonic() + timeout
+        window = self._run_dialog_hwnd
+        gui = self._win32gui() if window is not None else None
         while True:
             appeared = self._snapshot_dialogs() - before
+            if gui is not None:
+                owned = set()
+                for hwnd in appeared:
+                    try:
+                        if gui.GetWindow(hwnd, 4) == window:  # GW_OWNER
+                            owned.add(hwnd)
+                    except Exception:
+                        continue
+                appeared = owned
             if appeared:
                 return appeared
             if time.monotonic() >= deadline:
@@ -4914,8 +5131,7 @@ class App:
             if looks_like_duplicate_popup(texts):
                 return True
             if texts:
-                logging.info('안내창을 알아보지 못했습니다: %s', ' | '.join(
-                    t for t in texts if t)[:200])
+                logging.info('안내창을 알아보지 못했습니다')
         return False
 
     def _close_dialogs(self, hwnds: set) -> bool:
@@ -4924,6 +5140,10 @@ class App:
         안내창이 열린 채로 남으면 그다음 클릭이 전부 먹지 않는다.
         """
         for _ in range(2):
+            if self._run_dialog_hwnd is not None:
+                gui = self._win32gui()
+                if gui is None or gui.GetForegroundWindow() not in hwnds:
+                    return not (self._snapshot_dialogs() & hwnds)
             pyautogui.press('enter')
             time.sleep(0.15)
             if not (self._snapshot_dialogs() & hwnds):
@@ -5028,7 +5248,8 @@ class App:
             except Exception as exc:
                 logging.debug('검색 결과 수를 읽지 못했습니다: %s', exc)
             self._count_hwnd = None
-        for window in self._snapshot_dialogs():
+        windows = (self._run_dialog_hwnd,) if self._run_dialog_hwnd is not None else self._snapshot_dialogs()
+        for window in windows:
             for text in self._window_texts(window):
                 found = SEARCH_COUNT_RE.search(text or '')
                 if found:
@@ -5076,29 +5297,28 @@ class App:
         while True:
             if self.stop_flag.is_set():
                 return 'stopped'
-            # 소통메신저가 건수를 적어 두면 그걸 먼저 믿는다. 0명이면 더 기다릴
-            # 것도 없이 그 이름으로 찾은 사람이 없다는 뜻이다.
+            # 검색이 끝나기 전에는 이전 검색의 '0명'이 잠시 남아 있을 수 있다.
             counted = self._search_result_count()
-            if counted == 0:
-                return 'empty'
             current = self._result_pixels()
             if current is None:
                 # 화면 영역을 못 읽는 환경에서는 예전처럼 한 점만 본다.
-                if self._has_result_at_point():
+                if counted != 0 and self._has_result_at_point():
                     return 'new'
             else:
                 pixels = current[0]
                 if looks_like_result(*current):
-                    if previous is None or pixels != previous:
+                    if counted != 0 and (previous is None or pixels != previous):
                         return 'new'
                     state = 'stale'
                 else:
                     state = 'empty'
             if time.monotonic() >= deadline:
-                return state
+                return 'empty' if counted == 0 else state
             time.sleep(0.15)
 
     def _show_continue(self, name: str):
+        if self.stop_flag.is_set():
+            return
         name = name or ''
         self.status_var.set(
             f'수동 선택 대기: {name}. 소통메신저에서 결과를 누르고 선택 버튼을 누른 뒤 [계속] 을 누르세요'
@@ -5107,6 +5327,7 @@ class App:
 
     def _done(self, ok: int, fail: int, stopped: bool = False, run_items=None):
         self.worker_thread = None
+        self._resume()
         self.start_btn.config(state='normal')
         self.stop_btn.config(state='disabled')
         self.continue_btn.config(state='disabled')
@@ -5133,11 +5354,14 @@ class App:
 
         head = f'{result_word}  ·  {reconcile.summary_line(tally, "명")}'
         self.status_var.set(head + ('  ← 빨간색 항목 확인' if tally.short else ''))
-        if stopped:
-            return
-        # 신통픽이 누른 것과 실제로 들어간 것은 다를 수 있다. 끝나면 바로
-        # 소통메신저 [선택된 사용자] 를 읽어 소통픽 명단과 맞춰 보여 준다.
-        self._compare_with_messenger(quiet=True)
+        try:
+            verify_after_halt = not self.stop_flag.is_set() and any(
+                item.get('failure_reason') == FAIL_ADD_UNCONFIRMED for item in run_items)
+            if not stopped or verify_after_halt:
+                self._compare_with_messenger(quiet=True)
+        finally:
+            self._run_dialog_hwnd = None
+            self._count_hwnd = None
 
     def _update_progress(self, idx: int, total: int):
         self.root.after(

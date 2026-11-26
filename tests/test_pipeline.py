@@ -106,3 +106,44 @@ class DepartmentPipelineTest(unittest.TestCase):
         names = [r['name'] for r in rows]
         self.assertEqual(names, ['충청북도청주교육지원청 행정과',
                                  '충청북도충주교육지원청 행정과'])
+
+    def test_unmatched_department_is_not_replaced_with_its_parent(self):
+        texts = ('청주교육지원청 없는부서', '청주교육지원청 행정지원과',
+                 '청주교육지원청\t없는부서', '충주교육지원청 새부서 교육장 홍길동',
+                 '청주교육지원청 행정', '청주교육지원청\t행정')
+        rows = self.resolve_all('\n'.join(texts))
+        self.assertEqual(len(rows), 4)
+        self.assertEqual([r['raw'] for r in rows],
+                         ['청주교육지원청 없는부서', '청주교육지원청 행정지원과',
+                          '충주교육지원청 새부서', '청주교육지원청 행정'])
+        self.assertTrue(all(r['grade'] not in AUTO_GRADES for r in rows), rows)
+        self.assertTrue(all('충청북도청주교육지원청 행정과' in r['candidates']
+                            for r in (rows[1], rows[3])))
+        self.assertEqual(edufine.split_by_code(confirmed(rows), self.codes)[0], [])
+
+    def test_linked_department_cells_stay_together_alongside_school_cells(self):
+        rows = self.resolve_all('청주교육지원청\t행정과\t학성초\t한천초\n'
+                                '충주교육지원청\t행정과\t주무관\t홍길동')
+        ready, missing = edufine.split_by_code(confirmed(rows), self.codes)
+        self.assertEqual(missing, [])
+        self.assertEqual([r['fullname'] for r in ready], [
+            '충청북도청주교육지원청 행정과', '충청북도진천교육지원청 학성초등학교',
+            '충청북도진천교육지원청 한천초등학교', '충청북도충주교육지원청 행정과',
+        ])
+
+    def test_a_department_column_preserves_an_unrecognized_short_value(self):
+        rows = self.resolve_all('상위 기관\t부서\t성명\n청주교육지원청\t행정\t김영국')
+        self.assertEqual([r['raw'] for r in rows], ['청주교육지원청 행정'])
+        self.assertNotIn(rows[0]['grade'], AUTO_GRADES)
+
+    def test_a_name_column_does_not_become_a_department(self):
+        rows = self.resolve_all('기관\t성명\n청주교육지원청\t김영국')
+        self.assertEqual([r['name'] for r in rows], ['충청북도청주교육지원청'])
+        self.assertIn(rows[0]['grade'], AUTO_GRADES)
+
+    def test_a_school_and_an_independent_department_are_separate_cells(self):
+        rows = self.resolve_all('학성초\t정책기획과\t한천초')
+        self.assertEqual([r['name'] for r in rows], [
+            '충청북도진천교육지원청 학성초등학교', '충청북도교육청 정책기획과',
+            '충청북도진천교육지원청 한천초등학교',
+        ])

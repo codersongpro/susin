@@ -91,7 +91,7 @@ class LandingPageTest(unittest.TestCase):
 
     def test_old_code_import_instructions_are_removed(self):
         self.assertNotIn('기관코드 가져오기', self.html)
-        self.assertIn('충청북도교육청으로 자동 적용', self.html)
+        self.assertIsNotNone(re.search(r'등록교육청은\s*충청북도교육청으로', self.html))
         self.assertIn('그룹기호는 선택 사항', self.html)
 
 

@@ -582,6 +582,20 @@ class AppFlowTest(unittest.TestCase):
         self.assertFalse(row['code_missing'])
         self.assertFalse(self.app._org_needs_review(row))
 
+    def test_manual_org_confirmation_requires_a_dictionary_match(self):
+        row = self.parse('학셩초등학교')[0]
+        self.assertFalse(self.app._confirm_org_item(row, '학셩초등학교'))
+        self.assertTrue(self.app._org_needs_review(row))
+        self.assertEqual(self.app._split_confirmed()[0], [])
+
+        self.assertTrue(self.app._confirm_org_item(row, '학성초'))
+        self.assertEqual(row['org'], '충청북도진천교육지원청 학성초등학교')
+        ready, missing = self.app._split_confirmed()
+        self.assertEqual(missing, [])
+        self.assertEqual(ready[0]['raw'], '학셩초등학교')
+        self.assertEqual(ready[0]['fullname'], '충청북도진천교육지원청 학성초등학교')
+        self.assertEqual(ready[0]['code'], 'M100000795')
+
     def test_bulk_editor_listboxes_keep_their_selection(self):
         """검색창에 글자를 넣어도 목록 선택이 풀리면 안 된다.
 
@@ -914,6 +928,7 @@ class AppFlowTest(unittest.TestCase):
             with patch.object(self.app_module, 'pyautogui', MagicMock()), \
                     patch.object(self.app_module, 'pyperclip', MagicMock()), \
                     patch.object(self.app_module.threading, 'Thread', return_value=thread), \
+                    patch.object(self.app, '_automation_target', return_value=10), \
                     patch.object(self.app, '_log_clear') as clear_log, \
                     patch.object(self.app, '_log') as append_log:
                 self.app._start()
@@ -923,6 +938,7 @@ class AppFlowTest(unittest.TestCase):
             thread.start.assert_called_once_with()
         finally:
             self.app.worker_thread = None
+            self.app._run_dialog_hwnd = None
             self.app.names_list = []
             for key, value in old_coords.items():
                 self.app.config.data[key] = value
@@ -1123,9 +1139,35 @@ class AppFlowTest(unittest.TestCase):
         self._use_verify()
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
                 patch.object(self.app, '_click_add_once',
-                             return_value=True) as clicked:
-            self.assertEqual(self.app._do_select(), 'duplicate')
+                             return_value='duplicate') as clicked:
+            self.assertEqual(self.app._do_select('김충북', self.app_module.Counter()), 'duplicate')
         self.assertEqual(clicked.call_count, 1)
+
+    def test_click_without_a_list_change_is_not_success(self):
+        m = self.app_module
+        self.app.stop_flag.clear()
+        with patch.object(m.time, 'monotonic', side_effect=[0, 0, 2]), \
+                patch.object(m.time, 'sleep'), \
+                patch.object(self.app, '_run_on_ui', side_effect=lambda fn, **kw: fn()), \
+                patch.object(self.app, '_read_add_observation', return_value=m.Counter({'정가람': 3})), \
+                patch.object(self.app, '_click_add_once', return_value='clicked'):
+            self.assertEqual(self.app._do_select('김충북', m.Counter({'정가람': 3})), 'unconfirmed')
+
+    def test_late_change_for_the_requested_name_confirms_addition(self):
+        m = self.app_module
+        self.app.stop_flag.clear()
+        with patch.object(m.time, 'sleep'), \
+                patch.object(self.app, '_run_on_ui', side_effect=lambda fn, **kw: fn()), \
+                patch.object(self.app, '_read_add_observation',
+                             side_effect=[m.Counter({'정가람': 3}),
+                                          m.Counter({'정가람': 3, '김충북': 1})]), \
+                patch.object(self.app, '_click_add_once', return_value='clicked'):
+            self.assertEqual(self.app._do_select('김충북', m.Counter({'정가람': 3})), 'ok')
+
+    def test_click_when_full_selection_cannot_be_read_stays_unconfirmed(self):
+        with patch.object(self.app, '_click_add_once', return_value='clicked') as click:
+            self.assertEqual(self.app._do_select('김충북', None), 'unreadable')
+        click.assert_called_once()
 
     def test_guide_images_are_in_the_repository(self):
         """안내 그림 파일 이름이 저장소와 맞는가.
@@ -1177,11 +1219,11 @@ class AppFlowTest(unittest.TestCase):
             with patch.object(self.app, '_start') as started:
                 self.app._retry_failed()
             started.assert_called_once()
-            self.assertEqual(len(self.app.names_list), 1)
-            retried = self.app.names_list[0]
+            self.assertEqual(len(self.app.names_list), 2)
+            retried = started.call_args.args[0][0]
+            self.assertIs(retried, self.app.names_list[0])
             self.assertEqual(retried['search'], '죽리초등학교+김민혁')
             self.assertEqual(retried['grade'], 'exact')
-            self.assertNotIn('failure_reason', retried)
         finally:
             self.app.names_list = []
 
@@ -1291,8 +1333,8 @@ class AppFlowTest(unittest.TestCase):
             self.app.names_list = []
 
     # ── 동명이인: 검색 결과가 여럿이면 멈춘다 ──
-    def _run_one(self, count, choice='continue'):
-        """한 사람을 돌린다. 검색 결과가 count 명이고, 멈추면 choice 를 고른다."""
+    def _run_one(self, count, choice='continue', selection='ok', wait_result='ok'):
+        """한 사람을 실행하고 검색 결과에 따라 고르거나 건너뛴다."""
         m = self.app_module
         item = {'org': '', 'name': '김충북'}
         self.app.names_list = [item]
@@ -1314,7 +1356,8 @@ class AppFlowTest(unittest.TestCase):
                     patch.object(self.app, '_wait_for_result', return_value='new'), \
                     patch.object(self.app, '_run_on_ui', return_value=count), \
                     patch.object(self.app, '_ask_pick', side_effect=ask), \
-                    patch.object(self.app, '_do_select', return_value='ok') as clicked, \
+                    patch.object(self.app, '_wait_for_added', return_value=wait_result), \
+                    patch.object(self.app, '_do_select', return_value=selection) as clicked, \
                     patch.object(self.app, '_log'), \
                     patch.object(m, 'pyautogui', types.SimpleNamespace(
                         FailSafeException=type('FailSafeException', (Exception,), {}))), \
@@ -1330,7 +1373,8 @@ class AppFlowTest(unittest.TestCase):
         item, asked, clicked = self._run_one(2)
         self.assertEqual(asked, [('김충북', 2)])
         clicked.assert_not_called()
-        self.assertTrue(item.get('added'))
+        self.assertFalse(item.get('added'))
+        self.assertEqual(item.get('failure_reason'), self.app_module.reconcile.NAME_ONLY)
 
     def test_skipping_a_same_name_person_marks_it(self):
         from automation import FAIL_SAME_NAME_SKIPPED
@@ -1339,12 +1383,45 @@ class AppFlowTest(unittest.TestCase):
         self.assertEqual(item.get('failure_reason'), FAIL_SAME_NAME_SKIPPED)
         self.assertFalse(item.get('added'))
 
-    def test_one_result_or_unknown_count_goes_on_as_before(self):
-        for count in (1, None):
-            item, asked, clicked = self._run_one(count)
-            self.assertEqual(asked, [])
-            clicked.assert_called_once()
-            self.assertTrue(item.get('added'))
+    def test_only_one_confirmed_result_is_clicked_automatically(self):
+        item, asked, clicked = self._run_one(1)
+        self.assertEqual(asked, [])
+        clicked.assert_called_once()
+        self.assertTrue(item.get('added'))
+
+    def test_unknown_result_count_never_clicks_the_first_row(self):
+        item, asked, clicked = self._run_one(None, choice='skip')
+        self.assertEqual(asked, [('김충북', None)])
+        clicked.assert_not_called()
+        self.assertFalse(item.get('added'))
+
+    def test_continue_without_completing_manual_selection_does_not_count_as_added(self):
+        from automation import FAIL_ADD_UNCONFIRMED
+        item, _asked, clicked = self._run_one(2, wait_result='unconfirmed')
+        clicked.assert_not_called()
+        self.assertEqual(item.get('failure_reason'), FAIL_ADD_UNCONFIRMED)
+        self.assertFalse(item.get('added'))
+
+    def test_unconfirmed_click_stops_without_attempting_the_next_person(self):
+        from automation import FAIL_ADD_UNCONFIRMED
+        m = self.app_module
+        items = [{'name': '김충북'}, {'name': '이충북'}]
+        self.app.names_list = items
+        self.app.stop_flag.clear()
+        with patch.dict(self.app.config.data, {'manual_confirm': False}), \
+                patch.object(self.app.root, 'after', side_effect=lambda _ms, fn: fn()), \
+                patch.object(m.time, 'sleep'), \
+                patch.object(self.app, '_result_pixels', return_value=None), \
+                patch.object(self.app, '_do_search') as search, \
+                patch.object(self.app, '_wait_for_result', return_value='new'), \
+                patch.object(self.app, '_run_on_ui', return_value=1), \
+                patch.object(self.app, '_do_select', return_value='unconfirmed'), \
+                patch.object(self.app, '_compare_with_messenger'):
+            self.app._worker(tuple(items))
+        search.assert_called_once_with('김충북')
+        self.assertEqual(items[0].get('failure_reason'), FAIL_ADD_UNCONFIRMED)
+        self.assertEqual(items[1].get('failure_reason'), m.reconcile.NOT_TRIED)
+        self.assertFalse(any(item.get('added') for item in items))
 
     def test_search_count_is_read_with_ui_automation(self):
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
@@ -1369,48 +1446,44 @@ class AppFlowTest(unittest.TestCase):
         items = [{'org': '학성초등학교', 'name': '박소통'},
                  {'org': '학성초등학교', 'name': '최신통'},
                  {'org': '가초', 'name': '김충북'}, {'org': '나초', 'name': '김충북'}]
-        result = reconcile.compare_with_messenger(
-            items, ['박소통 [교사(초등)]', '김충북 [교사(초등)]'])
+        result = reconcile.compare_with_messenger(items, reconcile.MessengerSnapshot(
+            ['박소통 [교사(초등)]', '김충북 [교사(초등)]'], complete=True))
         added = []
         window = m.MessengerCompareReport(_Widget(), result, 4, on_add=added.append)
-        # 빠진 최신통 + 누가 들어갔는지 모르는 김충북 둘
-        self.assertEqual([i['name'] for i in window.addable], ['최신통', '김충북', '김충북'])
+        self.assertEqual([i['name'] for i in window.addable], ['최신통'])
         window._add()
         self.assertEqual(added, [window.addable])
 
     def test_adding_missing_runs_only_them_and_keeps_the_list(self):
         """누락된 사람만 돌린다. 처음 명단은 그대로 남아야 다시 비교할 수 있다."""
-        m = self.app_module
-        items = [{'org': '가초', 'name': '갑', 'added': True},
-                 {'org': '나초', 'name': '을', 'failure_reason': '소통메신저에 없음'},
-                 {'org': '다초', 'name': '병', 'failure_reason': '소통메신저에 없음'}]
+        import reconcile
+        items = [{'org': '가초', 'name': '갑돌', 'added': True},
+                 {'org': '나초', 'name': '을순', 'failure_reason': reconcile.NOT_IN_MESSENGER},
+                 {'org': '다초', 'name': '병문', 'failure_reason': reconcile.NOT_IN_MESSENGER}]
         self.app.names_list = items
-        started = []
-
-        class FakeThread:
-            def __init__(self, target, args=(), daemon=True):
-                started.append(args)
-
-            def start(self):
-                pass
-
-            def is_alive(self):
-                return False
-
         try:
-            with patch.object(m, 'pyautogui', object()), patch.object(m, 'pyperclip', object()), \
-                    patch.object(self.app.config, 'is_calibrated', return_value=True), \
-                    patch.object(self.app, '_confirm_screen_unchanged', return_value=True), \
-                    patch.object(self.app, '_confirm_dialog_not_moved', return_value=True), \
-                    patch.object(m.threading, 'Thread', FakeThread):
-                self.app._add_missing_to_messenger(items[1:])
-            self.assertEqual(started, [(tuple(items[1:]),)])
-            self.assertEqual(len(self.app.names_list), 3, '명단이 줄었습니다')
-            self.assertTrue(items[0].get('added'), '돌리지 않는 사람의 표시가 지워졌습니다')
-            self.assertNotIn('failure_reason', items[1])
+            snapshot = reconcile.MessengerSnapshot(['갑돌 [교사]', '을순 [교사]'], True, 10)
+            with patch.object(self.app, '_read_messenger_selected', return_value=(snapshot, '')) as read, \
+                    patch.object(self.app, '_start') as started:
+                self.app._add_missing_to_messenger(items[1:], window=10)
+            read.assert_called_once_with(expected_window=10)
+            started.assert_called_once_with([items[2]], expected_window=10)
+            self.assertIs(self.app.names_list, items)
+            self.assertTrue(items[0].get('added'))
         finally:
             self.app.names_list = []
-            self.app.worker_thread = None
+
+    def test_adding_missing_stops_when_the_new_read_is_incomplete(self):
+        import reconcile
+        item = {'org': '나초', 'name': '을순', 'failure_reason': reconcile.NOT_IN_MESSENGER}
+        self.app.names_list = [item]
+        snapshot = reconcile.MessengerSnapshot([], False, 10)
+        with patch.object(self.app, '_read_messenger_selected', return_value=(snapshot, '')), \
+                patch.object(self.app, '_start') as started, \
+                patch.object(self.app_module.messagebox, 'showwarning'):
+            self.app._add_missing_to_messenger([item], window=10)
+        started.assert_not_called()
+        self.assertEqual(item['failure_reason'], reconcile.READ_INCOMPLETE)
 
     def test_worker_marks_the_right_person_when_running_a_few(self):
         """일부만 돌리면 돌리는 순번과 명단 순번이 다르다. 명단에서 맞는 사람을 칠한다."""
@@ -1429,6 +1502,7 @@ class AppFlowTest(unittest.TestCase):
                     patch.object(self.app, '_result_pixels', return_value=None), \
                     patch.object(self.app, '_do_search'), \
                     patch.object(self.app, '_wait_for_result', side_effect=lambda *_: next(results)), \
+                    patch.object(self.app, '_run_on_ui', return_value=1), \
                     patch.object(self.app, '_do_select', return_value='ok'), \
                     patch.object(self.app, '_log'), \
                     patch.object(m, 'pyautogui', types.SimpleNamespace(
@@ -1442,16 +1516,19 @@ class AppFlowTest(unittest.TestCase):
             self.app.names_list = []
             self.app.config.data['manual_confirm'] = manual
 
-    def test_retry_skips_people_who_were_already_selected(self):
+    def test_retry_skips_people_who_are_already_selected_or_need_confirmation(self):
         from automation import FAIL_DUPLICATE, FAIL_NO_USER
         self.app.names_list = [
             {'org': '가초', 'name': '갑', 'failure_reason': FAIL_NO_USER},
             {'org': '나초', 'name': '을', 'failure_reason': FAIL_DUPLICATE},
+            {'org': '다초', 'name': '병', 'failure_reason': '이름 일치, 본인 확인 필요'},
+            {'org': '라초', 'name': '정', 'failure_reason': '목록 읽기 미완료, 확인 보류'},
         ]
         try:
-            with patch.object(self.app, '_start'):
+            with patch.object(self.app, '_start') as started:
                 self.app._retry_failed()
-            self.assertEqual([i['name'] for i in self.app.names_list], ['갑'])
+            self.assertEqual([i['name'] for i in started.call_args.args[0]], ['갑'])
+            self.assertEqual(len(self.app.names_list), 4)
         finally:
             self.app.names_list = []
 
@@ -1515,6 +1592,7 @@ class AppFlowTest(unittest.TestCase):
             GetWindowText=lambda h: titles.get(h, ''),
             EnumChildWindows=enum_children,
             SendMessageTimeout=send,
+            IsWindowVisible=lambda h: h in rects or h in child_rects,
         )
         self.app.config.data['add_button_x'] = 400
         self.app.config.data['add_button_y'] = 300
@@ -1651,7 +1729,7 @@ class AppFlowTest(unittest.TestCase):
                  {'org': '학성초등학교', 'name': '정수신', 'added': True},
                  {'org': '학성초등학교', 'name': '최신통', 'added': True}]
         self.app.names_list = items
-        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        gui, _sent = self._fake_messenger(count=3)
         try:
             with patch.object(self.app, '_win32gui', return_value=gui), \
                     patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
@@ -1661,10 +1739,10 @@ class AppFlowTest(unittest.TestCase):
                     patch.object(m, 'MessengerCompareReport') as report:
                 result = self.app._compare_with_messenger()
             report.assert_called_once()
-            self.assertEqual([i['name'] for i in result.inside], ['박소통', '정수신'])
-            # 들어간 사람은 빨간 표시를 지우고, 빠진 사람은 빨갛게 남긴다
-            self.assertNotIn('failure_reason', items[0])
-            self.assertTrue(items[0].get('added'))
+            self.assertTrue(result.complete)
+            self.assertEqual([i['name'] for i in result.name_only], ['박소통', '정수신'])
+            self.assertEqual(items[0]['failure_reason'], reconcile.NAME_ONLY)
+            self.assertFalse(items[0].get('added'))
             self.assertEqual(items[2]['failure_reason'], reconcile.NOT_IN_MESSENGER)
             self.assertFalse(items[2].get('added'))
             self.assertEqual(len(result.extra), 1)
@@ -1672,8 +1750,8 @@ class AppFlowTest(unittest.TestCase):
         finally:
             self.app.names_list = []
 
-    def test_compare_marks_partly_in_same_names_in_the_list(self):
-        """명단에도 이름 옆에 '동명이인 N명 중 X명만 들어감, 확인 필요' 가 붙는다."""
+    def test_compare_marks_unverified_identity_in_the_list(self):
+        import reconcile
         from ui_helpers import format_item_label
         m = self.app_module
         items = [{'org': '가초등학교', 'name': '김충북', 'added': True},
@@ -1681,12 +1759,13 @@ class AppFlowTest(unittest.TestCase):
         self.app.names_list = items
         try:
             with patch.object(self.app, '_read_messenger_selected',
-                              return_value=(['김충북 [교사(초등)] [3학년]'], '')), \
+                              return_value=(reconcile.MessengerSnapshot(
+                                  ['김충북 [교사(초등)] [3학년]'], complete=True), '')), \
                     patch.object(m, 'MessengerCompareReport'):
                 self.app._compare_with_messenger()
-            note = '동명이인 2명 중 1명만 들어감, 확인 필요'
+            note = '이름 일치, 본인 확인 필요'
             self.assertEqual([i['failure_reason'] for i in items], [note, note])
-            self.assertFalse(any(i.get('added') for i in items))
+            self.assertTrue(all(i.get('added') for i in items))
             self.assertEqual(format_item_label(items[0]), f'[가초등학교]  김충북  ({note})')
         finally:
             self.app.names_list = []
@@ -1716,7 +1795,7 @@ class AppFlowTest(unittest.TestCase):
         gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (30, 10)]
         read = []
 
-        def nodes_of(uia, hwnd, limit=3000, min_x=None):
+        def nodes_of(uia, hwnd, limit=3000, min_x=None, **kwargs):
             read.append(hwnd)
             return rows
 
@@ -1726,9 +1805,80 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(self.app, '_uia_nodes', side_effect=nodes_of):
             got, why = self.app._read_messenger_selected()
         self.assertEqual(why, '')
-        self.assertEqual(len(got), 2)
+        self.assertEqual(len(got.rows), 2)
         self.assertEqual(set(read), {30}, '맨 위 창이 아닌 것을 읽었습니다')
-        self.assertIn('2개 겹쳐 열려 있어 맨 위 창을 읽었습니다', self.app.compare_note)
+        self.assertIn('2개 겹쳐 열려 있어 맨 위 창을 읽었습니다', got.note)
+
+    def test_compare_distinguishes_verified_empty_list_from_a_label_only(self):
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        nodes = self._web_messenger_rows([])
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_read_uia_nodes', return_value=(nodes, 1)):
+            uncertain, _ = self.app._read_messenger_selected()
+            nodes[1].update(type=50034, name='선택된 사용자 (0명)')
+            empty, _ = self.app._read_messenger_selected()
+        self.assertEqual(uncertain.rows, [])
+        self.assertFalse(uncertain.complete)
+        self.assertEqual(empty.rows, [])
+        self.assertTrue(empty.complete)
+
+    def test_compare_accepts_explicit_positions_from_the_same_accessible_list(self):
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        nodes = self._web_messenger_rows(['박소통', '홍길동'])
+        nodes[3]['set_position'] = 1
+        nodes[6]['set_position'] = 2
+        nodes[3]['set_size'] = nodes[6]['set_size'] = 2
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_read_uia_nodes', return_value=(nodes, 1)):
+            complete, _ = self.app._read_messenger_selected()
+            nodes[6]['set_position'] = 1
+            repeated, _ = self.app._read_messenger_selected()
+        self.assertTrue(complete.complete)
+        self.assertFalse(repeated.complete)
+
+    def test_row_status_is_never_used_as_the_authoritative_list_count(self):
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        nodes = self._web_messenger_rows(['박소통'])
+        nodes[5].update(type=50020, parent=0, name='선택된 사용자 (1명)')
+        with patch.object(self.app, '_win32gui', return_value=gui):
+            self.assertIsNone(self.app._selected_total(10, (400, 300), nodes))
+
+    def test_compare_refuses_to_read_replacement_for_a_previous_window(self):
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_read_uia_nodes') as read:
+            got, why = self.app._read_messenger_selected(expected_window=30)
+        self.assertIsNone(got)
+        self.assertIn('창이 바뀌었습니다', why)
+        read.assert_not_called()
+
+    def test_truncated_accessibility_walk_cannot_prove_absence(self):
+        gui, _sent = self._fake_messenger(count=1)
+        nodes = self.app_module._UiaNodes(complete=False)
+        nodes.extend(self._web_messenger_rows(['박소통']))
+        with patch.object(self.app, '_win32gui', return_value=gui), \
+                patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_read_uia_nodes', return_value=(nodes, 1)):
+            got, _ = self.app._read_messenger_selected()
+        self.assertEqual(len(got.rows), 1)
+        self.assertFalse(got.complete)
+
+    def test_ui_automation_element_limit_marks_the_walk_partial(self):
+        root = types.SimpleNamespace(CurrentName='', CurrentControlType=50030, CurrentIsOffscreen=False,
+                                     CurrentBoundingRectangle=types.SimpleNamespace(
+                                         left=0, top=0, right=800, bottom=600))
+        walker = types.SimpleNamespace(GetFirstChildElement=lambda el: object(),
+                                       GetNextSiblingElement=lambda el: None)
+        uia = types.SimpleNamespace(ElementFromHandle=lambda hwnd: root, RawViewWalker=walker)
+        nodes = self.app._uia_nodes(uia, 10, limit=1, min_x=400)
+        self.assertEqual(len(nodes), 1)
+        self.assertFalse(nodes.complete)
 
     def test_compare_brings_the_two_people_already_selected(self):
         """담긴 사람이 두 명이면 그 두 사람의 명단을 가져와야 한다 (그룹단위 제목 두 줄이 아니라)."""
@@ -1742,10 +1892,10 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(self.app, '_uia_nodes', return_value=_photo_rows_nodes(2) * 1):
             got, why = self.app._read_messenger_selected()
         self.assertEqual(why, '')
-        self.assertEqual(len(got), 2, got)
-        self.assertIn('권성희', got[0])
-        self.assertIn('강명희', got[1])
-        self.assertFalse(any('그룹단위' in row for row in got))
+        self.assertEqual(len(got.rows), 2, got)
+        self.assertIn('권성희', got.rows[0])
+        self.assertIn('강명희', got.rows[1])
+        self.assertFalse(any('그룹단위' in row for row in got.rows))
 
     @staticmethod
     def _scrolling_list_nodes(names, offset, visible=6):
@@ -1791,6 +1941,8 @@ class AppFlowTest(unittest.TestCase):
         gui.GetWindowText = lambda h: '사용자 선택'
         gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
         gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (10,)]
+        gui.WindowFromPoint = lambda point: 10
+        gui.GetForegroundWindow = lambda: 10
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10}), \
                 patch.object(self.app, '_uia', return_value=(object(), '')), \
@@ -1799,7 +1951,8 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
             got, why = self.app._read_messenger_selected()
         self.assertEqual(why, '')
-        self.assertEqual([row.split(' ')[0] for row in got], names)
+        self.assertEqual([row.split(' ')[0] for row in got.rows], names)
+        self.assertFalse(got.complete, '전체 인원수를 확인하지 못했습니다')
         self.assertEqual(state['pos'], (11, 22), '마우스를 제자리에 돌려놓지 않았습니다')
         self.assertEqual(state['offset'], 0, '목록을 맨 위로 돌려놓지 않았습니다')
 
@@ -1825,10 +1978,11 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
             got, why = self.app._read_messenger_selected()
         self.assertEqual(why, '')
-        self.assertEqual(len(got), 16)
+        self.assertEqual(len(got.rows), 16)
+        self.assertFalse(got.complete, '화면 밖 줄이 일부 보이는 것만으로 전체를 확인할 수 없습니다')
         self.assertEqual(moved, [])
-        self.assertIn('16명을 읽었습니다', self.app.compare_note)
-        self.assertIn('화면에 보인 6명', self.app.compare_note)
+        self.assertIn('16명을 읽었습니다', got.note)
+        self.assertIn('화면에 보인 6명', got.note)
 
     def test_compare_does_not_grab_the_mouse_from_the_corner_after_an_emergency_stop(self):
         m = self.app_module
@@ -1847,9 +2001,10 @@ class AppFlowTest(unittest.TestCase):
                              side_effect=lambda *a, **k: self._scrolling_list_nodes(names, 0)), \
                 patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
             got, _why = self.app._read_messenger_selected()
-        self.assertEqual(len(got), 6)
+        self.assertEqual(len(got.rows), 6)
+        self.assertFalse(got.complete)
         self.assertEqual(moved, [])
-        self.assertIn('화면 모서리', self.app.compare_note)
+        self.assertIn('화면 모서리', got.note)
 
     def test_scrolling_a_list_that_shows_everyone_counts_each_person_once(self):
         """목록이 처음부터 다 읽히면 스크롤해도 같은 사람을 두 번 세지 않는다."""
@@ -1868,7 +2023,8 @@ class AppFlowTest(unittest.TestCase):
                              side_effect=lambda *a, **k: self._scrolling_list_nodes(names, 0, visible=20)), \
                 patch.object(m, 'pyautogui', fake), patch.object(m.time, 'sleep'):
             got, _why = self.app._read_messenger_selected()
-        self.assertEqual(len(got), len(names))
+        self.assertEqual(len(got.rows), len(names))
+        self.assertFalse(got.complete)
 
     def test_reading_skips_the_left_panel_so_the_limit_does_not_cut_the_list(self):
         """왼쪽 조직도는 요소가 수천 개다. 그 속을 읽지 않아야 오른쪽 목록을 끝까지 읽는다."""
@@ -1908,25 +2064,25 @@ class AppFlowTest(unittest.TestCase):
         everything = [n['name'] for n in self.app._uia_nodes(uia, 1)]
         self.assertEqual(sum(n.startswith('잎') for n in everything), 50)
 
-    def test_compare_looks_at_the_next_window_when_the_top_one_has_no_people(self):
-        """맨 위 창이 안 뜬 화면(제목 줄만 읽힘)이면 아래 창에서 담긴 사람을 읽는다."""
+    def test_compare_never_uses_a_back_window_when_the_top_one_has_no_people(self):
+        """맨 위 창을 읽지 못해도 뒤에 남아 있는 이전 명단을 쓰지 않는다."""
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
         gui.GetWindowText = lambda h: '사용자 선택'
         gui.GetWindowRect = lambda h: (0, 0, 2000, 1000)
         gui.EnumWindows = lambda cb, extra: [cb(h, extra) for h in (30, 10)]
         blank = _photo_rows_nodes(0, with_label=False)
 
-        def nodes_of(uia, hwnd, limit=3000, min_x=None):
+        def nodes_of(uia, hwnd, limit=3000, min_x=None, **kwargs):
             return blank if hwnd == 30 else _photo_rows_nodes(2)
 
         with patch.object(self.app, '_win32gui', return_value=gui), \
                 patch.object(self.app, '_snapshot_dialogs', return_value={10, 30}), \
                 patch.object(self.app, '_uia', return_value=(object(), '')), \
-                patch.object(self.app, '_uia_nodes', side_effect=nodes_of):
+                patch.object(self.app, '_uia_nodes', side_effect=nodes_of), \
+                patch.object(self.app_module.time, 'sleep'):
             got, why = self.app._read_messenger_selected()
-        self.assertEqual(why, '')
-        self.assertEqual(len(got), 2)
-        self.assertIn('위에서 2번째 창', self.app.compare_note)
+        self.assertIsNone(got)
+        self.assertIn('목록을 찾지 못했습니다', why)
 
     def test_compare_says_so_when_the_list_cannot_be_found_at_all(self):
         gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
@@ -1951,25 +2107,19 @@ class AppFlowTest(unittest.TestCase):
         self.assertIn('위치를 캡처할 때와 다른 곳에 있습니다', text)
         self.assertIn('화살표 위치는 이 창 밖에 있습니다', text)
 
-    def test_start_warns_when_the_dialog_was_moved(self):
+    def test_automation_rejects_a_window_that_cannot_receive_all_three_clicks(self):
         m = self.app_module
-        gui, _sent = self._fake_messenger(dialog_rect=(900, 0, 1700, 600))
-        with patch.object(self.app, '_win32gui', return_value=gui), \
-                patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
-                patch.object(m.messagebox, 'askyesno', return_value=False) as asked:
-            self.assertFalse(self.app._confirm_dialog_not_moved())
-        asked.assert_called_once()
+        with patch.object(self.app, '_messenger_dialogs', return_value=[10]), \
+                patch.object(self.app, '_click_point', side_effect=[(50, 50), (70, 100), (150, 100)]), \
+                patch.object(self.app, '_target_at', side_effect=[True, False]), \
+                patch.object(m.messagebox, 'showwarning') as warned:
+            self.assertIsNone(self.app._automation_target())
+        warned.assert_called_once()
 
-    def test_start_does_not_ask_when_the_dialog_is_in_place_or_unknown(self):
-        m = self.app_module
-        for snapshot, title in (({10, 20}, '사용자 선택'), ({20}, '사용자 선택'),
-                                ({10, 20}, '다른 창')):
-            gui, _sent = self._fake_messenger(title=title)
-            with patch.object(self.app, '_win32gui', return_value=gui), \
-                    patch.object(self.app, '_snapshot_dialogs', return_value=snapshot), \
-                    patch.object(m.messagebox, 'askyesno') as asked:
-                self.assertTrue(self.app._confirm_dialog_not_moved())
-            asked.assert_not_called()
+    def test_automation_rejects_a_different_window_than_compared(self):
+        with patch.object(self.app, '_messenger_dialogs', return_value=[20, 10]), \
+                patch.object(self.app_module.messagebox, 'showwarning'):
+            self.assertIsNone(self.app._automation_target(expected_window=10))
 
     def test_moved_dialog_is_not_counted(self):
         """창을 옮긴 뒤 옛 화살표 자리 오른쪽에는 검색 결과 목록이 온다. 그것을 세면 안 된다."""
@@ -2020,13 +2170,39 @@ class AppFlowTest(unittest.TestCase):
                 self.app.last_excel_result = None
                 self.app.names_list.clear()
 
-    def test_search_count_zero_means_no_result(self):
-        """소통메신저가 0명이라고 적어 두면 더 기다리지 않는다."""
+    def test_excel_with_the_correct_code_but_wrong_path_does_not_replace_a_file(self):
+        m = self.app_module
+        self.parse('학성초')
+        for key, value in (('사용자ID', 'test'), ('사용자명', '홍길동'),
+                           ('그룹명', '시험 그룹')):
+            self.app.edufine_vars[key].set(value)
+        build_workbook = m.edufine.build_workbook
+
+        def write_wrong_path(rows, meta, path):
+            rows = [dict(row, fullname='충청북도진천교육지원청 한천초등학교') for row in rows]
+            return build_workbook(rows, meta, path)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'out.xlsx')
+            with open(path, 'wb') as previous:
+                previous.write(b'previous file')
+            with patch.object(m.filedialog, 'asksaveasfilename', return_value=path), \
+                    patch.object(m.edufine, 'build_workbook', side_effect=write_wrong_path), \
+                    patch.object(m.messagebox, 'showerror') as error, \
+                    patch.object(m, 'ResultReport') as report:
+                self.app._build_group_excel()
+
+            with open(path, 'rb') as result:
+                self.assertEqual(result.read(), b'previous file')
+            error.assert_called_once()
+            report.assert_not_called()
+
+    def test_initial_zero_does_not_hide_a_result_that_appears_later(self):
+        blank, filled = self._result_frames(set(), self._row(6, 40))
         with patch.object(self.app_module.time, 'sleep', lambda *_: None), \
-                patch.object(self.app, '_search_result_count', return_value=0), \
-                patch.object(self.app, '_result_pixels') as looked:
-            self.assertEqual(self.app._wait_for_result(), 'empty')
-        looked.assert_not_called()
+                patch.object(self.app, '_search_result_count', side_effect=[0, 1]), \
+                patch.object(self.app, '_result_pixels', side_effect=[blank, filled]):
+            self.assertEqual(self.app._wait_for_result(blank[0]), 'new')
 
     def test_search_count_is_read_from_the_window(self):
         gui = types.SimpleNamespace(
@@ -2054,7 +2230,7 @@ class AppFlowTest(unittest.TestCase):
             self._use_result_coords()
             self.app.config.data['add_button_x'] = 900
             self.app.config.data['add_button_y'] = 600
-            self.assertTrue(self.app._click_add_once(1.0))
+            self.assertEqual(self.app._click_add_once(1.0), 'duplicate')
 
 
 

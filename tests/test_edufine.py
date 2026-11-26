@@ -74,6 +74,13 @@ class LookupTest(unittest.TestCase):
     def test_unknown_returns_nothing(self):
         self.assertEqual(edufine.lookup_code(self.codes, '없는기관'), (None, []))
 
+    def test_code_lookup_does_not_correct_a_typo(self):
+        self.assertEqual(edufine.lookup_code(self.codes, '학셩초등학교'), (None, []))
+
+    def test_code_lookup_rejects_an_invalid_code(self):
+        codes = {'기관': {'충청북도진천교육지원청 학성초등학교': ''}}
+        self.assertEqual(edufine.lookup_code(codes, '학성초'), (None, []))
+
     def test_duplicate_short_name_is_never_guessed(self):
         # 부서명은 기관마다 겹친다. 하나를 임의로 고르면 공문이 엉뚱한 곳으로 간다.
         codes = {'기관': {
@@ -210,6 +217,11 @@ class ResolveOrgTest(unittest.TestCase):
 
     def test_unknown_yields_nothing(self):
         self.assertEqual(self.resolve('있을리없는부서'), (None, []))
+
+    def test_an_incomplete_department_name_cannot_confirm_a_path(self):
+        codes = {'기관': {'충청북도청주교육지원청 행정과': 'M100002264'}}
+        full, _ = edufine.resolve_org(codes, '청주교육지원청 행정')
+        self.assertIsNone(full)
 
     def test_every_resolved_name_has_a_code(self):
         for text in ('학성초', '정책기획과', '청주교육지원청 행정과',

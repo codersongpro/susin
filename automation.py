@@ -5,6 +5,7 @@ import re
 FAIL_NO_USER = '사용자 없음'
 FAIL_DUPLICATE = '중복'
 FAIL_SEARCH_STALE = '검색 결과 안 바뀜'
+FAIL_ADD_UNCONFIRMED = '추가 여부 확인 필요'
 FAIL_COORDINATE = '좌표 오류'
 FAIL_MANUAL_STOP = '수동 중지'
 FAIL_AUTOMATION = '자동화 오류'
@@ -420,6 +421,26 @@ def selected_rows_seen(nodes, split_x: int):
     return [texts[row['id']] for row in ordered], visible
 
 
+def selected_row_set_total(nodes, split_x: int):
+    """같은 목록의 줄에 제공자가 명시한 전체 인원수. 없거나 서로 다르면 None."""
+    if not any('set_size' in node for node in nodes) or not has_selected_label(nodes):
+        return None
+    rows, _texts, _visible = _selected_row_nodes(nodes, split_x)
+    if not rows or len({row['parent'] for row in rows}) != 1:
+        return None
+    parent = next((node for node in nodes if node['id'] == rows[0]['parent']), None)
+    if parent is None or parent['rect'][0] < split_x or _empty_rect(parent):
+        return None
+    totals = {row.get('set_size') for row in rows}
+    if len(totals) != 1 or None in totals:
+        return None
+    total = next(iter(totals))
+    positions = {row.get('set_position') for row in rows}
+    if len(positions) != len(rows) or any(pos is None or not 1 <= pos <= total for pos in positions):
+        return None
+    return total
+
+
 def selected_rows_anchor(nodes, split_x: int):
     """스크롤할 때 마우스를 올려 둘 자리. 맨 위에 보이는 사람 줄의 가운데. 없으면 None."""
     ordered, _texts, _visible = _selected_row_nodes(nodes, split_x)
@@ -477,3 +498,34 @@ def search_count_in(nodes, pattern):
             if found:
                 return int(found.group(1))
     return None
+
+
+def search_row_matches(nodes, point, split_x, name, affiliations=()):
+    """저장한 결과 위치에 있는 줄에서 이름과 요청한 소속을 확인한다."""
+    if not name:
+        return False
+    x, y = point
+    children = {}
+    for node in nodes:
+        if not node.get('offscreen'):
+            children.setdefault(node['parent'], []).append(node)
+
+    person = re.compile(rf'{re.escape(name)}(?:\s*\[[^\]]+\])?')
+    affiliation_labels = {label for org in affiliations for label in
+                          (org, f'소속: {org}', f'소속 {org}')}
+
+    for node in nodes:
+        left, top, right, bottom = node['rect']
+        if (node.get('offscreen') or not (left <= x < right <= split_x)
+                or not (top <= y < bottom) or bottom - top > 100):
+            continue
+        labels = []
+        pending = [node]
+        while pending:
+            part = pending.pop()
+            labels.append(' '.join((part.get('name') or '').split()))
+            pending.extend(children.get(part['id'], ()))
+        if any(person.fullmatch(label) for label in labels) and (
+                not affiliations or affiliation_labels.intersection(labels)):
+            return True
+    return False

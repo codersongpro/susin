@@ -38,7 +38,7 @@ MAX_ORG_EXTRACT_HISTORY = 30
 
 TARGET_SUMMARIES = {
     TARGET_MESSENGER: '소통메신저에서 쪽지·대화 상대를 자동으로 골라 담습니다',
-    TARGET_EDUFINE: '에듀파인 공문 수신그룹 엑셀을 만들어 올립니다',
+    TARGET_EDUFINE: '에듀파인에 올릴 공문 수신그룹 엑셀을 만듭니다',
 }
 
 COORD_DEFAULTS = {
