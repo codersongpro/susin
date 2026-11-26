@@ -2,12 +2,14 @@
    시각은 초. 두 파일이 같은 값을 읽도록 여기 한 곳에만 적는다. 아래 중괄호 안은 JSON 이어야 한다
    (intro_sound.py 가 INTRO_CUES 뒤의 중괄호를 잘라 json 으로 읽는다).
    insert 바깥의 시각은 '끼워 넣기 전' 기준이다. insert.at 이후의 시각은 실제로는 insert.dur 만큼 늦다.
-   insert.cues 는 insert.at 부터 잰 시각이다 (소통메신저 1,800자, 수신 기관 300자 타이핑, 순서가 꼬이는 장면). */
+   insert.cues 는 insert.at 부터 잰 시각이다 (충북소통메신저 1,800자, K에듀파인 수신 기관 300자 타이핑과 검색마다 3초 대기,
+   기다린 시간을 더해 보는 장면, 순서가 꼬이는 장면). */
 window.INTRO_CUES = {
   "total": 32.0,
-  "insert": {"at": 4.3, "dur": 6.0,
-             "cues": {"typeA": [0.25, 1.75], "typeB": [2.25, 3.45],
-                      "checks": [4.05, 4.2, 4.35, 4.5, 4.65], "tangle": 4.9, "rewind": 5.25}},
+  "insert": {"at": 4.3, "dur": 8.2,
+             "cues": {"typeA": [0.25, 2.05], "waitA": [0.55, 2.05], "typeB": [2.5, 3.8], "waitB": [2.75, 3.8],
+                      "sum": 4.2, "sumRows": [4.5, 4.8], "sumPop": 5.15,
+                      "checks": [6.25, 6.4, 6.55, 6.7, 6.85], "tangle": 7.1, "rewind": 7.45}},
   "bpm": 120,
   "groove": [9.0, 24.0],
   "pulse": [0.0, 4.7],

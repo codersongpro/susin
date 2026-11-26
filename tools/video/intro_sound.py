@@ -299,6 +299,16 @@ def build(cues):
         for i in range(words):    # 한 사람(기관)을 다 칠 때마다 작은 소리
             mix.add(a0 + (a1 - a0) * (i + 1) / words, pluck(1046.5 * pitch, .05), .05)
         mix.add(a1, bell(1567.98 * pitch, .6), .12, verb=.4)
+    # 검색할 때마다 3초 기다림: 고리가 한 바퀴 찰 때마다 낮은 똑딱 소리
+    for key in ('waitA', 'waitB'):
+        a0, a1 = ins[key]
+        for i in range(30):
+            mix.add(a0 + (a1 - a0) * (i + 1) / 30, pluck(392.0 if i % 2 else 523.25, .06), .07, pan=.5)
+    # 기다린 시간 더하기: 두 줄이 들어올 때와 +3분이 찍힐 때
+    for i, at in enumerate(ins['sumRows']):
+        mix.add(at, pop(), .22, pan=-.2 + .4 * i)
+    mix.add(ins['sumPop'], kick(.9), .55)
+    mix.add(ins['sumPop'], bell(659.25, 1.2) * .6 + bell(987.77, 1.2) * .4, .22, verb=.5)
     for i, at in enumerate(ins['checks']):
         mix.add(at, pluck([783.99, 880.0, 987.77, 1046.5, 1174.66][i % 5], .1), .16, pan=.4)
     mix.add(ins['tangle'], error_buzz(), .4, pan=.4)
