@@ -106,7 +106,8 @@ GitHub Release 본문이 된다. 빠뜨리면 릴리즈 노트에 "CHANGELOG.md 
 - 광고 카피체를 쓰지 않는다. `지금 바로 시작하세요`, `반복 작업, 이제 맡기세요` 같은 것.
 - `~처리합니다`, `~제공합니다` 같은 번역투 대신 사람이 말하는 쪽으로.
 - 영어 나열을 피한다. `Teacher · Data Analytics` (X) → `초등교사 · 데이터 분석` (O)
-  (예외: 만든 사람 표기는 `송동석(Dustin) Teacher / App developer / Data analyst` 로 정해져 있다)
+  (예외: 만든 사람 표기. 앱은 `송동석(Dustin) Teacher / App developer / Data analyst`, 랜딩페이지 카드는
+  `송동석 (Songpro / Dustin)`, `AI Product Builder · Educator · Data Analyst`, `즐거움은 더하고, 불편함은 덜고.` 로 정해져 있고 songpro.app 을 안내한다)
 - **`CHANGELOG.md` 는 명사형으로 짧게 쓴다.** 목록 한 줄에 한 가지씩, 무엇이 달라졌는지만.
   `~했습니다` 로 풀어쓴 문단 (X) → `추가됐는지 확인하고 넘어감` (O)
   앱 화면과 랜딩페이지는 지금처럼 존댓말 문장으로 쓴다. 명사형은 릴리즈 노트에만 쓴다.
