@@ -5,6 +5,7 @@ Windows 러너까지 가서야 아는 일이 없도록, 리눅스 테스트 단�
 실제 위젯 동작(탭 숨김, 콤보 목록)은 tools/smoke_gui.py 가 CI 에서 확인한다.
 """
 
+import itertools
 import os
 import sys
 import tempfile
@@ -1421,11 +1422,12 @@ class AppFlowTest(unittest.TestCase):
         clicked.assert_called_once()
         self.assertTrue(item.get('added'))
 
-    def test_unknown_result_count_never_clicks_the_first_row(self):
+    def test_unknown_result_count_clicks_the_first_row_without_asking(self):
+        """검색 결과가 떴는데 수를 못 읽으면 묻지 않고 담는다 (검색 결과가 안 뜰 때만 직접 고른다)."""
         item, asked, clicked = self._run_one(None, choice='skip')
-        self.assertEqual(asked, [('김충북', None)])
-        clicked.assert_not_called()
-        self.assertFalse(item.get('added'))
+        self.assertEqual(asked, [])
+        clicked.assert_called_once()
+        self.assertTrue(item.get('added'))
 
     def test_continue_without_completing_manual_selection_does_not_count_as_added(self):
         from automation import FAIL_ADD_UNCONFIRMED
@@ -1491,6 +1493,64 @@ class AppFlowTest(unittest.TestCase):
         finally:
             self.app.config.data.update(saved)
         whole.assert_not_called()
+
+    def _run_with(self, found, counts, *, choice='continue', added='ok', select='ok'):
+        """한 사람을 돌린다. found 는 검색 결과가 떴는지, counts 는 결과 수를 읽은 값들."""
+        m = self.app_module
+        item = {'org': '죽리초등학교', 'name': '김민혁'}
+        self.app.names_list = [item]
+        self.app.stop_flag.clear()
+        reads = iter([m.Counter(), *counts])
+        asked = []
+
+        def ask(name, count):
+            asked.append(count)
+            self.app.pick_choice = choice
+            self.app.continue_event.set()
+        try:
+            with patch.dict(self.app.config.data, {'manual_confirm': False}), \
+                    patch.object(self.app.root, 'after', side_effect=lambda _ms, fn: fn()), \
+                    patch.object(m.time, 'sleep'), \
+                    patch.object(m.time, 'monotonic', side_effect=itertools.count(0, 1.0)), \
+                    patch.object(self.app, '_result_pixels', return_value=None), \
+                    patch.object(self.app, '_do_search'), \
+                    patch.object(self.app, '_wait_for_result', return_value=found), \
+                    patch.object(self.app, '_run_on_ui', side_effect=lambda *_a, **_k: next(reads, None)), \
+                    patch.object(self.app.stop_flag, 'wait', return_value=False), \
+                    patch.object(self.app, '_ask_pick', side_effect=ask), \
+                    patch.object(self.app, '_wait_for_added', return_value=added), \
+                    patch.object(self.app, '_do_select', return_value=select) as clicked, \
+                    patch.object(self.app, '_log'), \
+                    patch.object(self.app, '_done'):
+                self.app._worker((item,))
+        finally:
+            self.app.names_list = []
+        return item, asked, clicked
+
+    def test_result_that_cannot_be_counted_is_still_added_automatically(self):
+        """결과가 떴으면 수를 못 읽어도 묻지 않고 첫 줄을 담는다."""
+        item, asked, clicked = self._run_with('new', [None, None, None, None, None])
+        self.assertEqual(asked, [])
+        clicked.assert_called_once()
+        self.assertFalse(clicked.call_args.kwargs['verify'])
+        self.assertTrue(item.get('added'))
+
+    def test_no_result_asks_for_a_manual_pick(self):
+        item, asked, clicked = self._run_with('empty', [])
+        self.assertEqual(asked, [0])
+        clicked.assert_not_called()
+        self.assertEqual(item.get('failure_reason'), self.app_module.reconcile.NAME_ONLY)
+
+    def test_no_result_skipped_keeps_the_no_user_reason(self):
+        from automation import FAIL_NO_USER
+        item, _asked, _clicked = self._run_with('empty', [], choice='skip')
+        self.assertEqual(item.get('failure_reason'), FAIL_NO_USER)
+
+    def test_two_people_read_with_the_same_name_still_pause(self):
+        """같은 이름이 여럿으로 확실히 읽히면 지금처럼 멈춘다 (안전 규칙)."""
+        _item, asked, clicked = self._run_with('new', [2], choice='skip')
+        self.assertEqual(asked, [2])
+        clicked.assert_not_called()
 
     def test_unread_search_count_is_read_again_before_asking(self):
         """한 번 못 읽었다고 바로 사람에게 넘기지 않는다. 다시 읽어 1명이면 저절로 담는다."""
@@ -1580,8 +1640,13 @@ class AppFlowTest(unittest.TestCase):
         results = iter(['new', 'empty'])
         manual = self.app.config.data.get('manual_confirm')
         self.app.config.data['manual_confirm'] = False   # 켜져 있으면 [계속] 을 기다린다
+
+        def skip(_name, _count):   # 검색 결과가 안 뜬 사람은 묻는다. 여기서는 건너뛴다
+            self.app.pick_choice = 'skip'
+            self.app.continue_event.set()
         try:
             with patch.object(self.app.root, 'after', side_effect=lambda _ms, fn: fn()), \
+                    patch.object(self.app, '_ask_pick', side_effect=skip), \
                     patch.object(m.time, 'sleep', lambda *_: None), \
                     patch.object(self.app, '_result_pixels', return_value=None), \
                     patch.object(self.app, '_do_search'), \

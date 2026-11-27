@@ -454,9 +454,9 @@ _HELP_TEXT = f"""━━━━━━━━━━━━━━━━━━━━━
 ■ 이 프로그램이 하는 일
 ──────────────────────────────────────────────────────
   소통픽은 소통메신저 [사용자 선택] 창에서 명단에 적힌 사람을 한 명씩 검색합니다.
-  검색 결과가 한 명이면 이름을 확인합니다. 명단에 소속기관이 있으면 소속도 확인합니다.
-  명단에 적힌 정보와 일치할 때만 자동으로 고릅니다.
-  후보가 여럿이거나 화면에 보이는 결과를 확인할 수 없으면 직접 고를 수 있게 기다립니다.
+  검색 결과가 뜨면 결과 첫 줄을 자동으로 골라 받는 사람에 넣습니다.
+  결과가 한 명으로 읽히면 이름과 소속까지 맞춰 본 뒤 고릅니다.
+  검색 결과가 뜨지 않거나 같은 이름이 여럿이면 직접 고를 수 있게 기다립니다.
   추가 버튼을 누른 뒤에는 같은 창의 [선택된 사용자] 목록에 들어갔는지 확인합니다.
 
   자동 선택이 끝나면 같은 창의 [선택된 사용자] 목록을 소통픽 명단과 비교합니다.
@@ -756,7 +756,7 @@ GUIDE_STEPS = {
         ('auto', 'start_button', '자동 선택을 시작하세요',
          '소통메신저 [사용자 선택] 창에서 [전체조직] 탭을 먼저 열어 두세요.\n'
          '[자동 선택 시작]을 누르면 같은 창에서 한 명씩 검색하고 목록에 추가됐는지 확인합니다.\n'
-         '후보가 여럿이거나 화면에 보이는 결과를 확인할 수 없으면 직접 고를 수 있게 기다립니다.'),
+         '검색 결과가 뜨지 않거나 같은 이름이 여럿이면 직접 고를 수 있게 기다립니다.'),
     ],
     TARGET_EDUFINE: [
         ('input', 'input_text', '기관 명단을 넣으세요',
@@ -4332,7 +4332,8 @@ class App:
         if self.stop_flag.is_set():
             return
         self.pick_choice = None
-        reason = f'검색 결과 {count}명' if count and count > 1 else '검색 결과를 확인하지 못했습니다'
+        reason = (f'검색 결과 {count}명' if count and count > 1
+                  else '검색 결과가 뜨지 않았습니다' if count == 0 else '검색 결과를 확인하지 못했습니다')
         self.status_var.set(
             f'{name} · {reason}. 소통메신저에서 맞는 분을 골라 '
             f'화살표를 누른 뒤 [계속] 을 누르세요')
@@ -4914,35 +4915,34 @@ class App:
                     self._log('\n')
                     self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                     break
+                # 검색 결과가 안 떴으면 사람이 직접 고른다. 건너뛰면 이 사유로 남는다.
+                no_result = None
                 if found != 'new':
-                    fail += 1
                     no_result_streak += 1
-                    if found == 'stale':
-                        self._log('검색 결과가 바뀌지 않았습니다\n')
-                        self._mark_failed(idx, FAIL_SEARCH_STALE, item)
-                    else:
-                        self._log('사용자 없음\n')
-                        self._mark_failed(idx, FAIL_NO_USER, item)
+                    no_result = FAIL_SEARCH_STALE if found == 'stale' else FAIL_NO_USER
                     if no_result_streak == 3:
                         self._log(
-                            '     연달아 결과를 못 찾았습니다. 검색 후 대기 시간을 늘리거나 '
-                            '[위치 설정] 탭에서 결과 첫 줄 위치를 확인해 보세요.\n')
-                    self._update_progress(idx + 1, total)
-                    continue
-                no_result_streak = 0
+                            '\n     연달아 결과를 못 찾았습니다. 검색 후 대기 시간을 늘리거나 '
+                            '[위치 설정] 탭에서 결과 첫 줄 위치를 확인해 보세요.\n     ')
+                else:
+                    no_result_streak = 0
 
                 before_add = self._run_on_ui(self._read_add_observation)
-                many = None if manual else self._run_on_ui(lambda: self._read_search_count(name, org))
-                # 소통메신저가 검색 결과를 늦게 그리면 화면 읽어 주기도 한 박자 늦다.
-                # 한 번 못 읽었다고 바로 사람에게 넘기지 않고 3초 안에서 몇 번 다시 읽는다.
-                retry_until = time.monotonic() + 3.0
-                while (not manual and many in (None, 0) and time.monotonic() < retry_until
-                       and not self.stop_flag.wait(0.3)):
+                many = None
+                if not manual and no_result is None:
                     many = self._run_on_ui(lambda: self._read_search_count(name, org))
+                    # 소통메신저가 검색 결과를 늦게 그리면 화면 읽어 주기도 한 박자 늦다.
+                    retry_until = time.monotonic() + 3.0
+                    while (many in (None, 0) and time.monotonic() < retry_until
+                           and not self.stop_flag.wait(0.3)):
+                        many = self._run_on_ui(lambda: self._read_search_count(name, org))
                 if self.stop_flag.is_set():
                     self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                     break
-                if manual or many != 1:
+                # 직접 고르는 때: 수동 확인 모드, 검색 결과가 안 뜸, 같은 이름이 여럿으로 읽힘.
+                # 결과가 떴는데 수를 못 읽었을 때는 결과 첫 줄을 그대로 담는다 (사용자 요청).
+                same_name = many is not None and many >= 2
+                if manual or no_result or same_name:
                     self.continue_event.clear()
                     if self.stop_flag.is_set():
                         self._mark_failed(idx, FAIL_MANUAL_STOP, item)
@@ -4950,20 +4950,23 @@ class App:
                     if manual:
                         self.root.after(0, lambda n=name: self._show_continue(n))
                     else:
-                        self._log('직접 선택을 기다립니다. ')
-                        self.root.after(0, lambda n=search_str, k=many: self._ask_pick(n, k))
+                        self._log('검색 결과가 뜨지 않아 직접 선택을 기다립니다. ' if no_result
+                                  else '같은 이름이 여럿이라 직접 선택을 기다립니다. ')
+                        shown = 0 if no_result else many
+                        self.root.after(0, lambda n=search_str, k=shown: self._ask_pick(n, k))
                     self.continue_event.wait()
                     if self.stop_flag.is_set():
                         self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                         break
                     if not manual and self.pick_choice == 'skip':
-                        result = 'skipped'
+                        result = 'no_result' if no_result else 'skipped'
                     else:
                         result = self._wait_for_added(name, before_add)
                         if result == 'ok':
                             result = 'manual_observed'
                 else:
-                    result = self._do_select(name, before_add, org=org)
+                    # 1명으로 확인했으면 누르기 직전에 한 번 더 보고, 수를 못 읽었으면 그대로 누른다.
+                    result = self._do_select(name, before_add, org=org, verify=many == 1)
                 if result == 'stopped':
                     self._mark_failed(idx, FAIL_MANUAL_STOP, item)
                     break
@@ -4975,10 +4978,12 @@ class App:
                     fail += 1
                     reason = {'duplicate': FAIL_DUPLICATE, 'skipped': FAIL_SAME_NAME_SKIPPED,
                               'manual_observed': reconcile.NAME_ONLY, 'changed': FAIL_SEARCH_STALE,
+                              'no_result': no_result,
                               }.get(result, FAIL_ADD_UNCONFIRMED)
                     self._mark_failed(idx, reason, item)
                     self._log(f'{reason}\n')
-                    if result == 'unconfirmed' and not manual and many == 1:
+                    # 저절로 눌렀는데 목록에 그 이름이 안 늘었으면 엉뚱한 줄을 눌렀을 수 있다. 멈춘다.
+                    if result == 'unconfirmed' and not (manual or no_result or same_name):
                         halted = True
                         self._update_progress(idx + 1, total)
                         break
@@ -5095,12 +5100,11 @@ class App:
             return 'stopped'
         return 'unconfirmed' if readable else 'unreadable'
 
-    def _do_select(self, name, before, org='') -> str:
+    def _do_select(self, name, before, org='', verify=True) -> str:
         if self.stop_flag.is_set():
             return 'stopped'
-        result = self._click_add_once(
-            POPUP_WAIT_ADD,
-            still_matches=lambda: self._run_on_ui(lambda: self._read_search_count(name, org)) == 1)
+        check = (lambda: self._run_on_ui(lambda: self._read_search_count(name, org)) == 1) if verify else None
+        result = self._click_add_once(POPUP_WAIT_ADD, still_matches=check)
         if result == 'duplicate':
             # '이미 선택된 사용자' 안내창만 믿지 않는다. 늦게 온 앞 검색 결과를 눌러도
             # 이 안내창이 뜬다. 누르기 전 목록에 그 이름이 있었을 때만 원래 있던 사람으로 본다.
