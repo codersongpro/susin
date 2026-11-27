@@ -1178,7 +1178,7 @@ class AppFlowTest(unittest.TestCase):
     def test_click_without_a_list_change_is_not_success(self):
         m = self.app_module
         self.app.stop_flag.clear()
-        with patch.object(m.time, 'monotonic', side_effect=[0, 0, 2]), \
+        with patch.object(m.time, 'monotonic', side_effect=[0, 0, 7]), \
                 patch.object(m.time, 'sleep'), \
                 patch.object(self.app, '_run_on_ui', side_effect=lambda fn, **kw: fn()), \
                 patch.object(self.app, '_read_add_observation', return_value=m.Counter({'정가람': 3})), \
@@ -1466,6 +1466,58 @@ class AppFlowTest(unittest.TestCase):
                 patch.object(self.app, '_uia', return_value=(object(), '')), \
                 patch.object(self.app, '_uia_nodes', return_value=nodes):
             self.assertEqual(self.app._read_search_count(), 2)
+
+    def test_search_count_reads_only_the_result_area_when_it_can(self):
+        """창 전체(조직도 수천 개)를 읽지 않고 결과 줄 둘레의 판만 읽어도 확인된다."""
+        gui, _sent = self._fake_messenger(list_class='Chrome_RenderWidgetHostHWND')
+        area = [{'id': 0, 'parent': -1, 'type': 50033, 'rect': (0, 60, 340, 400), 'name': '', 'offscreen': False},
+                {'id': 1, 'parent': 0, 'type': 50020, 'rect': (10, 70, 200, 90),
+                 'name': '검색 결과(1명)', 'offscreen': False},
+                {'id': 2, 'parent': 0, 'type': 50007, 'rect': (0, 100, 300, 145), 'name': '', 'offscreen': False},
+                {'id': 3, 'parent': 2, 'type': 50020, 'rect': (10, 102, 120, 120),
+                 'name': '김민혁 [교사]', 'offscreen': False},
+                {'id': 4, 'parent': 2, 'type': 50020, 'rect': (10, 121, 160, 144),
+                 'name': '죽리초등학교', 'offscreen': False}]
+        keys = ('result_first_x', 'result_first_y')
+        saved = {k: self.app.config.data.get(k) for k in keys}
+        self.app.config.data.update(result_first_x=150, result_first_y=115)
+        try:
+            with patch.object(self.app, '_win32gui', return_value=gui), \
+                    patch.object(self.app, '_snapshot_dialogs', return_value={10, 20}), \
+                    patch.object(self.app, '_uia', return_value=(object(), '')), \
+                    patch.object(self.app, '_search_area_nodes', return_value=area), \
+                    patch.object(self.app, '_uia_nodes') as whole:
+                self.assertEqual(self.app._read_search_count('김민혁', '죽리초등학교'), 1)
+        finally:
+            self.app.config.data.update(saved)
+        whole.assert_not_called()
+
+    def test_unread_search_count_is_read_again_before_asking(self):
+        """한 번 못 읽었다고 바로 사람에게 넘기지 않는다. 다시 읽어 1명이면 저절로 담는다."""
+        m = self.app_module
+        item = {'org': '죽리초등학교', 'name': '김민혁'}
+        self.app.names_list = [item]
+        self.app.stop_flag.clear()
+        reads = iter([m.Counter(), None, None, 1])
+        try:
+            with patch.dict(self.app.config.data, {'manual_confirm': False}), \
+                    patch.object(self.app.root, 'after', side_effect=lambda _ms, fn: fn()), \
+                    patch.object(m.time, 'sleep'), \
+                    patch.object(self.app, '_result_pixels', return_value=None), \
+                    patch.object(self.app, '_do_search'), \
+                    patch.object(self.app, '_wait_for_result', return_value='new'), \
+                    patch.object(self.app, '_run_on_ui', side_effect=lambda *_a, **_k: next(reads)), \
+                    patch.object(self.app.stop_flag, 'wait', return_value=False), \
+                    patch.object(self.app, '_ask_pick') as asked, \
+                    patch.object(self.app, '_do_select', return_value='ok') as clicked, \
+                    patch.object(self.app, '_log'), \
+                    patch.object(self.app, '_done'):
+                self.app._worker((item,))
+        finally:
+            self.app.names_list = []
+        asked.assert_not_called()
+        clicked.assert_called_once()
+        self.assertTrue(item.get('added'))
 
     def test_tab_has_no_result_list_button(self):
         """[결과 대조 · 빠진 명단] 버튼은 뺐다. 소통메신저와 비교가 그 일을 한다."""

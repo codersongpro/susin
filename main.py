@@ -4144,14 +4144,17 @@ class App:
             return None, str(exc)
 
     def _uia_nodes(self, uia, hwnd, limit: int = 6000, min_x=None, *,
-                   include_set_metadata=False, max_seconds=None) -> list:
+                   include_set_metadata=False, max_seconds=None, root=None,
+                   skip_offscreen=False) -> list:
         """창 안의 요소를 모두 모은다. 이름은 화면에 내보내지 않고 판단에만 쓴다.
 
         min_x 를 주면 그보다 왼쪽에 통째로 있는 요소의 속은 읽지 않는다. 왼쪽 조직도에는
         요소가 수천 개라, 다 읽다가 개수 제한에 걸려 오른쪽 [선택된 사용자] 를 덜 읽을 수 있다.
+        root 를 주면 창 전체 대신 그 요소 아래만 읽는다.
+        skip_offscreen 이면 화면에 안 보이는 요소의 속은 읽지 않는다 (가려진 조직도 탭 같은 것).
         """
         try:
-            root = uia.ElementFromHandle(hwnd)
+            root = root if root is not None else uia.ElementFromHandle(hwnd)
             walker = uia.RawViewWalker
         except Exception as exc:
             logging.info('UI 자동화로 창을 열지 못했습니다: %s', exc)
@@ -4176,6 +4179,8 @@ class App:
             nodes.append(node)
             left, _top, right, _bottom = node['rect']
             if min_x is not None and parent != -1 and left < right < min_x:
+                continue
+            if skip_offscreen and parent != -1 and node['offscreen']:
                 continue
             if include_set_metadata and node['type'] in (50007, 50026, 50029):
                 # UIA can infer a set size from the rendered siblings. Only use the ARIA
@@ -4234,20 +4239,71 @@ class App:
             return None
         uia, _why = self._uia()
         if uia is None:
+            self._note_search_check('화면 읽어 주기를 쓸 수 없음')
             return None
-        nodes = self._uia_nodes(uia, window if window is not None else dialogs[0], max_seconds=0.9)
-        if not getattr(nodes, 'complete', True):
-            return None
+        window = window if window is not None else dialogs[0]
+        try:
+            x, y = self._click_point('result_first')
+        except (TypeError, ValueError, KeyError):
+            x = y = None
+        # 창 전체를 읽으면 [전체조직] 조직도 요소가 수천 개라 시간 안에 못 끝낸다.
+        # 결과 첫 줄에서 위로 올라가며 '검색 결과(N명)' 이 든 가장 작은 판만 읽는다.
+        nodes = self._search_area_nodes(uia, (x, y)) if x is not None else None
+        if nodes is None:
+            nodes = self._uia_nodes(uia, window, max_seconds=2.5, skip_offscreen=True)
+            if not getattr(nodes, 'complete', True):
+                self._note_search_check('창을 시간 안에 다 읽지 못함')
+                return None
         visible = [node for node in nodes if not node.get('offscreen')]
         count = search_count_in(visible, SEARCH_COUNT_RE)
+        if count is None:
+            self._note_search_check("'검색 결과(N명)' 글을 찾지 못함")
         if count != 1 or expected_name is None:
             return count
+        if x is None:
+            self._note_search_check('결과 첫 줄 위치가 없음')
+            return None
+        split_x = point[0] if point else x + RESULT_SCAN_WIDTH
         # A visible count of one may still describe the previous search. Check the
         # name in the visible result row before using its saved click position.
-        x, y = self._click_point('result_first')
-        split_x = point[0] if point else x + RESULT_SCAN_WIDTH
         affiliations = {expected_org, abbreviate_school(expected_org)} if expected_org else ()
-        return 1 if search_row_matches(visible, (x, y), split_x, expected_name, affiliations) else None
+        if search_row_matches(visible, (x, y), split_x, expected_name, affiliations):
+            return 1
+        self._note_search_check('결과 첫 줄의 이름이나 소속이 명단과 다름')
+        return None
+
+    def _note_search_check(self, why: str):
+        """검색 결과를 확인하지 못한 까닭을 파일 로그에 남긴다 (이름은 남기지 않는다)."""
+        logging.info('검색 결과 확인 실패: %s', why)
+
+    def _search_area_nodes(self, uia, point):
+        """결과 첫 줄 자리의 요소에서 위로 올라가며, '검색 결과(N명)' 이 보이는 가장 작은 판을 읽는다.
+
+        못 찾으면 None. 판이 너무 커지면(조직도까지 걸치면) 그만둔다.
+        """
+        try:
+            from comtypes.gen.UIAutomationClient import tagPOINT
+            element = uia.ElementFromPoint(tagPOINT(int(point[0]), int(point[1])))
+            walker = uia.RawViewWalker
+        except Exception as exc:
+            logging.debug('결과 자리 요소를 찾지 못했습니다: %s', exc)
+            return None
+        deadline = time.monotonic() + 1.5
+        for _level in range(12):
+            if element is None or time.monotonic() >= deadline:
+                return None
+            nodes = self._uia_nodes(uia, None, limit=1500, root=element, skip_offscreen=True,
+                                    max_seconds=max(.1, deadline - time.monotonic()))
+            if not getattr(nodes, 'complete', True):
+                return None
+            visible = [node for node in nodes if not node.get('offscreen')]
+            if search_count_in(visible, SEARCH_COUNT_RE) is not None:
+                return nodes
+            try:
+                element = walker.GetParentElement(element)
+            except Exception:
+                return None
+        return None
 
     def _run_on_ui(self, fn, timeout: float = 5.0):
         """워커 스레드에서 fn 을 화면 스레드로 넘겨 부르고 결과를 받는다. 늦으면 None."""
@@ -4877,8 +4933,11 @@ class App:
 
                 before_add = self._run_on_ui(self._read_add_observation)
                 many = None if manual else self._run_on_ui(lambda: self._read_search_count(name, org))
-                if not manual and idx == 0 and many in (None, 0) and not self.stop_flag.wait(0.25):
-                    # 처음 열리는 메신저의 접근성 정보가 한 박자 늦게 준비될 수 있다.
+                # 소통메신저가 검색 결과를 늦게 그리면 화면 읽어 주기도 한 박자 늦다.
+                # 한 번 못 읽었다고 바로 사람에게 넘기지 않고 3초 안에서 몇 번 다시 읽는다.
+                retry_until = time.monotonic() + 3.0
+                while (not manual and many in (None, 0) and time.monotonic() < retry_until
+                       and not self.stop_flag.wait(0.3)):
                     many = self._run_on_ui(lambda: self._read_search_count(name, org))
                 if self.stop_flag.is_set():
                     self._mark_failed(idx, FAIL_MANUAL_STOP, item)
@@ -5004,12 +5063,14 @@ class App:
         uia, _why = self._uia()
         if uia is None:
             return None
-        nodes = self._uia_nodes(uia, window, min_x=point[0], include_set_metadata=True, max_seconds=0.9)
+        nodes = self._uia_nodes(uia, window, min_x=point[0], include_set_metadata=True, max_seconds=2.5)
         if not getattr(nodes, 'complete', True):
+            logging.info('선택 목록 확인 실패: 창을 시간 안에 다 읽지 못함')
             return None
         rows = selected_person_rows(nodes, point[0])
         total = self._selected_total(window, point, nodes)
         if total is None or total != len(rows):
+            logging.info('선택 목록 확인 실패: 제목의 인원수(%s)와 읽은 줄 수(%s)가 다름', total, len(rows))
             return None
         names = [reconcile.person_name_from_row(row) for row in rows]
         return Counter(names) if all(names) else None
@@ -5018,7 +5079,8 @@ class App:
         if before is None:
             return 'unreadable'
         expected = before + Counter({name: 1})
-        deadline = time.monotonic() + 1.5
+        # 한 번 읽는 데 2초 넘게 걸릴 수 있으니, 두세 번은 다시 읽을 만큼 기다린다
+        deadline = time.monotonic() + 6.0
         readable = False
         while not self.stop_flag.is_set():
             remaining = deadline - time.monotonic()
