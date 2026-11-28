@@ -351,7 +351,7 @@
     .hero-sub { font-size: 18px; margin: 26px 0 30px; }
 
     .numbers {
-      max-width: 1120px; margin: 16px auto 0; display: grid; grid-template-columns: repeat(4, 1fr);
+      max-width: 1120px; margin: 16px auto 0; display: grid; grid-template-columns: 1.7fr repeat(4, 1fr);
       border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line);
     }
     .num-item { padding: 26px 22px 24px; }
@@ -361,6 +361,9 @@
     .num-item > span { display: block; margin-top: 12px; font-size: 14px; color: var(--ink-2); line-height: 1.6; }
     .num-item.acc-susin b { color: var(--tertiary); }
     .num-item.acc-sotong b { color: var(--primary); }
+    /* 맨 앞 칸: 명단을 손으로 넣을 때 걸리는 시간. 띠에서 가장 크게 읽히게 한다 */
+    .num-item.num-time b { color: var(--warn); }
+    .num-item.num-time b small { margin-right: .18em; }
 
     .video-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 30px; }
     .video-card { margin: 0; }
@@ -391,8 +394,9 @@
     @media (max-width: 960px) {
       .hero { grid-template-columns: minmax(0, 1fr); gap: 32px; }
       .numbers { grid-template-columns: repeat(2, 1fr); }
-      .num-item:nth-child(3) { border-left: 0; }
-      .num-item:nth-child(n+3) { border-top: 1px solid var(--line); }
+      .num-item.num-time { grid-column: 1 / -1; }
+      .num-item:nth-child(2n) { border-left: 0; }
+      .num-item:nth-child(n+2) { border-top: 1px solid var(--line); }
       .video-pair { grid-template-columns: 1fr; }
     }
     @media (max-width: 640px) {
@@ -489,9 +493,9 @@
       <source src="assets/video/intro.mp4" type="video/mp4">
     </video>
     <p id="intro-desc" class="sr-only">
-      40초 소개 영상입니다. 수신 기관 서른 곳을 조직도에서 하나씩 고르는 예에서는 120번을 클릭합니다.
-      충북소통메신저에서 30명을 찾는 예에서는 1,800자, K에듀파인에서 수신 기관 30곳을 찾는 예에서는 300자를 입력하고,
-      검색할 때마다 3초씩 기다려 기다리는 시간만 3분이 더 걸립니다.
+      40초 소개 영상입니다. 수신 기관 쉰 곳을 조직도에서 하나씩 고르는 예에서는 200번을 클릭합니다.
+      충북소통메신저에서 50명을 찾는 예에서는 3,000자, K에듀파인에서 수신 기관 50곳을 찾는 예에서는 500자를 입력합니다.
+      한 사람(한 곳)을 타이핑하고 검색하는 데 7초씩 걸려, 50명은 5분 50초, 50곳도 5분 50초, 모두 11분 40초가 걸립니다.
       순서가 꼬이면 처음부터 다시 확인해야 합니다. 영상 뒤쪽에서는 수신픽이 줄여 쓴 기관명을 정식 이름으로 바꿔
       에듀파인 수신그룹 엑셀을 만듭니다. 소통픽으로 수신자를 검색하다가 같은 이름이 둘이면 자동 선택을 멈추고 직접 고릅니다.
     </p>
@@ -571,7 +575,8 @@
 
 <!-- ═══ 숫자로 보기 ═══ -->
 <section class="numbers" aria-label="숫자로 보는 신통픽">
-  <div class="num-item"><b>120<small>번</small></b><span>조직도에서 수신 기관 <span class="nb">30곳을 고를 때</span></span></div>
+  <div class="num-item num-time"><b>11<small>분</small>40<small>초</small></b><span>50명, 50곳을 하나에 7초씩 <span class="nb">타이핑하고 검색하면</span></span></div>
+  <div class="num-item"><b>200<small>번</small></b><span>조직도에서 수신 기관 <span class="nb">50곳을 고를 때</span></span></div>
   <div class="num-item acc-susin"><b>2<small>번</small></b><span>수신그룹을 등록해 두면 <span class="nb">기안할 때마다</span></span></div>
   <div class="num-item"><b>770<small>곳</small></b><span>앱에 들어 있는 <span class="nb">충북 교육기관 코드</span></span></div>
   <div class="num-item acc-sotong"><b>0<small>원</small></b><span>무료이고 <span class="nb">설치 없이 실행</span></span></div>
@@ -695,8 +700,8 @@
     <div class="notice" style="margin-top:22px;">
       <svg class="ico"><use href="#i-info"/></svg>
       <div>
-        수신 기관이 30곳이면 조직도에서 검색해 체크하고 [&gt;&gt;]를 누르는 일을 30번 되풀이합니다.
-        모두 합치면 <strong>타이핑 1,800글자에 클릭 120번</strong>입니다.
+        수신 기관이 50곳이면 조직도에서 검색해 체크하고 [&gt;&gt;]를 누르는 일을 50번 되풀이합니다.
+        한 곳을 타이핑하고 검색하는 데 7초씩 잡으면 <strong>5분 50초에 클릭 200번</strong>입니다.
         수신그룹을 한 번 등록해 두면 다음부터는 [수신자 지정]의 [개인수신그룹]에서
         그룹 하나만 고르면 되니 <strong>클릭 2번</strong>으로 끝납니다.
       </div>

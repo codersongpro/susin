@@ -13,7 +13,7 @@ window.INTRO_CUES = {
   "bpm": 120,
   "groove": [9.0, 24.0],
   "pulse": [0.0, 4.7],
-  "dots": {"start": 1.95, "step": 0.034, "count": 30},
+  "dots": {"start": 1.95, "step": 0.02, "count": 50},
   "count": {"start": 3.0, "end": 4.2, "ticks": 30},
   "riser": [3.3, 5.0],
   "slams": [5.0, 6.0, 7.0],
