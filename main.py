@@ -4128,16 +4128,22 @@ class App:
 
     def _uia(self):
         """윈도우 화면 읽어 주기(UI 자동화). (객체, 못 쓰는 이유) 로 돌려준다."""
-        cached = getattr(self, '_uia_cached', None)
+        # 화면 읽어 주기 객체는 만든 스레드에서만 쓴다. 자동 선택은 작업 스레드에서 읽으므로
+        # (화면 스레드에서 읽으면 몇 초씩 앱이 '응답 없음' 이 된다) 스레드마다 따로 만든다.
+        local = self.__dict__.setdefault('_uia_local', threading.local())
+        cached = getattr(local, 'uia', None)
         if cached is not None:
             return cached, ''
         try:
+            import comtypes
             import comtypes.client
+            if threading.current_thread() is not threading.main_thread():
+                comtypes.CoInitialize()
             comtypes.client.GetModule('UIAutomationCore.dll')
             from comtypes.gen import UIAutomationClient as client
             uia = comtypes.client.CreateObject(
                 client.CUIAutomation, interface=client.IUIAutomation)
-            self._uia_cached = uia
+            local.uia = uia
             return uia, ''
         except Exception as exc:
             logging.info('UI 자동화를 쓸 수 없습니다: %s', exc)
@@ -4306,26 +4312,17 @@ class App:
         return None
 
     def _run_on_ui(self, fn, timeout: float = 5.0):
-        """워커 스레드에서 fn 을 화면 스레드로 넘겨 부르고 결과를 받는다. 늦으면 None."""
-        done = threading.Event()
-        expired = threading.Event()
-        box = {}
+        """자동 선택 중에 소통메신저 화면을 읽는다. 실패하면 None.
 
-        def call():
-            if expired.is_set():
-                return
-            try:
-                box['value'] = fn()
-            except Exception as exc:
-                logging.debug('화면 스레드 호출 실패: %s', exc)
-            finally:
-                done.set()
-
-        self.root.after(0, call)
-        if not done.wait(timeout):
-            expired.set()
+        예전에는 화면 스레드로 넘겨 읽었다. 한 번에 몇 초씩 걸려 그동안 앱이 '응답 없음' 이 되고
+        자동 선택도 느려졌다. 이제 부른 작업 스레드에서 바로 읽는다 (화면 읽어 주기 객체는
+        스레드마다 따로 만든다, _uia 참고). timeout 은 예전 호출과 맞추려고 남겨 둔 것이다.
+        """
+        try:
+            return fn()
+        except Exception as exc:
+            logging.debug('화면 읽기 실패: %s', exc)
             return None
-        return box.get('value')
 
     def _ask_pick(self, name: str, count: int | None):
         """검색 결과 하나를 확인하지 못했을 때 직접 선택을 요청한다."""
@@ -4932,7 +4929,8 @@ class App:
                 if not manual and no_result is None:
                     many = self._run_on_ui(lambda: self._read_search_count(name, org))
                     # 소통메신저가 검색 결과를 늦게 그리면 화면 읽어 주기도 한 박자 늦다.
-                    retry_until = time.monotonic() + 3.0
+                    # 못 읽어도 결과가 떴으면 담으므로 오래 붙잡지 않는다 (한 사람이 느려진다).
+                    retry_until = time.monotonic() + 1.0
                     while (many in (None, 0) and time.monotonic() < retry_until
                            and not self.stop_flag.wait(0.3)):
                         many = self._run_on_ui(lambda: self._read_search_count(name, org))
@@ -5074,8 +5072,15 @@ class App:
             return None
         rows = selected_person_rows(nodes, point[0])
         total = self._selected_total(window, point, nodes)
-        if total is None or total != len(rows):
-            logging.info('선택 목록 확인 실패: 제목의 인원수(%s)와 읽은 줄 수(%s)가 다름', total, len(rows))
+        # 인원수를 따로 알 수 있는데 읽은 줄 수와 다르면 덜 읽은 것이다.
+        # 이 소통메신저처럼 제목에 인원수가 없으면(total 이 None) 읽은 줄 그대로 쓴다.
+        # 그래도 안전한 것은, 추가 확인이 '누르기 전 목록 + 그 이름 한 명' 과 정확히 같을 때만
+        # 성공으로 치기 때문이다. 덜 읽었거나 화면이 밀렸으면 같지 않아 확인 필요로 남는다.
+        if total is not None and total != len(rows):
+            logging.info('선택 목록 확인 실패: 인원수(%s)와 읽은 줄 수(%s)가 다름', total, len(rows))
+            return None
+        if total is None and not rows and not has_selected_label(nodes):
+            logging.info('선택 목록 확인 실패: [선택된 사용자] 목록을 찾지 못함')
             return None
         names = [reconcile.person_name_from_row(row) for row in rows]
         return Counter(names) if all(names) else None

@@ -1579,6 +1579,32 @@ class AppFlowTest(unittest.TestCase):
         clicked.assert_called_once()
         self.assertTrue(item.get('added'))
 
+    def _observe(self, rows, total, label=True):
+        m = self.app_module
+        with patch.object(self.app, '_window_contains', return_value=True), \
+                patch.object(self.app, '_arrow_point', return_value=(900, 400)), \
+                patch.object(self.app, '_uia', return_value=(object(), '')), \
+                patch.object(self.app, '_uia_nodes', return_value=[]), \
+                patch.object(m, 'selected_person_rows', return_value=rows), \
+                patch.object(m, 'has_selected_label', return_value=label), \
+                patch.object(self.app, '_selected_total', return_value=total):
+            self.app._run_dialog_hwnd = 10
+            try:
+                return self.app._read_add_observation()
+            finally:
+                self.app._run_dialog_hwnd = None
+
+    def test_list_without_a_head_count_is_still_read(self):
+        """[선택된 사용자] 제목에 인원수가 없는 소통메신저도 담긴 사람을 센다."""
+        rows = ['권순범 [영양교사] 영양(500)', '권용진 [초등학교교사] [4-3] (343)']
+        self.assertEqual(self._observe(rows, None),
+                         self.app_module.Counter({'권순범': 1, '권용진': 1}))
+        self.assertEqual(self._observe([], None), self.app_module.Counter())
+        self.assertIsNone(self._observe([], None, label=False), '목록을 못 찾았으면 모른다고 해야 합니다')
+
+    def test_known_count_that_disagrees_is_still_unreadable(self):
+        self.assertIsNone(self._observe(['권순범 [영양교사]'], 3))
+
     def test_tab_has_no_result_list_button(self):
         """[결과 대조 · 빠진 명단] 버튼은 뺐다. 소통메신저와 비교가 그 일을 한다."""
         self.assertFalse(hasattr(self.app, 'failed_list_btn'))
