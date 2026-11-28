@@ -8,7 +8,7 @@
 """
 
 APP_NAME    = '신통픽'
-APP_VERSION = '2.4.0'
+APP_VERSION = '2.4.1'
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
